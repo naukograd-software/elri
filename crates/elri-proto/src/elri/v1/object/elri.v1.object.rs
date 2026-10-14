@@ -134,6 +134,8 @@ pub enum ObjectKind {
     Rule = 9,
     /// A tree of interface nodes drawn by the renderer; see elri.v1.ui. 
     Interface = 10,
+    /// An immutable published version of a definition; see elri.v1.definition. 
+    Publication = 11,
 }
 impl ObjectKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -153,6 +155,7 @@ impl ObjectKind {
             Self::Script => "OBJECT_KIND_SCRIPT",
             Self::Rule => "OBJECT_KIND_RULE",
             Self::Interface => "OBJECT_KIND_INTERFACE",
+            Self::Publication => "OBJECT_KIND_PUBLICATION",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -169,6 +172,7 @@ impl ObjectKind {
             "OBJECT_KIND_SCRIPT" => Some(Self::Script),
             "OBJECT_KIND_RULE" => Some(Self::Rule),
             "OBJECT_KIND_INTERFACE" => Some(Self::Interface),
+            "OBJECT_KIND_PUBLICATION" => Some(Self::Publication),
             _ => None,
         }
     }

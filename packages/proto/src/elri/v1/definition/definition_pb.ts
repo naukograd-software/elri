@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { FieldDefinition, FieldDefinitionJson, FieldKind, FieldKindJson, RoleDefinition, RoleDefinitionJson, TypeDefinition, TypeDefinitionJson, TypeField, TypeFieldJson } from "./domain_pb.ts";
+import type { FieldDefinition, FieldDefinitionJson, FieldKind, FieldKindJson, Pin, PinJson, Publication, PublicationJson, RoleDefinition, RoleDefinitionJson, Schema, SchemaJson, TypeDefinition, TypeDefinitionJson, TypeField, TypeFieldJson } from "./domain_pb.ts";
 import { file_elri_v1_definition_domain } from "./domain_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,271 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/definition/definition.proto.
  */
 export const file_elri_v1_definition_definition: GenFile = /*@__PURE__*/
-  fileDesc("CiNlbHJpL3YxL2RlZmluaXRpb24vZGVmaW5pdGlvbi5wcm90bxISZWxyaS52MS5kZWZpbml0aW9uIoABChxDcmVhdGVGaWVsZERlZmluaXRpb25SZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSKwoEa2luZBgEIAEoDjIdLmVscmkudjEuZGVmaW5pdGlvbi5GaWVsZEtpbmQiWAodQ3JlYXRlRmllbGREZWZpbml0aW9uUmVzcG9uc2USNwoKZGVmaW5pdGlvbhgBIAEoCzIjLmVscmkudjEuZGVmaW5pdGlvbi5GaWVsZERlZmluaXRpb24iggEKHFVwZGF0ZUZpZWxkRGVmaW5pdGlvblJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSEQoEbmFtZRgDIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAQgASgJSAGIAQFCBwoFX25hbWVCDgoMX2Rlc2NyaXB0aW9uIlgKHVVwZGF0ZUZpZWxkRGVmaW5pdGlvblJlc3BvbnNlEjcKCmRlZmluaXRpb24YASABKAsyIy5lbHJpLnYxLmRlZmluaXRpb24uRmllbGREZWZpbml0aW9uIkgKG0xpc3RGaWVsZERlZmluaXRpb25zUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIXCg9pbmNsdWRlX2RlbGV0ZWQYAiABKAgiWAocTGlzdEZpZWxkRGVmaW5pdGlvbnNSZXNwb25zZRI4CgtkZWZpbml0aW9ucxgBIAMoCzIjLmVscmkudjEuZGVmaW5pdGlvbi5GaWVsZERlZmluaXRpb24igQEKG0NyZWF0ZVR5cGVEZWZpbml0aW9uUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhMKC2Rlc2NyaXB0aW9uGAMgASgJEi0KBmZpZWxkcxgEIAMoCzIdLmVscmkudjEuZGVmaW5pdGlvbi5UeXBlRmllbGQiVgocQ3JlYXRlVHlwZURlZmluaXRpb25SZXNwb25zZRI2CgpkZWZpbml0aW9uGAEgASgLMiIuZWxyaS52MS5kZWZpbml0aW9uLlR5cGVEZWZpbml0aW9uIssBChtVcGRhdGVUeXBlRGVmaW5pdGlvblJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSEQoEbmFtZRgDIAEoCUgAiAEBEhgKC2Rlc2NyaXB0aW9uGAQgASgJSAGIAQESMQoKc2V0X2ZpZWxkcxgFIAMoCzIdLmVscmkudjEuZGVmaW5pdGlvbi5UeXBlRmllbGQSFQoNcmVtb3ZlX2ZpZWxkcxgGIAMoCUIHCgVfbmFtZUIOCgxfZGVzY3JpcHRpb24iVgocVXBkYXRlVHlwZURlZmluaXRpb25SZXNwb25zZRI2CgpkZWZpbml0aW9uGAEgASgLMiIuZWxyaS52MS5kZWZpbml0aW9uLlR5cGVEZWZpbml0aW9uIkcKGkxpc3RUeXBlRGVmaW5pdGlvbnNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhcKD2luY2x1ZGVfZGVsZXRlZBgCIAEoCCJWChtMaXN0VHlwZURlZmluaXRpb25zUmVzcG9uc2USNwoLZGVmaW5pdGlvbnMYASADKAsyIi5lbHJpLnYxLmRlZmluaXRpb24uVHlwZURlZmluaXRpb24iUgobQ3JlYXRlUm9sZURlZmluaXRpb25SZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkiVgocQ3JlYXRlUm9sZURlZmluaXRpb25SZXNwb25zZRI2CgpkZWZpbml0aW9uGAEgASgLMiIuZWxyaS52MS5kZWZpbml0aW9uLlJvbGVEZWZpbml0aW9uIkcKGkxpc3RSb2xlRGVmaW5pdGlvbnNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhcKD2luY2x1ZGVfZGVsZXRlZBgCIAEoCCJWChtMaXN0Um9sZURlZmluaXRpb25zUmVzcG9uc2USNwoLZGVmaW5pdGlvbnMYASADKAsyIi5lbHJpLnYxLmRlZmluaXRpb24uUm9sZURlZmluaXRpb24y6wcKEURlZmluaXRpb25TZXJ2aWNlEnwKFUNyZWF0ZUZpZWxkRGVmaW5pdGlvbhIwLmVscmkudjEuZGVmaW5pdGlvbi5DcmVhdGVGaWVsZERlZmluaXRpb25SZXF1ZXN0GjEuZWxyaS52MS5kZWZpbml0aW9uLkNyZWF0ZUZpZWxkRGVmaW5pdGlvblJlc3BvbnNlEnwKFVVwZGF0ZUZpZWxkRGVmaW5pdGlvbhIwLmVscmkudjEuZGVmaW5pdGlvbi5VcGRhdGVGaWVsZERlZmluaXRpb25SZXF1ZXN0GjEuZWxyaS52MS5kZWZpbml0aW9uLlVwZGF0ZUZpZWxkRGVmaW5pdGlvblJlc3BvbnNlEnkKFExpc3RGaWVsZERlZmluaXRpb25zEi8uZWxyaS52MS5kZWZpbml0aW9uLkxpc3RGaWVsZERlZmluaXRpb25zUmVxdWVzdBowLmVscmkudjEuZGVmaW5pdGlvbi5MaXN0RmllbGREZWZpbml0aW9uc1Jlc3BvbnNlEnkKFENyZWF0ZVR5cGVEZWZpbml0aW9uEi8uZWxyaS52MS5kZWZpbml0aW9uLkNyZWF0ZVR5cGVEZWZpbml0aW9uUmVxdWVzdBowLmVscmkudjEuZGVmaW5pdGlvbi5DcmVhdGVUeXBlRGVmaW5pdGlvblJlc3BvbnNlEnkKFFVwZGF0ZVR5cGVEZWZpbml0aW9uEi8uZWxyaS52MS5kZWZpbml0aW9uLlVwZGF0ZVR5cGVEZWZpbml0aW9uUmVxdWVzdBowLmVscmkudjEuZGVmaW5pdGlvbi5VcGRhdGVUeXBlRGVmaW5pdGlvblJlc3BvbnNlEnYKE0xpc3RUeXBlRGVmaW5pdGlvbnMSLi5lbHJpLnYxLmRlZmluaXRpb24uTGlzdFR5cGVEZWZpbml0aW9uc1JlcXVlc3QaLy5lbHJpLnYxLmRlZmluaXRpb24uTGlzdFR5cGVEZWZpbml0aW9uc1Jlc3BvbnNlEnkKFENyZWF0ZVJvbGVEZWZpbml0aW9uEi8uZWxyaS52MS5kZWZpbml0aW9uLkNyZWF0ZVJvbGVEZWZpbml0aW9uUmVxdWVzdBowLmVscmkudjEuZGVmaW5pdGlvbi5DcmVhdGVSb2xlRGVmaW5pdGlvblJlc3BvbnNlEnYKE0xpc3RSb2xlRGVmaW5pdGlvbnMSLi5lbHJpLnYxLmRlZmluaXRpb24uTGlzdFJvbGVEZWZpbml0aW9uc1JlcXVlc3QaLy5lbHJpLnYxLmRlZmluaXRpb24uTGlzdFJvbGVEZWZpbml0aW9uc1Jlc3BvbnNlYgZwcm90bzM", [file_elri_v1_definition_domain]);
+  fileDesc("CiNlbHJpL3YxL2RlZmluaXRpb24vZGVmaW5pdGlvbi5wcm90bxISZWxyaS52MS5kZWZpbml0aW9uIjgKGFB1Ymxpc2hEZWZpbml0aW9uUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSJRChlQdWJsaXNoRGVmaW5pdGlvblJlc3BvbnNlEjQKC3B1YmxpY2F0aW9uGAEgASgLMh8uZWxyaS52MS5kZWZpbml0aW9uLlB1YmxpY2F0aW9uIkIKF0xpc3RQdWJsaWNhdGlvbnNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhUKDWRlZmluaXRpb25faWQYAiABKAkiUQoYTGlzdFB1YmxpY2F0aW9uc1Jlc3BvbnNlEjUKDHB1YmxpY2F0aW9ucxgBIAMoCzIfLmVscmkudjEuZGVmaW5pdGlvbi5QdWJsaWNhdGlvbiJYChRQaW5EZWZpbml0aW9uUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIWCg5wdWJsaWNhdGlvbl9pZBgCIAEoCRIWCg5leHBlY3RlZF9lcG9jaBgDIAEoAyI9ChVQaW5EZWZpbml0aW9uUmVzcG9uc2USJAoDcGluGAEgASgLMhcuZWxyaS52MS5kZWZpbml0aW9uLlBpbiIkChBHZXRTY2hlbWFSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJIj8KEUdldFNjaGVtYVJlc3BvbnNlEioKBnNjaGVtYRgBIAEoCzIaLmVscmkudjEuZGVmaW5pdGlvbi5TY2hlbWEigAEKHENyZWF0ZUZpZWxkRGVmaW5pdGlvblJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIrCgRraW5kGAQgASgOMh0uZWxyaS52MS5kZWZpbml0aW9uLkZpZWxkS2luZCJYCh1DcmVhdGVGaWVsZERlZmluaXRpb25SZXNwb25zZRI3CgpkZWZpbml0aW9uGAEgASgLMiMuZWxyaS52MS5kZWZpbml0aW9uLkZpZWxkRGVmaW5pdGlvbiKCAQocVXBkYXRlRmllbGREZWZpbml0aW9uUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIRCgRuYW1lGAMgASgJSACIAQESGAoLZGVzY3JpcHRpb24YBCABKAlIAYgBAUIHCgVfbmFtZUIOCgxfZGVzY3JpcHRpb24iWAodVXBkYXRlRmllbGREZWZpbml0aW9uUmVzcG9uc2USNwoKZGVmaW5pdGlvbhgBIAEoCzIjLmVscmkudjEuZGVmaW5pdGlvbi5GaWVsZERlZmluaXRpb24iSAobTGlzdEZpZWxkRGVmaW5pdGlvbnNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhcKD2luY2x1ZGVfZGVsZXRlZBgCIAEoCCJYChxMaXN0RmllbGREZWZpbml0aW9uc1Jlc3BvbnNlEjgKC2RlZmluaXRpb25zGAEgAygLMiMuZWxyaS52MS5kZWZpbml0aW9uLkZpZWxkRGVmaW5pdGlvbiKBAQobQ3JlYXRlVHlwZURlZmluaXRpb25SZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgwKBG5hbWUYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSLQoGZmllbGRzGAQgAygLMh0uZWxyaS52MS5kZWZpbml0aW9uLlR5cGVGaWVsZCJWChxDcmVhdGVUeXBlRGVmaW5pdGlvblJlc3BvbnNlEjYKCmRlZmluaXRpb24YASABKAsyIi5lbHJpLnYxLmRlZmluaXRpb24uVHlwZURlZmluaXRpb24iywEKG1VwZGF0ZVR5cGVEZWZpbml0aW9uUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIRCgRuYW1lGAMgASgJSACIAQESGAoLZGVzY3JpcHRpb24YBCABKAlIAYgBARIxCgpzZXRfZmllbGRzGAUgAygLMh0uZWxyaS52MS5kZWZpbml0aW9uLlR5cGVGaWVsZBIVCg1yZW1vdmVfZmllbGRzGAYgAygJQgcKBV9uYW1lQg4KDF9kZXNjcmlwdGlvbiJWChxVcGRhdGVUeXBlRGVmaW5pdGlvblJlc3BvbnNlEjYKCmRlZmluaXRpb24YASABKAsyIi5lbHJpLnYxLmRlZmluaXRpb24uVHlwZURlZmluaXRpb24iRwoaTGlzdFR5cGVEZWZpbml0aW9uc1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAIgASgIIlYKG0xpc3RUeXBlRGVmaW5pdGlvbnNSZXNwb25zZRI3CgtkZWZpbml0aW9ucxgBIAMoCzIiLmVscmkudjEuZGVmaW5pdGlvbi5UeXBlRGVmaW5pdGlvbiJSChtDcmVhdGVSb2xlRGVmaW5pdGlvblJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCSJWChxDcmVhdGVSb2xlRGVmaW5pdGlvblJlc3BvbnNlEjYKCmRlZmluaXRpb24YASABKAsyIi5lbHJpLnYxLmRlZmluaXRpb24uUm9sZURlZmluaXRpb24iRwoaTGlzdFJvbGVEZWZpbml0aW9uc1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAIgASgIIlYKG0xpc3RSb2xlRGVmaW5pdGlvbnNSZXNwb25zZRI3CgtkZWZpbml0aW9ucxgBIAMoCzIiLmVscmkudjEuZGVmaW5pdGlvbi5Sb2xlRGVmaW5pdGlvbjKMCwoRRGVmaW5pdGlvblNlcnZpY2USfAoVQ3JlYXRlRmllbGREZWZpbml0aW9uEjAuZWxyaS52MS5kZWZpbml0aW9uLkNyZWF0ZUZpZWxkRGVmaW5pdGlvblJlcXVlc3QaMS5lbHJpLnYxLmRlZmluaXRpb24uQ3JlYXRlRmllbGREZWZpbml0aW9uUmVzcG9uc2USfAoVVXBkYXRlRmllbGREZWZpbml0aW9uEjAuZWxyaS52MS5kZWZpbml0aW9uLlVwZGF0ZUZpZWxkRGVmaW5pdGlvblJlcXVlc3QaMS5lbHJpLnYxLmRlZmluaXRpb24uVXBkYXRlRmllbGREZWZpbml0aW9uUmVzcG9uc2USeQoUTGlzdEZpZWxkRGVmaW5pdGlvbnMSLy5lbHJpLnYxLmRlZmluaXRpb24uTGlzdEZpZWxkRGVmaW5pdGlvbnNSZXF1ZXN0GjAuZWxyaS52MS5kZWZpbml0aW9uLkxpc3RGaWVsZERlZmluaXRpb25zUmVzcG9uc2USeQoUQ3JlYXRlVHlwZURlZmluaXRpb24SLy5lbHJpLnYxLmRlZmluaXRpb24uQ3JlYXRlVHlwZURlZmluaXRpb25SZXF1ZXN0GjAuZWxyaS52MS5kZWZpbml0aW9uLkNyZWF0ZVR5cGVEZWZpbml0aW9uUmVzcG9uc2USeQoUVXBkYXRlVHlwZURlZmluaXRpb24SLy5lbHJpLnYxLmRlZmluaXRpb24uVXBkYXRlVHlwZURlZmluaXRpb25SZXF1ZXN0GjAuZWxyaS52MS5kZWZpbml0aW9uLlVwZGF0ZVR5cGVEZWZpbml0aW9uUmVzcG9uc2USdgoTTGlzdFR5cGVEZWZpbml0aW9ucxIuLmVscmkudjEuZGVmaW5pdGlvbi5MaXN0VHlwZURlZmluaXRpb25zUmVxdWVzdBovLmVscmkudjEuZGVmaW5pdGlvbi5MaXN0VHlwZURlZmluaXRpb25zUmVzcG9uc2USeQoUQ3JlYXRlUm9sZURlZmluaXRpb24SLy5lbHJpLnYxLmRlZmluaXRpb24uQ3JlYXRlUm9sZURlZmluaXRpb25SZXF1ZXN0GjAuZWxyaS52MS5kZWZpbml0aW9uLkNyZWF0ZVJvbGVEZWZpbml0aW9uUmVzcG9uc2USdgoTTGlzdFJvbGVEZWZpbml0aW9ucxIuLmVscmkudjEuZGVmaW5pdGlvbi5MaXN0Um9sZURlZmluaXRpb25zUmVxdWVzdBovLmVscmkudjEuZGVmaW5pdGlvbi5MaXN0Um9sZURlZmluaXRpb25zUmVzcG9uc2UScAoRUHVibGlzaERlZmluaXRpb24SLC5lbHJpLnYxLmRlZmluaXRpb24uUHVibGlzaERlZmluaXRpb25SZXF1ZXN0Gi0uZWxyaS52MS5kZWZpbml0aW9uLlB1Ymxpc2hEZWZpbml0aW9uUmVzcG9uc2USbQoQTGlzdFB1YmxpY2F0aW9ucxIrLmVscmkudjEuZGVmaW5pdGlvbi5MaXN0UHVibGljYXRpb25zUmVxdWVzdBosLmVscmkudjEuZGVmaW5pdGlvbi5MaXN0UHVibGljYXRpb25zUmVzcG9uc2USZAoNUGluRGVmaW5pdGlvbhIoLmVscmkudjEuZGVmaW5pdGlvbi5QaW5EZWZpbml0aW9uUmVxdWVzdBopLmVscmkudjEuZGVmaW5pdGlvbi5QaW5EZWZpbml0aW9uUmVzcG9uc2USWAoJR2V0U2NoZW1hEiQuZWxyaS52MS5kZWZpbml0aW9uLkdldFNjaGVtYVJlcXVlc3QaJS5lbHJpLnYxLmRlZmluaXRpb24uR2V0U2NoZW1hUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_definition_domain]);
+
+/**
+ * @generated from message elri.v1.definition.PublishDefinitionRequest
+ */
+export type PublishDefinitionRequest = Message<"elri.v1.definition.PublishDefinitionRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id: string;
+};
+
+/**
+ * @generated from message elri.v1.definition.PublishDefinitionRequest
+ */
+export type PublishDefinitionRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id?: string;
+};
+
+/**
+ * Describes the message elri.v1.definition.PublishDefinitionRequest.
+ * Use `create(PublishDefinitionRequestSchema)` to create a new message.
+ */
+export const PublishDefinitionRequestSchema: GenMessage<PublishDefinitionRequest, {jsonType: PublishDefinitionRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_definition, 0);
+
+/**
+ * @generated from message elri.v1.definition.PublishDefinitionResponse
+ */
+export type PublishDefinitionResponse = Message<"elri.v1.definition.PublishDefinitionResponse"> & {
+  /**
+   * @generated from field: elri.v1.definition.Publication publication = 1;
+   */
+  publication?: Publication | undefined;
+};
+
+/**
+ * @generated from message elri.v1.definition.PublishDefinitionResponse
+ */
+export type PublishDefinitionResponseJson = {
+  /**
+   * @generated from field: elri.v1.definition.Publication publication = 1;
+   */
+  publication?: PublicationJson;
+};
+
+/**
+ * Describes the message elri.v1.definition.PublishDefinitionResponse.
+ * Use `create(PublishDefinitionResponseSchema)` to create a new message.
+ */
+export const PublishDefinitionResponseSchema: GenMessage<PublishDefinitionResponse, {jsonType: PublishDefinitionResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_definition, 1);
+
+/**
+ * @generated from message elri.v1.definition.ListPublicationsRequest
+ */
+export type ListPublicationsRequest = Message<"elri.v1.definition.ListPublicationsRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * Only publications of this definition, if set. 
+   *
+   * @generated from field: string definition_id = 2;
+   */
+  definitionId: string;
+};
+
+/**
+ * @generated from message elri.v1.definition.ListPublicationsRequest
+ */
+export type ListPublicationsRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * Only publications of this definition, if set. 
+   *
+   * @generated from field: string definition_id = 2;
+   */
+  definitionId?: string;
+};
+
+/**
+ * Describes the message elri.v1.definition.ListPublicationsRequest.
+ * Use `create(ListPublicationsRequestSchema)` to create a new message.
+ */
+export const ListPublicationsRequestSchema: GenMessage<ListPublicationsRequest, {jsonType: ListPublicationsRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_definition, 2);
+
+/**
+ * @generated from message elri.v1.definition.ListPublicationsResponse
+ */
+export type ListPublicationsResponse = Message<"elri.v1.definition.ListPublicationsResponse"> & {
+  /**
+   * @generated from field: repeated elri.v1.definition.Publication publications = 1;
+   */
+  publications: Publication[];
+};
+
+/**
+ * @generated from message elri.v1.definition.ListPublicationsResponse
+ */
+export type ListPublicationsResponseJson = {
+  /**
+   * @generated from field: repeated elri.v1.definition.Publication publications = 1;
+   */
+  publications?: PublicationJson[];
+};
+
+/**
+ * Describes the message elri.v1.definition.ListPublicationsResponse.
+ * Use `create(ListPublicationsResponseSchema)` to create a new message.
+ */
+export const ListPublicationsResponseSchema: GenMessage<ListPublicationsResponse, {jsonType: ListPublicationsResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_definition, 3);
+
+/**
+ * @generated from message elri.v1.definition.PinDefinitionRequest
+ */
+export type PinDefinitionRequest = Message<"elri.v1.definition.PinDefinitionRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string publication_id = 2;
+   */
+  publicationId: string;
+
+  /**
+   * The epoch the caller saw; the pin is refused if it moved. 
+   *
+   * @generated from field: int64 expected_epoch = 3;
+   */
+  expectedEpoch: bigint;
+};
+
+/**
+ * @generated from message elri.v1.definition.PinDefinitionRequest
+ */
+export type PinDefinitionRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string publication_id = 2;
+   */
+  publicationId?: string;
+
+  /**
+   * The epoch the caller saw; the pin is refused if it moved. 
+   *
+   * @generated from field: int64 expected_epoch = 3;
+   */
+  expectedEpoch?: string;
+};
+
+/**
+ * Describes the message elri.v1.definition.PinDefinitionRequest.
+ * Use `create(PinDefinitionRequestSchema)` to create a new message.
+ */
+export const PinDefinitionRequestSchema: GenMessage<PinDefinitionRequest, {jsonType: PinDefinitionRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_definition, 4);
+
+/**
+ * @generated from message elri.v1.definition.PinDefinitionResponse
+ */
+export type PinDefinitionResponse = Message<"elri.v1.definition.PinDefinitionResponse"> & {
+  /**
+   * @generated from field: elri.v1.definition.Pin pin = 1;
+   */
+  pin?: Pin | undefined;
+};
+
+/**
+ * @generated from message elri.v1.definition.PinDefinitionResponse
+ */
+export type PinDefinitionResponseJson = {
+  /**
+   * @generated from field: elri.v1.definition.Pin pin = 1;
+   */
+  pin?: PinJson;
+};
+
+/**
+ * Describes the message elri.v1.definition.PinDefinitionResponse.
+ * Use `create(PinDefinitionResponseSchema)` to create a new message.
+ */
+export const PinDefinitionResponseSchema: GenMessage<PinDefinitionResponse, {jsonType: PinDefinitionResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_definition, 5);
+
+/**
+ * @generated from message elri.v1.definition.GetSchemaRequest
+ */
+export type GetSchemaRequest = Message<"elri.v1.definition.GetSchemaRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+};
+
+/**
+ * @generated from message elri.v1.definition.GetSchemaRequest
+ */
+export type GetSchemaRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+};
+
+/**
+ * Describes the message elri.v1.definition.GetSchemaRequest.
+ * Use `create(GetSchemaRequestSchema)` to create a new message.
+ */
+export const GetSchemaRequestSchema: GenMessage<GetSchemaRequest, {jsonType: GetSchemaRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_definition, 6);
+
+/**
+ * @generated from message elri.v1.definition.GetSchemaResponse
+ */
+export type GetSchemaResponse = Message<"elri.v1.definition.GetSchemaResponse"> & {
+  /**
+   * @generated from field: elri.v1.definition.Schema schema = 1;
+   */
+  schema?: Schema | undefined;
+};
+
+/**
+ * @generated from message elri.v1.definition.GetSchemaResponse
+ */
+export type GetSchemaResponseJson = {
+  /**
+   * @generated from field: elri.v1.definition.Schema schema = 1;
+   */
+  schema?: SchemaJson;
+};
+
+/**
+ * Describes the message elri.v1.definition.GetSchemaResponse.
+ * Use `create(GetSchemaResponseSchema)` to create a new message.
+ */
+export const GetSchemaResponseSchema: GenMessage<GetSchemaResponse, {jsonType: GetSchemaResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_definition, 7);
 
 /**
  * @generated from message elri.v1.definition.CreateFieldDefinitionRequest
@@ -69,7 +333,7 @@ export type CreateFieldDefinitionRequestJson = {
  * Use `create(CreateFieldDefinitionRequestSchema)` to create a new message.
  */
 export const CreateFieldDefinitionRequestSchema: GenMessage<CreateFieldDefinitionRequest, {jsonType: CreateFieldDefinitionRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 0);
+  messageDesc(file_elri_v1_definition_definition, 8);
 
 /**
  * @generated from message elri.v1.definition.CreateFieldDefinitionResponse
@@ -96,7 +360,7 @@ export type CreateFieldDefinitionResponseJson = {
  * Use `create(CreateFieldDefinitionResponseSchema)` to create a new message.
  */
 export const CreateFieldDefinitionResponseSchema: GenMessage<CreateFieldDefinitionResponse, {jsonType: CreateFieldDefinitionResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 1);
+  messageDesc(file_elri_v1_definition_definition, 9);
 
 /**
  * @generated from message elri.v1.definition.UpdateFieldDefinitionRequest
@@ -153,7 +417,7 @@ export type UpdateFieldDefinitionRequestJson = {
  * Use `create(UpdateFieldDefinitionRequestSchema)` to create a new message.
  */
 export const UpdateFieldDefinitionRequestSchema: GenMessage<UpdateFieldDefinitionRequest, {jsonType: UpdateFieldDefinitionRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 2);
+  messageDesc(file_elri_v1_definition_definition, 10);
 
 /**
  * @generated from message elri.v1.definition.UpdateFieldDefinitionResponse
@@ -180,7 +444,7 @@ export type UpdateFieldDefinitionResponseJson = {
  * Use `create(UpdateFieldDefinitionResponseSchema)` to create a new message.
  */
 export const UpdateFieldDefinitionResponseSchema: GenMessage<UpdateFieldDefinitionResponse, {jsonType: UpdateFieldDefinitionResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 3);
+  messageDesc(file_elri_v1_definition_definition, 11);
 
 /**
  * @generated from message elri.v1.definition.ListFieldDefinitionsRequest
@@ -217,7 +481,7 @@ export type ListFieldDefinitionsRequestJson = {
  * Use `create(ListFieldDefinitionsRequestSchema)` to create a new message.
  */
 export const ListFieldDefinitionsRequestSchema: GenMessage<ListFieldDefinitionsRequest, {jsonType: ListFieldDefinitionsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 4);
+  messageDesc(file_elri_v1_definition_definition, 12);
 
 /**
  * @generated from message elri.v1.definition.ListFieldDefinitionsResponse
@@ -244,7 +508,7 @@ export type ListFieldDefinitionsResponseJson = {
  * Use `create(ListFieldDefinitionsResponseSchema)` to create a new message.
  */
 export const ListFieldDefinitionsResponseSchema: GenMessage<ListFieldDefinitionsResponse, {jsonType: ListFieldDefinitionsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 5);
+  messageDesc(file_elri_v1_definition_definition, 13);
 
 /**
  * @generated from message elri.v1.definition.CreateTypeDefinitionRequest
@@ -301,7 +565,7 @@ export type CreateTypeDefinitionRequestJson = {
  * Use `create(CreateTypeDefinitionRequestSchema)` to create a new message.
  */
 export const CreateTypeDefinitionRequestSchema: GenMessage<CreateTypeDefinitionRequest, {jsonType: CreateTypeDefinitionRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 6);
+  messageDesc(file_elri_v1_definition_definition, 14);
 
 /**
  * @generated from message elri.v1.definition.CreateTypeDefinitionResponse
@@ -328,7 +592,7 @@ export type CreateTypeDefinitionResponseJson = {
  * Use `create(CreateTypeDefinitionResponseSchema)` to create a new message.
  */
 export const CreateTypeDefinitionResponseSchema: GenMessage<CreateTypeDefinitionResponse, {jsonType: CreateTypeDefinitionResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 7);
+  messageDesc(file_elri_v1_definition_definition, 15);
 
 /**
  * @generated from message elri.v1.definition.UpdateTypeDefinitionRequest
@@ -409,7 +673,7 @@ export type UpdateTypeDefinitionRequestJson = {
  * Use `create(UpdateTypeDefinitionRequestSchema)` to create a new message.
  */
 export const UpdateTypeDefinitionRequestSchema: GenMessage<UpdateTypeDefinitionRequest, {jsonType: UpdateTypeDefinitionRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 8);
+  messageDesc(file_elri_v1_definition_definition, 16);
 
 /**
  * @generated from message elri.v1.definition.UpdateTypeDefinitionResponse
@@ -436,7 +700,7 @@ export type UpdateTypeDefinitionResponseJson = {
  * Use `create(UpdateTypeDefinitionResponseSchema)` to create a new message.
  */
 export const UpdateTypeDefinitionResponseSchema: GenMessage<UpdateTypeDefinitionResponse, {jsonType: UpdateTypeDefinitionResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 9);
+  messageDesc(file_elri_v1_definition_definition, 17);
 
 /**
  * @generated from message elri.v1.definition.ListTypeDefinitionsRequest
@@ -473,7 +737,7 @@ export type ListTypeDefinitionsRequestJson = {
  * Use `create(ListTypeDefinitionsRequestSchema)` to create a new message.
  */
 export const ListTypeDefinitionsRequestSchema: GenMessage<ListTypeDefinitionsRequest, {jsonType: ListTypeDefinitionsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 10);
+  messageDesc(file_elri_v1_definition_definition, 18);
 
 /**
  * @generated from message elri.v1.definition.ListTypeDefinitionsResponse
@@ -500,7 +764,7 @@ export type ListTypeDefinitionsResponseJson = {
  * Use `create(ListTypeDefinitionsResponseSchema)` to create a new message.
  */
 export const ListTypeDefinitionsResponseSchema: GenMessage<ListTypeDefinitionsResponse, {jsonType: ListTypeDefinitionsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 11);
+  messageDesc(file_elri_v1_definition_definition, 19);
 
 /**
  * @generated from message elri.v1.definition.CreateRoleDefinitionRequest
@@ -547,7 +811,7 @@ export type CreateRoleDefinitionRequestJson = {
  * Use `create(CreateRoleDefinitionRequestSchema)` to create a new message.
  */
 export const CreateRoleDefinitionRequestSchema: GenMessage<CreateRoleDefinitionRequest, {jsonType: CreateRoleDefinitionRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 12);
+  messageDesc(file_elri_v1_definition_definition, 20);
 
 /**
  * @generated from message elri.v1.definition.CreateRoleDefinitionResponse
@@ -574,7 +838,7 @@ export type CreateRoleDefinitionResponseJson = {
  * Use `create(CreateRoleDefinitionResponseSchema)` to create a new message.
  */
 export const CreateRoleDefinitionResponseSchema: GenMessage<CreateRoleDefinitionResponse, {jsonType: CreateRoleDefinitionResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 13);
+  messageDesc(file_elri_v1_definition_definition, 21);
 
 /**
  * @generated from message elri.v1.definition.ListRoleDefinitionsRequest
@@ -611,7 +875,7 @@ export type ListRoleDefinitionsRequestJson = {
  * Use `create(ListRoleDefinitionsRequestSchema)` to create a new message.
  */
 export const ListRoleDefinitionsRequestSchema: GenMessage<ListRoleDefinitionsRequest, {jsonType: ListRoleDefinitionsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 14);
+  messageDesc(file_elri_v1_definition_definition, 22);
 
 /**
  * @generated from message elri.v1.definition.ListRoleDefinitionsResponse
@@ -638,7 +902,7 @@ export type ListRoleDefinitionsResponseJson = {
  * Use `create(ListRoleDefinitionsResponseSchema)` to create a new message.
  */
 export const ListRoleDefinitionsResponseSchema: GenMessage<ListRoleDefinitionsResponse, {jsonType: ListRoleDefinitionsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_definition_definition, 15);
+  messageDesc(file_elri_v1_definition_definition, 23);
 
 /**
  *
@@ -713,6 +977,47 @@ export const DefinitionService: GenService<{
     methodKind: "unary";
     input: typeof ListRoleDefinitionsRequestSchema;
     output: typeof ListRoleDefinitionsResponseSchema;
+  },
+  /**
+   * Freezes a definition as its next version; type definitions pin the
+   * current publications of their fields as dependencies. 
+   *
+   * @generated from rpc elri.v1.definition.DefinitionService.PublishDefinition
+   */
+  publishDefinition: {
+    methodKind: "unary";
+    input: typeof PublishDefinitionRequestSchema;
+    output: typeof PublishDefinitionResponseSchema;
+  },
+  /**
+   * @generated from rpc elri.v1.definition.DefinitionService.ListPublications
+   */
+  listPublications: {
+    methodKind: "unary";
+    input: typeof ListPublicationsRequestSchema;
+    output: typeof ListPublicationsResponseSchema;
+  },
+  /**
+   *
+   * Makes a publication the Space's agreed version of its definition,
+   * against an expected schema epoch. Local Spaces apply it at once; a
+   * server Space asks the server (Owner/Admin) and the pin arrives with
+   * the log.
+   *
+   * @generated from rpc elri.v1.definition.DefinitionService.PinDefinition
+   */
+  pinDefinition: {
+    methodKind: "unary";
+    input: typeof PinDefinitionRequestSchema;
+    output: typeof PinDefinitionResponseSchema;
+  },
+  /**
+   * @generated from rpc elri.v1.definition.DefinitionService.GetSchema
+   */
+  getSchema: {
+    methodKind: "unary";
+    input: typeof GetSchemaRequestSchema;
+    output: typeof GetSchemaResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_definition_definition, 0);

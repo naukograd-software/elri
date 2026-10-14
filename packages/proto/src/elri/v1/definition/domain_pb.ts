@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/definition/domain.proto.
  */
 export const file_elri_v1_definition_domain: GenFile = /*@__PURE__*/
-  fileDesc("Ch9lbHJpL3YxL2RlZmluaXRpb24vZG9tYWluLnByb3RvEhJlbHJpLnYxLmRlZmluaXRpb24i2wEKD0ZpZWxkRGVmaW5pdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEisKBGtpbmQYBSABKA4yHS5lbHJpLnYxLmRlZmluaXRpb24uRmllbGRLaW5kEhUKDWNyZWF0ZWRfYXRfbXMYBiABKAMSFQoNdXBkYXRlZF9hdF9tcxgHIAEoAxIaCg1kZWxldGVkX2F0X21zGAggASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMiLwoJVHlwZUZpZWxkEhAKCGZpZWxkX2lkGAEgASgJEhAKCHJlcXVpcmVkGAIgASgIItwBCg5UeXBlRGVmaW5pdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEi0KBmZpZWxkcxgFIAMoCzIdLmVscmkudjEuZGVmaW5pdGlvbi5UeXBlRmllbGQSFQoNY3JlYXRlZF9hdF9tcxgGIAEoAxIVCg11cGRhdGVkX2F0X21zGAcgASgDEhoKDWRlbGV0ZWRfYXRfbXMYCCABKANIAIgBAUIQCg5fZGVsZXRlZF9hdF9tcyKtAQoOUm9sZURlZmluaXRpb24SCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIVCg1jcmVhdGVkX2F0X21zGAUgASgDEhUKDXVwZGF0ZWRfYXRfbXMYBiABKAMSGgoNZGVsZXRlZF9hdF9tcxgHIAEoA0gAiAEBQhAKDl9kZWxldGVkX2F0X21zKtEBCglGaWVsZEtpbmQSGgoWRklFTERfS0lORF9VTlNQRUNJRklFRBAAEhMKD0ZJRUxEX0tJTkRfQk9PTBABEhIKDkZJRUxEX0tJTkRfSU5UEAISFQoRRklFTERfS0lORF9ET1VCTEUQAxIVChFGSUVMRF9LSU5EX1NUUklORxAEEhMKD0ZJRUxEX0tJTkRfVElNRRAFEhIKDkZJRUxEX0tJTkRfUkVGEAYSEwoPRklFTERfS0lORF9URVhUEAcSEwoPRklFTERfS0lORF9MSVNUEAhiBnByb3RvMw");
+  fileDesc("Ch9lbHJpL3YxL2RlZmluaXRpb24vZG9tYWluLnByb3RvEhJlbHJpLnYxLmRlZmluaXRpb24i2wEKD0ZpZWxkRGVmaW5pdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEisKBGtpbmQYBSABKA4yHS5lbHJpLnYxLmRlZmluaXRpb24uRmllbGRLaW5kEhUKDWNyZWF0ZWRfYXRfbXMYBiABKAMSFQoNdXBkYXRlZF9hdF9tcxgHIAEoAxIaCg1kZWxldGVkX2F0X21zGAggASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMiLwoJVHlwZUZpZWxkEhAKCGZpZWxkX2lkGAEgASgJEhAKCHJlcXVpcmVkGAIgASgIItwBCg5UeXBlRGVmaW5pdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEi0KBmZpZWxkcxgFIAMoCzIdLmVscmkudjEuZGVmaW5pdGlvbi5UeXBlRmllbGQSFQoNY3JlYXRlZF9hdF9tcxgGIAEoAxIVCg11cGRhdGVkX2F0X21zGAcgASgDEhoKDWRlbGV0ZWRfYXRfbXMYCCABKANIAIgBAUIQCg5fZGVsZXRlZF9hdF9tcyKtAQoOUm9sZURlZmluaXRpb24SCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIVCg1jcmVhdGVkX2F0X21zGAUgASgDEhUKDXVwZGF0ZWRfYXRfbXMYBiABKAMSGgoNZGVsZXRlZF9hdF9tcxgHIAEoA0gAiAEBQhAKDl9kZWxldGVkX2F0X21zIo8CCgtQdWJsaWNhdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIVCg1kZWZpbml0aW9uX2lkGAMgASgJEg8KB3ZlcnNpb24YBCABKAUSFQoNc25hcHNob3RfanNvbhgFIAEoCRJHCgxkZXBlbmRlbmNpZXMYBiADKAsyMS5lbHJpLnYxLmRlZmluaXRpb24uUHVibGljYXRpb24uRGVwZW5kZW5jaWVzRW50cnkSDgoGZGlnZXN0GAcgASgJEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMaMwoRRGVwZW5kZW5jaWVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgFOgI4ASJUCgNQaW4SFQoNZGVmaW5pdGlvbl9pZBgBIAEoCRIWCg5wdWJsaWNhdGlvbl9pZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFEg0KBWVwb2NoGAQgASgDIj4KBlNjaGVtYRINCgVlcG9jaBgBIAEoAxIlCgRwaW5zGAIgAygLMhcuZWxyaS52MS5kZWZpbml0aW9uLlBpbirRAQoJRmllbGRLaW5kEhoKFkZJRUxEX0tJTkRfVU5TUEVDSUZJRUQQABITCg9GSUVMRF9LSU5EX0JPT0wQARISCg5GSUVMRF9LSU5EX0lOVBACEhUKEUZJRUxEX0tJTkRfRE9VQkxFEAMSFQoRRklFTERfS0lORF9TVFJJTkcQBBITCg9GSUVMRF9LSU5EX1RJTUUQBRISCg5GSUVMRF9LSU5EX1JFRhAGEhMKD0ZJRUxEX0tJTkRfVEVYVBAHEhMKD0ZJRUxEX0tJTkRfTElTVBAIYgZwcm90bzM");
 
 /**
  * @generated from message elri.v1.definition.FieldDefinition
@@ -333,6 +333,241 @@ export type RoleDefinitionJson = {
  */
 export const RoleDefinitionSchema: GenMessage<RoleDefinition, {jsonType: RoleDefinitionJson}> = /*@__PURE__*/
   messageDesc(file_elri_v1_definition_domain, 3);
+
+/**
+ *
+ * An immutable published version of a definition: its logical snapshot, the
+ * exact versions of the definitions it depends on, and a digest over both.
+ * Pins reference publications, never live definitions, so what a Space
+ * agreed on cannot drift.
+ *
+ * @generated from message elri.v1.definition.Publication
+ */
+export type Publication = Message<"elri.v1.definition.Publication"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string space_id = 2;
+   */
+  spaceId: string;
+
+  /**
+   * The definition published. 
+   *
+   * @generated from field: string definition_id = 3;
+   */
+  definitionId: string;
+
+  /**
+   * 1, 2, 3, ... per definition. 
+   *
+   * @generated from field: int32 version = 4;
+   */
+  version: number;
+
+  /**
+   * Canonical JSON of the definition at publication. 
+   *
+   * @generated from field: string snapshot_json = 5;
+   */
+  snapshotJson: string;
+
+  /**
+   * Definition id → version of the publications this one depends on. 
+   *
+   * @generated from field: map<string, int32> dependencies = 6;
+   */
+  dependencies: { [key: string]: number };
+
+  /**
+   * Hex SHA-256 over the canonical snapshot and dependencies. 
+   *
+   * @generated from field: string digest = 7;
+   */
+  digest: string;
+
+  /**
+   * @generated from field: int64 created_at_ms = 8;
+   */
+  createdAtMs: bigint;
+};
+
+/**
+ *
+ * An immutable published version of a definition: its logical snapshot, the
+ * exact versions of the definitions it depends on, and a digest over both.
+ * Pins reference publications, never live definitions, so what a Space
+ * agreed on cannot drift.
+ *
+ * @generated from message elri.v1.definition.Publication
+ */
+export type PublicationJson = {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * @generated from field: string space_id = 2;
+   */
+  spaceId?: string;
+
+  /**
+   * The definition published. 
+   *
+   * @generated from field: string definition_id = 3;
+   */
+  definitionId?: string;
+
+  /**
+   * 1, 2, 3, ... per definition. 
+   *
+   * @generated from field: int32 version = 4;
+   */
+  version?: number;
+
+  /**
+   * Canonical JSON of the definition at publication. 
+   *
+   * @generated from field: string snapshot_json = 5;
+   */
+  snapshotJson?: string;
+
+  /**
+   * Definition id → version of the publications this one depends on. 
+   *
+   * @generated from field: map<string, int32> dependencies = 6;
+   */
+  dependencies?: { [key: string]: number };
+
+  /**
+   * Hex SHA-256 over the canonical snapshot and dependencies. 
+   *
+   * @generated from field: string digest = 7;
+   */
+  digest?: string;
+
+  /**
+   * @generated from field: int64 created_at_ms = 8;
+   */
+  createdAtMs?: string;
+};
+
+/**
+ * Describes the message elri.v1.definition.Publication.
+ * Use `create(PublicationSchema)` to create a new message.
+ */
+export const PublicationSchema: GenMessage<Publication, {jsonType: PublicationJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_domain, 4);
+
+/**
+ * The version of a definition a Space has agreed to use. 
+ *
+ * @generated from message elri.v1.definition.Pin
+ */
+export type Pin = Message<"elri.v1.definition.Pin"> & {
+  /**
+   * @generated from field: string definition_id = 1;
+   */
+  definitionId: string;
+
+  /**
+   * @generated from field: string publication_id = 2;
+   */
+  publicationId: string;
+
+  /**
+   * @generated from field: int32 version = 3;
+   */
+  version: number;
+
+  /**
+   * Schema epoch after this pin was applied. 
+   *
+   * @generated from field: int64 epoch = 4;
+   */
+  epoch: bigint;
+};
+
+/**
+ * The version of a definition a Space has agreed to use. 
+ *
+ * @generated from message elri.v1.definition.Pin
+ */
+export type PinJson = {
+  /**
+   * @generated from field: string definition_id = 1;
+   */
+  definitionId?: string;
+
+  /**
+   * @generated from field: string publication_id = 2;
+   */
+  publicationId?: string;
+
+  /**
+   * @generated from field: int32 version = 3;
+   */
+  version?: number;
+
+  /**
+   * Schema epoch after this pin was applied. 
+   *
+   * @generated from field: int64 epoch = 4;
+   */
+  epoch?: string;
+};
+
+/**
+ * Describes the message elri.v1.definition.Pin.
+ * Use `create(PinSchema)` to create a new message.
+ */
+export const PinSchema: GenMessage<Pin, {jsonType: PinJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_domain, 5);
+
+/**
+ * Every pin of a Space, under one epoch that changes with each pin. 
+ *
+ * @generated from message elri.v1.definition.Schema
+ */
+export type Schema = Message<"elri.v1.definition.Schema"> & {
+  /**
+   * @generated from field: int64 epoch = 1;
+   */
+  epoch: bigint;
+
+  /**
+   * @generated from field: repeated elri.v1.definition.Pin pins = 2;
+   */
+  pins: Pin[];
+};
+
+/**
+ * Every pin of a Space, under one epoch that changes with each pin. 
+ *
+ * @generated from message elri.v1.definition.Schema
+ */
+export type SchemaJson = {
+  /**
+   * @generated from field: int64 epoch = 1;
+   */
+  epoch?: string;
+
+  /**
+   * @generated from field: repeated elri.v1.definition.Pin pins = 2;
+   */
+  pins?: PinJson[];
+};
+
+/**
+ * Describes the message elri.v1.definition.Schema.
+ * Use `create(SchemaSchema)` to create a new message.
+ */
+export const SchemaSchema: GenMessage<Schema, {jsonType: SchemaJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_domain, 6);
 
 /**
  * Storage kind of a field; fixed for the life of the definition. 

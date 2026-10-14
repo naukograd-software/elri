@@ -53,6 +53,10 @@ pub mod sync_service_ws {
         route: "/elri.v1.sync.SyncService/DownloadBlob",
         kind: StreamKind::ServerStream,
     };
+    pub const PIN_DEFINITION: MethodSpec = MethodSpec {
+        route: "/elri.v1.sync.SyncService/PinDefinition",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `SyncService` service. Implement with `async fn`.
     pub trait SyncServiceHandler: Send + Sync + 'static {
         ///  Identify the caller and negotiate the protocol.
@@ -125,6 +129,13 @@ pub mod sync_service_ws {
             req: Request<super::DownloadBlobRequest>,
             stream: DownloadBlobServerStream,
         ) -> impl ::core::future::Future<Output = Result<(), Status>> + Send;
+        ///  Owner/Admin: pins a publication against an expected schema epoch.
+        fn pin_definition(
+            &self,
+            req: Request<super::PinDefinitionRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::PinDefinitionResponse>, Status>,
+        > + Send;
     }
     /// Typed server-side stream for `SyncService.Subscribe`.
     #[derive(Clone, Debug)]
@@ -389,6 +400,17 @@ pub mod sync_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    PIN_DEFINITION.route,
+                    move |req: Request<super::PinDefinitionRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.pin_definition(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `SyncService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -498,6 +520,13 @@ pub mod sync_service_ws {
             Ok(DownloadBlobClientStream {
                 inner: conn,
             })
+        }
+        ///  Owner/Admin: pins a publication against an expected schema epoch.
+        pub async fn pin_definition(
+            &self,
+            req: impl Into<Request<super::PinDefinitionRequest>>,
+        ) -> Result<Response<super::PinDefinitionResponse>, Status> {
+            self.conn.invoke_unary(PIN_DEFINITION, req.into()).await
         }
     }
     /// Typed client-side stream for `SyncService.Subscribe`.

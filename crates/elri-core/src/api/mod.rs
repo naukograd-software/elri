@@ -138,13 +138,15 @@ impl From<StoreError> for Status {
             StoreError::NotRejected(_)
             | StoreError::Downloading { .. }
             | StoreError::NotDeleted(_)
-            | StoreError::Purged(_) => Status::new(Code::FailedPrecondition, e.to_string()),
+            | StoreError::Purged(_)
+            | StoreError::EpochMoved { .. } => Status::new(Code::FailedPrecondition, e.to_string()),
             StoreError::Model(
                 ModelError::InvalidId(_)
                 | ModelError::EmptyValue(_)
                 | ModelError::NestedContainer(_)
                 | ModelError::Placement(..),
-            ) => Status::new(Code::InvalidArgument, e.to_string()),
+            )
+            | StoreError::NotPublication(_) => Status::new(Code::InvalidArgument, e.to_string()),
             other => {
                 tracing::error!(error = %other, "storage failure");
                 Status::new(Code::Internal, "storage failure")

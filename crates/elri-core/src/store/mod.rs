@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 use elri_proto::elri::v1::change::{Change, ChangePart, ChangeStatus};
 use elri_proto::elri::v1::definition::FieldKind;
+use elri_proto::elri::v1::definition::{Pin, Schema};
 use elri_proto::elri::v1::events::{
     event, ChangeEvent, Event, ObjectEvent, RemoteEvent, SpaceEvent,
 };
@@ -32,11 +33,13 @@ use uuid::Uuid;
 use crate::blobs::Blobs;
 use crate::change::{accepted, rejected, Outcome, Reason};
 use crate::device::DeviceId;
-use crate::model::{field_def_kind, now_ms, ModelError, ObjectDoc, ObjectId, SpaceId};
+use crate::model::{
+    field_def_kind, now_ms, publication_of, ModelError, ObjectDoc, ObjectId, SpaceId,
+};
 use models::{
     BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, GrantRow,
-    GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow, PlacementRow, RemoteRow,
-    SettingRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
+    GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow, PinRow, PlacementRow,
+    RemoteRow, SettingRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
 };
 
 mod coordinator;
@@ -79,6 +82,17 @@ pub enum StoreError {
     /// No such grant on this device.
     #[error("grant {0} not found")]
     GrantNotFound(String),
+    /// The schema epoch moved since the caller looked.
+    #[error("schema epoch is {actual}, not {expected}; look again")]
+    EpochMoved {
+        /// What the caller expected.
+        expected: i64,
+        /// What it is.
+        actual: i64,
+    },
+    /// Not a publication Object.
+    #[error("object {0} is not a publication")]
+    NotPublication(ObjectId),
     /// The Space's initial download is not finished; it is read-only.
     #[error("space is downloading: {received} of {target} accepted changes received")]
     Downloading {
@@ -700,6 +714,7 @@ impl SpaceStore {
                 PlacementRow,
                 GraveyardRow,
                 BlobRow,
+                PinRow,
                 SpaceLogRow,
                 SyncStateRow
             ),
@@ -1045,7 +1060,95 @@ impl SpaceStore {
         if row.kind != i64::from(ObjectKind::FieldDef as i32) || row.deleted_at.is_some() {
             return Ok(None);
         }
+        // A pinned publication fixes the kind, whatever the live definition says.
+        if let Some(pin) = PinRow::filter_by_definition_id(id.uuid())
+            .first()
+            .exec(&mut *db)
+            .await?
+        {
+            if let Ok((doc, _)) = load_doc(&mut db, ObjectId::from_uuid(pin.publication_id)).await {
+                if let Some(p) = publication_of(&doc.read()?) {
+                    let snap: serde_json::Value =
+                        serde_json::from_str(&p.snapshot_json).unwrap_or_default();
+                    if let Some(code) = snap.get("kind").and_then(serde_json::Value::as_i64) {
+                        if let Some(kind) = i32::try_from(code)
+                            .ok()
+                            .and_then(|c| FieldKind::try_from(c).ok())
+                            .filter(|k| *k != FieldKind::Unspecified)
+                        {
+                            return Ok(Some(kind));
+                        }
+                    }
+                }
+            }
+        }
         Ok(field_def_kind(&load_doc(&mut db, id).await?.0.read()?))
+    }
+
+    // --- schema pins ----------------------------------------------------
+
+    /// The Space's pins under their epoch.
+    pub async fn schema(&self) -> Result<Schema, StoreError> {
+        let mut db = self.db.lock().await;
+        let epoch = read_state(&mut db, SCHEMA_EPOCH).await?;
+        let rows = PinRow::all().exec(&mut *db).await?;
+        let mut pins: Vec<Pin> = rows
+            .iter()
+            .map(|r| Pin {
+                definition_id: ObjectId::from_uuid(r.definition_id).to_string(),
+                publication_id: ObjectId::from_uuid(r.publication_id).to_string(),
+                version: i32::try_from(r.version).unwrap_or(i32::MAX),
+                epoch: r.epoch,
+            })
+            .collect();
+        pins.sort_by(|a, b| a.definition_id.cmp(&b.definition_id));
+        Ok(Schema { epoch, pins })
+    }
+
+    /// Authority side: pins a publication against the expected epoch and
+    /// records the pin in the Space log.
+    pub async fn pin_definition(
+        &self,
+        publication: ObjectId,
+        expected_epoch: i64,
+    ) -> Result<Pin, StoreError> {
+        let mut db = self.db.lock().await;
+        let actual = read_state(&mut db, SCHEMA_EPOCH).await?;
+        if actual != expected_epoch {
+            return Err(StoreError::EpochMoved {
+                expected: expected_epoch,
+                actual,
+            });
+        }
+        let (doc, _) = load_doc(&mut db, publication).await?;
+        let Some(p) = publication_of(&doc.read()?) else {
+            return Err(StoreError::NotPublication(publication));
+        };
+        let pin = Pin {
+            definition_id: p.definition_id.clone(),
+            publication_id: p.id.clone(),
+            version: p.version,
+            epoch: actual + 1,
+        };
+        let seq = last_seq(&mut db).await? + 1;
+        let mut tx = db.transaction().await?;
+        write_pin(&mut tx, &pin).await?;
+        write_log_pin(&mut tx, seq, &pin).await?;
+        write_state_tx(&mut tx, SCHEMA_EPOCH, pin.epoch).await?;
+        tx.commit().await?;
+        Ok(pin)
+    }
+
+    /// Replica side: installs a pin delivered from the authority.
+    pub async fn apply_pin(&self, seq: i64, pin: &Pin) -> Result<(), StoreError> {
+        let mut db = self.db.lock().await;
+        let mut tx = db.transaction().await?;
+        write_pin(&mut tx, pin).await?;
+        write_log_pin(&mut tx, seq, pin).await?;
+        write_state_tx(&mut tx, SCHEMA_EPOCH, pin.epoch).await?;
+        write_state_tx(&mut tx, CURSOR, seq).await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     /// Whether a live Object with this id is in the Space.
@@ -1423,6 +1526,17 @@ impl SpaceStore {
                     change: None,
                     accepted_at_ms: e.accepted_at,
                     purged_object_id: object.to_string(),
+                    pin: None,
+                });
+                continue;
+            }
+            if let Some(json) = &e.pin_json {
+                out.push(Entry {
+                    seq: e.seq,
+                    change: None,
+                    accepted_at_ms: e.accepted_at,
+                    purged_object_id: String::new(),
+                    pin: Some(pin_from_json(json)?),
                 });
                 continue;
             }
@@ -1446,6 +1560,7 @@ impl SpaceStore {
                 change: Some(read_envelope(&mut db, self.id, &row).await?),
                 accepted_at_ms: e.accepted_at,
                 purged_object_id: String::new(),
+                pin: None,
             });
         }
         Ok(out)
@@ -1549,6 +1664,7 @@ impl SpaceStore {
             change_id: Some(change_id),
             accepted_at: now_ms(),
             purged_object_id: None,
+            pin_json: None,
         })
         .exec(&mut tx)
         .await?;
@@ -1808,6 +1924,7 @@ async fn write_log(
         change_id,
         accepted_at: now_ms(),
         purged_object_id,
+        pin_json: None,
     })
     .exec(&mut *tx)
     .await?;
@@ -2135,6 +2252,80 @@ async fn read_envelope(
 const CURSOR: &str = "cursor";
 /// Sync-state key: sequence the initial download must reach.
 const INITIAL_TARGET: &str = "initial_target";
+/// Sync-state key: the schema epoch, moved by every pin.
+const SCHEMA_EPOCH: &str = "schema_epoch";
+
+async fn write_pin(tx: &mut toasty::Transaction<'_>, pin: &Pin) -> Result<(), StoreError> {
+    let definition = uuid_arg(&pin.definition_id)?;
+    PinRow::filter_by_definition_id(definition)
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    toasty::create!(PinRow {
+        definition_id: definition,
+        publication_id: uuid_arg(&pin.publication_id)?,
+        version: i64::from(pin.version),
+        epoch: pin.epoch,
+    })
+    .exec(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+async fn write_log_pin(
+    tx: &mut toasty::Transaction<'_>,
+    seq: i64,
+    pin: &Pin,
+) -> Result<(), StoreError> {
+    let json = serde_json::json!({
+        "definition_id": pin.definition_id,
+        "publication_id": pin.publication_id,
+        "version": pin.version,
+        "epoch": pin.epoch,
+    })
+    .to_string();
+    SpaceLogRow::filter_by_seq(seq)
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    toasty::create!(SpaceLogRow {
+        seq,
+        change_id: None,
+        accepted_at: now_ms(),
+        purged_object_id: None,
+        pin_json: Some(json),
+    })
+    .exec(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+fn pin_from_json(s: &str) -> Result<Pin, StoreError> {
+    let v: serde_json::Value = serde_json::from_str(s).map_err(|_| StoreError::Corrupt {
+        table: "space_log",
+        what: "pin",
+    })?;
+    let text = |k: &str| {
+        v.get(k)
+            .and_then(|x| x.as_str())
+            .unwrap_or_default()
+            .to_owned()
+    };
+    Ok(Pin {
+        definition_id: text("definition_id"),
+        publication_id: text("publication_id"),
+        version: i32::try_from(
+            v.get("version")
+                .and_then(serde_json::Value::as_i64)
+                .unwrap_or(0),
+        )
+        .unwrap_or(0),
+        epoch: v
+            .get("epoch")
+            .and_then(serde_json::Value::as_i64)
+            .unwrap_or(0),
+    })
+}
 
 async fn read_state(db: &mut Db, key: &str) -> Result<i64, StoreError> {
     Ok(SyncStateRow::filter_by_key(key.to_owned())

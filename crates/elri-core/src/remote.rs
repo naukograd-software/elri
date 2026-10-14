@@ -11,8 +11,8 @@ use elri_proto::elri::v1::space::{Authority, Space as PbSpace};
 use elri_proto::elri::v1::sync::sync_service_ws::SyncServiceClient;
 use elri_proto::elri::v1::sync::{
     upload_blob_request, AddMemberRequest, BlobHeader, CreateSpaceRequest, DownloadBlobRequest,
-    HelloRequest, ListSpacesRequest, PullRequest, PurgeObjectRequest, SubmitRequest,
-    SubscribeRequest, UploadBlobRequest,
+    HelloRequest, ListSpacesRequest, PinDefinitionRequest, PullRequest, PurgeObjectRequest,
+    SubmitRequest, SubscribeRequest, UploadBlobRequest,
 };
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -414,6 +414,30 @@ impl Remote {
         Ok(res.msg.seq)
     }
 
+    /// Owner/Admin: asks the server to pin a publication. The pin reaches
+    /// this device with the log.
+    pub async fn pin_definition(
+        &self,
+        space_id: SpaceId,
+        publication: ObjectId,
+        expected_epoch: i64,
+    ) -> Result<elri_proto::elri::v1::definition::Pin, RemoteError> {
+        let (client, token) = self
+            .with_session(|s| (s.client.clone(), s.token.clone()))
+            .await?;
+        let res = SyncServiceClient::new(client)
+            .pin_definition(authed(
+                &token,
+                PinDefinitionRequest {
+                    space_id: space_id.to_string(),
+                    publication_id: publication.to_string(),
+                    expected_epoch,
+                },
+            ))
+            .await?;
+        res.msg.pin.ok_or(RemoteError::BadReply("no pin"))
+    }
+
     /// Fetches attachment bytes of a server Space into the local blob
     /// store, checking the digest and size on the way.
     pub async fn fetch_blob(
@@ -707,6 +731,8 @@ async fn replicate_once(
                 let id = ObjectId::parse(&entry.purged_object_id)
                     .map_err(|_| RemoteError::BadReply("purged object id"))?;
                 space.apply_purge(entry.seq, id).await?;
+            } else if let Some(pin) = entry.pin.as_ref() {
+                space.apply_pin(entry.seq, pin).await?;
             } else {
                 return Err(RemoteError::BadReply("entry without change or purge"));
             }

@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package elri.v1.sync;
 
+import "elri/v1/definition/domain.proto";
 import "elri/v1/object/domain.proto";
 
 /* The operations a Change added to one document. */
@@ -33,12 +34,14 @@ message Envelope {
 }
 
 /*
-One position in the Space log: an accepted Change, or the purge of an
-Object, in which case `change` is unset and `purged_object_id` names it.
+One position in the Space log: an accepted Change; the purge of an Object
+(`change` unset, `purged_object_id` names it); or a schema pin (`change`
+unset, `pin` set).
 */
 message Entry {
     int64 seq = 1;
     Envelope change = 2;
     int64 accepted_at_ms = 3;
     string purged_object_id = 4;
+    elri.v1.definition.Pin pin = 5;
 }

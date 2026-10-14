@@ -4,6 +4,8 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Pin, PinJson } from "../definition/domain_pb.ts";
+import { file_elri_v1_definition_domain } from "../definition/domain_pb.ts";
 import type { Role, RoleJson, Space, SpaceJson } from "../space/domain_pb.ts";
 import { file_elri_v1_space_domain } from "../space/domain_pb.ts";
 import type { Entry, EntryJson, Envelope, EnvelopeJson } from "./domain_pb.ts";
@@ -14,7 +16,81 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/sync/sync.proto.
  */
 export const file_elri_v1_sync_sync: GenFile = /*@__PURE__*/
-  fileDesc("ChdlbHJpL3YxL3N5bmMvc3luYy5wcm90bxIMZWxyaS52MS5zeW5jIjwKCkJsb2JIZWFkZXISEAoIc3BhY2VfaWQYASABKAkSDgoGc2hhMjU2GAIgASgJEgwKBHNpemUYAyABKAMiWAoRVXBsb2FkQmxvYlJlcXVlc3QSKgoGaGVhZGVyGAEgASgLMhguZWxyaS52MS5zeW5jLkJsb2JIZWFkZXJIABIOCgRkYXRhGAIgASgMSABCBwoFY2h1bmsiGQoJQmxvYkNodW5rEgwKBGRhdGEYASABKAwiJQoSVXBsb2FkQmxvYlJlc3BvbnNlEg8KB2V4aXN0ZWQYASABKAgiNwoTRG93bmxvYWRCbG9iUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIOCgZzaGEyNTYYAiABKAkiOQoSUHVyZ2VPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCW9iamVjdF9pZBgCIAEoCSIiChNQdXJnZU9iamVjdFJlc3BvbnNlEgsKA3NlcRgBIAEoAyI7CgxIZWxsb1JlcXVlc3QSEQoJZGV2aWNlX2lkGAEgASgJEhgKEHByb3RvY29sX3ZlcnNpb24YAiABKA0iTQoNSGVsbG9SZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCXVzZXJfbmFtZRgCIAEoCRIYChBwcm90b2NvbF92ZXJzaW9uGAMgASgNIhMKEUxpc3RTcGFjZXNSZXF1ZXN0IjoKEkxpc3RTcGFjZXNSZXNwb25zZRIkCgZzcGFjZXMYASADKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIiIKEkNyZWF0ZVNwYWNlUmVxdWVzdBIMCgRuYW1lGAEgASgJIjoKE0NyZWF0ZVNwYWNlUmVzcG9uc2USIwoFc3BhY2UYASABKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIloKEEFkZE1lbWJlclJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSEQoJdXNlcl9uYW1lGAIgASgJEiEKBHJvbGUYAyABKA4yEy5lbHJpLnYxLnNwYWNlLlJvbGUiEwoRQWRkTWVtYmVyUmVzcG9uc2UiNwoNU3VibWl0UmVxdWVzdBImCgZjaGFuZ2UYASABKAsyFi5lbHJpLnYxLnN5bmMuRW52ZWxvcGUi6wEKCVJlamVjdGlvbhIuCgZyZWFzb24YASABKA4yHi5lbHJpLnYxLnN5bmMuUmVqZWN0aW9uLlJlYXNvbhIPCgdtZXNzYWdlGAIgASgJIpwBCgZSZWFzb24SFgoSUkVBU09OX1VOU1BFQ0lGSUVEEAASHAoYUkVBU09OX1BFUk1JU1NJT05fREVOSUVEEAESHwobUkVBU09OX01JU1NJTkdfUFJFREVDRVNTT1JTEAISEgoOUkVBU09OX0lOVkFMSUQQAxIUChBSRUFTT05fUFJPVEVDVEVEEAQSEQoNUkVBU09OX1BVUkdFRBAFImAKDlN1Ym1pdFJlc3BvbnNlEhYKDGFjY2VwdGVkX3NlcRgBIAEoA0gAEisKCHJlamVjdGVkGAIgASgLMhcuZWxyaS52MS5zeW5jLlJlamVjdGlvbkgAQgkKB291dGNvbWUiQQoLUHVsbFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSEQoJYWZ0ZXJfc2VxGAIgASgDEg0KBWxpbWl0GAMgASgFIkYKDFB1bGxSZXNwb25zZRIkCgdlbnRyaWVzGAEgAygLMhMuZWxyaS52MS5zeW5jLkVudHJ5EhAKCGhhc19tb3JlGAIgASgIIiUKEFN1YnNjcmliZVJlcXVlc3QSEQoJc3BhY2VfaWRzGAEgAygJIi8KDlN1YnNjcmliZUV2ZW50EhAKCHNwYWNlX2lkGAEgASgJEgsKA3NlcRgCIAEoAzKIBgoLU3luY1NlcnZpY2USQAoFSGVsbG8SGi5lbHJpLnYxLnN5bmMuSGVsbG9SZXF1ZXN0GhsuZWxyaS52MS5zeW5jLkhlbGxvUmVzcG9uc2USTwoKTGlzdFNwYWNlcxIfLmVscmkudjEuc3luYy5MaXN0U3BhY2VzUmVxdWVzdBogLmVscmkudjEuc3luYy5MaXN0U3BhY2VzUmVzcG9uc2USUgoLQ3JlYXRlU3BhY2USIC5lbHJpLnYxLnN5bmMuQ3JlYXRlU3BhY2VSZXF1ZXN0GiEuZWxyaS52MS5zeW5jLkNyZWF0ZVNwYWNlUmVzcG9uc2USTAoJQWRkTWVtYmVyEh4uZWxyaS52MS5zeW5jLkFkZE1lbWJlclJlcXVlc3QaHy5lbHJpLnYxLnN5bmMuQWRkTWVtYmVyUmVzcG9uc2USQwoGU3VibWl0EhsuZWxyaS52MS5zeW5jLlN1Ym1pdFJlcXVlc3QaHC5lbHJpLnYxLnN5bmMuU3VibWl0UmVzcG9uc2USPQoEUHVsbBIZLmVscmkudjEuc3luYy5QdWxsUmVxdWVzdBoaLmVscmkudjEuc3luYy5QdWxsUmVzcG9uc2USSwoJU3Vic2NyaWJlEh4uZWxyaS52MS5zeW5jLlN1YnNjcmliZVJlcXVlc3QaHC5lbHJpLnYxLnN5bmMuU3Vic2NyaWJlRXZlbnQwARJSCgtQdXJnZU9iamVjdBIgLmVscmkudjEuc3luYy5QdXJnZU9iamVjdFJlcXVlc3QaIS5lbHJpLnYxLnN5bmMuUHVyZ2VPYmplY3RSZXNwb25zZRJRCgpVcGxvYWRCbG9iEh8uZWxyaS52MS5zeW5jLlVwbG9hZEJsb2JSZXF1ZXN0GiAuZWxyaS52MS5zeW5jLlVwbG9hZEJsb2JSZXNwb25zZSgBEkwKDERvd25sb2FkQmxvYhIhLmVscmkudjEuc3luYy5Eb3dubG9hZEJsb2JSZXF1ZXN0GhcuZWxyaS52MS5zeW5jLkJsb2JDaHVuazABYgZwcm90bzM", [file_elri_v1_space_domain, file_elri_v1_sync_domain]);
+  fileDesc("ChdlbHJpL3YxL3N5bmMvc3luYy5wcm90bxIMZWxyaS52MS5zeW5jIlgKFFBpbkRlZmluaXRpb25SZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhYKDnB1YmxpY2F0aW9uX2lkGAIgASgJEhYKDmV4cGVjdGVkX2Vwb2NoGAMgASgDIj0KFVBpbkRlZmluaXRpb25SZXNwb25zZRIkCgNwaW4YASABKAsyFy5lbHJpLnYxLmRlZmluaXRpb24uUGluIjwKCkJsb2JIZWFkZXISEAoIc3BhY2VfaWQYASABKAkSDgoGc2hhMjU2GAIgASgJEgwKBHNpemUYAyABKAMiWAoRVXBsb2FkQmxvYlJlcXVlc3QSKgoGaGVhZGVyGAEgASgLMhguZWxyaS52MS5zeW5jLkJsb2JIZWFkZXJIABIOCgRkYXRhGAIgASgMSABCBwoFY2h1bmsiGQoJQmxvYkNodW5rEgwKBGRhdGEYASABKAwiJQoSVXBsb2FkQmxvYlJlc3BvbnNlEg8KB2V4aXN0ZWQYASABKAgiNwoTRG93bmxvYWRCbG9iUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIOCgZzaGEyNTYYAiABKAkiOQoSUHVyZ2VPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCW9iamVjdF9pZBgCIAEoCSIiChNQdXJnZU9iamVjdFJlc3BvbnNlEgsKA3NlcRgBIAEoAyI7CgxIZWxsb1JlcXVlc3QSEQoJZGV2aWNlX2lkGAEgASgJEhgKEHByb3RvY29sX3ZlcnNpb24YAiABKA0iTQoNSGVsbG9SZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCXVzZXJfbmFtZRgCIAEoCRIYChBwcm90b2NvbF92ZXJzaW9uGAMgASgNIhMKEUxpc3RTcGFjZXNSZXF1ZXN0IjoKEkxpc3RTcGFjZXNSZXNwb25zZRIkCgZzcGFjZXMYASADKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIiIKEkNyZWF0ZVNwYWNlUmVxdWVzdBIMCgRuYW1lGAEgASgJIjoKE0NyZWF0ZVNwYWNlUmVzcG9uc2USIwoFc3BhY2UYASABKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIloKEEFkZE1lbWJlclJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSEQoJdXNlcl9uYW1lGAIgASgJEiEKBHJvbGUYAyABKA4yEy5lbHJpLnYxLnNwYWNlLlJvbGUiEwoRQWRkTWVtYmVyUmVzcG9uc2UiNwoNU3VibWl0UmVxdWVzdBImCgZjaGFuZ2UYASABKAsyFi5lbHJpLnYxLnN5bmMuRW52ZWxvcGUi6wEKCVJlamVjdGlvbhIuCgZyZWFzb24YASABKA4yHi5lbHJpLnYxLnN5bmMuUmVqZWN0aW9uLlJlYXNvbhIPCgdtZXNzYWdlGAIgASgJIpwBCgZSZWFzb24SFgoSUkVBU09OX1VOU1BFQ0lGSUVEEAASHAoYUkVBU09OX1BFUk1JU1NJT05fREVOSUVEEAESHwobUkVBU09OX01JU1NJTkdfUFJFREVDRVNTT1JTEAISEgoOUkVBU09OX0lOVkFMSUQQAxIUChBSRUFTT05fUFJPVEVDVEVEEAQSEQoNUkVBU09OX1BVUkdFRBAFImAKDlN1Ym1pdFJlc3BvbnNlEhYKDGFjY2VwdGVkX3NlcRgBIAEoA0gAEisKCHJlamVjdGVkGAIgASgLMhcuZWxyaS52MS5zeW5jLlJlamVjdGlvbkgAQgkKB291dGNvbWUiQQoLUHVsbFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSEQoJYWZ0ZXJfc2VxGAIgASgDEg0KBWxpbWl0GAMgASgFIkYKDFB1bGxSZXNwb25zZRIkCgdlbnRyaWVzGAEgAygLMhMuZWxyaS52MS5zeW5jLkVudHJ5EhAKCGhhc19tb3JlGAIgASgIIiUKEFN1YnNjcmliZVJlcXVlc3QSEQoJc3BhY2VfaWRzGAEgAygJIi8KDlN1YnNjcmliZUV2ZW50EhAKCHNwYWNlX2lkGAEgASgJEgsKA3NlcRgCIAEoAzLiBgoLU3luY1NlcnZpY2USQAoFSGVsbG8SGi5lbHJpLnYxLnN5bmMuSGVsbG9SZXF1ZXN0GhsuZWxyaS52MS5zeW5jLkhlbGxvUmVzcG9uc2USTwoKTGlzdFNwYWNlcxIfLmVscmkudjEuc3luYy5MaXN0U3BhY2VzUmVxdWVzdBogLmVscmkudjEuc3luYy5MaXN0U3BhY2VzUmVzcG9uc2USUgoLQ3JlYXRlU3BhY2USIC5lbHJpLnYxLnN5bmMuQ3JlYXRlU3BhY2VSZXF1ZXN0GiEuZWxyaS52MS5zeW5jLkNyZWF0ZVNwYWNlUmVzcG9uc2USTAoJQWRkTWVtYmVyEh4uZWxyaS52MS5zeW5jLkFkZE1lbWJlclJlcXVlc3QaHy5lbHJpLnYxLnN5bmMuQWRkTWVtYmVyUmVzcG9uc2USQwoGU3VibWl0EhsuZWxyaS52MS5zeW5jLlN1Ym1pdFJlcXVlc3QaHC5lbHJpLnYxLnN5bmMuU3VibWl0UmVzcG9uc2USPQoEUHVsbBIZLmVscmkudjEuc3luYy5QdWxsUmVxdWVzdBoaLmVscmkudjEuc3luYy5QdWxsUmVzcG9uc2USSwoJU3Vic2NyaWJlEh4uZWxyaS52MS5zeW5jLlN1YnNjcmliZVJlcXVlc3QaHC5lbHJpLnYxLnN5bmMuU3Vic2NyaWJlRXZlbnQwARJSCgtQdXJnZU9iamVjdBIgLmVscmkudjEuc3luYy5QdXJnZU9iamVjdFJlcXVlc3QaIS5lbHJpLnYxLnN5bmMuUHVyZ2VPYmplY3RSZXNwb25zZRJRCgpVcGxvYWRCbG9iEh8uZWxyaS52MS5zeW5jLlVwbG9hZEJsb2JSZXF1ZXN0GiAuZWxyaS52MS5zeW5jLlVwbG9hZEJsb2JSZXNwb25zZSgBEkwKDERvd25sb2FkQmxvYhIhLmVscmkudjEuc3luYy5Eb3dubG9hZEJsb2JSZXF1ZXN0GhcuZWxyaS52MS5zeW5jLkJsb2JDaHVuazABElgKDVBpbkRlZmluaXRpb24SIi5lbHJpLnYxLnN5bmMuUGluRGVmaW5pdGlvblJlcXVlc3QaIy5lbHJpLnYxLnN5bmMuUGluRGVmaW5pdGlvblJlc3BvbnNlYgZwcm90bzM", [file_elri_v1_definition_domain, file_elri_v1_space_domain, file_elri_v1_sync_domain]);
+
+/**
+ * @generated from message elri.v1.sync.PinDefinitionRequest
+ */
+export type PinDefinitionRequest = Message<"elri.v1.sync.PinDefinitionRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string publication_id = 2;
+   */
+  publicationId: string;
+
+  /**
+   * @generated from field: int64 expected_epoch = 3;
+   */
+  expectedEpoch: bigint;
+};
+
+/**
+ * @generated from message elri.v1.sync.PinDefinitionRequest
+ */
+export type PinDefinitionRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string publication_id = 2;
+   */
+  publicationId?: string;
+
+  /**
+   * @generated from field: int64 expected_epoch = 3;
+   */
+  expectedEpoch?: string;
+};
+
+/**
+ * Describes the message elri.v1.sync.PinDefinitionRequest.
+ * Use `create(PinDefinitionRequestSchema)` to create a new message.
+ */
+export const PinDefinitionRequestSchema: GenMessage<PinDefinitionRequest, {jsonType: PinDefinitionRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_sync_sync, 0);
+
+/**
+ * @generated from message elri.v1.sync.PinDefinitionResponse
+ */
+export type PinDefinitionResponse = Message<"elri.v1.sync.PinDefinitionResponse"> & {
+  /**
+   * @generated from field: elri.v1.definition.Pin pin = 1;
+   */
+  pin?: Pin | undefined;
+};
+
+/**
+ * @generated from message elri.v1.sync.PinDefinitionResponse
+ */
+export type PinDefinitionResponseJson = {
+  /**
+   * @generated from field: elri.v1.definition.Pin pin = 1;
+   */
+  pin?: PinJson;
+};
+
+/**
+ * Describes the message elri.v1.sync.PinDefinitionResponse.
+ * Use `create(PinDefinitionResponseSchema)` to create a new message.
+ */
+export const PinDefinitionResponseSchema: GenMessage<PinDefinitionResponse, {jsonType: PinDefinitionResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_sync_sync, 1);
 
 /**
  * @generated from message elri.v1.sync.BlobHeader
@@ -65,7 +141,7 @@ export type BlobHeaderJson = {
  * Use `create(BlobHeaderSchema)` to create a new message.
  */
 export const BlobHeaderSchema: GenMessage<BlobHeader, {jsonType: BlobHeaderJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 0);
+  messageDesc(file_elri_v1_sync_sync, 2);
 
 /**
  * @generated from message elri.v1.sync.UploadBlobRequest
@@ -109,7 +185,7 @@ export type UploadBlobRequestJson = {
  * Use `create(UploadBlobRequestSchema)` to create a new message.
  */
 export const UploadBlobRequestSchema: GenMessage<UploadBlobRequest, {jsonType: UploadBlobRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 1);
+  messageDesc(file_elri_v1_sync_sync, 3);
 
 /**
  * @generated from message elri.v1.sync.BlobChunk
@@ -136,7 +212,7 @@ export type BlobChunkJson = {
  * Use `create(BlobChunkSchema)` to create a new message.
  */
 export const BlobChunkSchema: GenMessage<BlobChunk, {jsonType: BlobChunkJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 2);
+  messageDesc(file_elri_v1_sync_sync, 4);
 
 /**
  * @generated from message elri.v1.sync.UploadBlobResponse
@@ -167,7 +243,7 @@ export type UploadBlobResponseJson = {
  * Use `create(UploadBlobResponseSchema)` to create a new message.
  */
 export const UploadBlobResponseSchema: GenMessage<UploadBlobResponse, {jsonType: UploadBlobResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 3);
+  messageDesc(file_elri_v1_sync_sync, 5);
 
 /**
  * @generated from message elri.v1.sync.DownloadBlobRequest
@@ -204,7 +280,7 @@ export type DownloadBlobRequestJson = {
  * Use `create(DownloadBlobRequestSchema)` to create a new message.
  */
 export const DownloadBlobRequestSchema: GenMessage<DownloadBlobRequest, {jsonType: DownloadBlobRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 4);
+  messageDesc(file_elri_v1_sync_sync, 6);
 
 /**
  * @generated from message elri.v1.sync.PurgeObjectRequest
@@ -241,7 +317,7 @@ export type PurgeObjectRequestJson = {
  * Use `create(PurgeObjectRequestSchema)` to create a new message.
  */
 export const PurgeObjectRequestSchema: GenMessage<PurgeObjectRequest, {jsonType: PurgeObjectRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 5);
+  messageDesc(file_elri_v1_sync_sync, 7);
 
 /**
  * @generated from message elri.v1.sync.PurgeObjectResponse
@@ -272,7 +348,7 @@ export type PurgeObjectResponseJson = {
  * Use `create(PurgeObjectResponseSchema)` to create a new message.
  */
 export const PurgeObjectResponseSchema: GenMessage<PurgeObjectResponse, {jsonType: PurgeObjectResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 6);
+  messageDesc(file_elri_v1_sync_sync, 8);
 
 /**
  * @generated from message elri.v1.sync.HelloRequest
@@ -309,7 +385,7 @@ export type HelloRequestJson = {
  * Use `create(HelloRequestSchema)` to create a new message.
  */
 export const HelloRequestSchema: GenMessage<HelloRequest, {jsonType: HelloRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 7);
+  messageDesc(file_elri_v1_sync_sync, 9);
 
 /**
  * @generated from message elri.v1.sync.HelloResponse
@@ -356,7 +432,7 @@ export type HelloResponseJson = {
  * Use `create(HelloResponseSchema)` to create a new message.
  */
 export const HelloResponseSchema: GenMessage<HelloResponse, {jsonType: HelloResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 8);
+  messageDesc(file_elri_v1_sync_sync, 10);
 
 /**
  * @generated from message elri.v1.sync.ListSpacesRequest
@@ -375,7 +451,7 @@ export type ListSpacesRequestJson = {
  * Use `create(ListSpacesRequestSchema)` to create a new message.
  */
 export const ListSpacesRequestSchema: GenMessage<ListSpacesRequest, {jsonType: ListSpacesRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 9);
+  messageDesc(file_elri_v1_sync_sync, 11);
 
 /**
  * @generated from message elri.v1.sync.ListSpacesResponse
@@ -402,7 +478,7 @@ export type ListSpacesResponseJson = {
  * Use `create(ListSpacesResponseSchema)` to create a new message.
  */
 export const ListSpacesResponseSchema: GenMessage<ListSpacesResponse, {jsonType: ListSpacesResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 10);
+  messageDesc(file_elri_v1_sync_sync, 12);
 
 /**
  * @generated from message elri.v1.sync.CreateSpaceRequest
@@ -429,7 +505,7 @@ export type CreateSpaceRequestJson = {
  * Use `create(CreateSpaceRequestSchema)` to create a new message.
  */
 export const CreateSpaceRequestSchema: GenMessage<CreateSpaceRequest, {jsonType: CreateSpaceRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 11);
+  messageDesc(file_elri_v1_sync_sync, 13);
 
 /**
  * @generated from message elri.v1.sync.CreateSpaceResponse
@@ -456,7 +532,7 @@ export type CreateSpaceResponseJson = {
  * Use `create(CreateSpaceResponseSchema)` to create a new message.
  */
 export const CreateSpaceResponseSchema: GenMessage<CreateSpaceResponse, {jsonType: CreateSpaceResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 12);
+  messageDesc(file_elri_v1_sync_sync, 14);
 
 /**
  * @generated from message elri.v1.sync.AddMemberRequest
@@ -503,7 +579,7 @@ export type AddMemberRequestJson = {
  * Use `create(AddMemberRequestSchema)` to create a new message.
  */
 export const AddMemberRequestSchema: GenMessage<AddMemberRequest, {jsonType: AddMemberRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 13);
+  messageDesc(file_elri_v1_sync_sync, 15);
 
 /**
  * @generated from message elri.v1.sync.AddMemberResponse
@@ -522,7 +598,7 @@ export type AddMemberResponseJson = {
  * Use `create(AddMemberResponseSchema)` to create a new message.
  */
 export const AddMemberResponseSchema: GenMessage<AddMemberResponse, {jsonType: AddMemberResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 14);
+  messageDesc(file_elri_v1_sync_sync, 16);
 
 /**
  * @generated from message elri.v1.sync.SubmitRequest
@@ -549,7 +625,7 @@ export type SubmitRequestJson = {
  * Use `create(SubmitRequestSchema)` to create a new message.
  */
 export const SubmitRequestSchema: GenMessage<SubmitRequest, {jsonType: SubmitRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 15);
+  messageDesc(file_elri_v1_sync_sync, 17);
 
 /**
  * @generated from message elri.v1.sync.Rejection
@@ -586,7 +662,7 @@ export type RejectionJson = {
  * Use `create(RejectionSchema)` to create a new message.
  */
 export const RejectionSchema: GenMessage<Rejection, {jsonType: RejectionJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 16);
+  messageDesc(file_elri_v1_sync_sync, 18);
 
 /**
  * @generated from enum elri.v1.sync.Rejection.Reason
@@ -642,7 +718,7 @@ export type Rejection_ReasonJson = "REASON_UNSPECIFIED" | "REASON_PERMISSION_DEN
  * Describes the enum elri.v1.sync.Rejection.Reason.
  */
 export const Rejection_ReasonSchema: GenEnum<Rejection_Reason, Rejection_ReasonJson> = /*@__PURE__*/
-  enumDesc(file_elri_v1_sync_sync, 16, 0);
+  enumDesc(file_elri_v1_sync_sync, 18, 0);
 
 /**
  * @generated from message elri.v1.sync.SubmitResponse
@@ -686,7 +762,7 @@ export type SubmitResponseJson = {
  * Use `create(SubmitResponseSchema)` to create a new message.
  */
 export const SubmitResponseSchema: GenMessage<SubmitResponse, {jsonType: SubmitResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 17);
+  messageDesc(file_elri_v1_sync_sync, 19);
 
 /**
  * @generated from message elri.v1.sync.PullRequest
@@ -737,7 +813,7 @@ export type PullRequestJson = {
  * Use `create(PullRequestSchema)` to create a new message.
  */
 export const PullRequestSchema: GenMessage<PullRequest, {jsonType: PullRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 18);
+  messageDesc(file_elri_v1_sync_sync, 20);
 
 /**
  * @generated from message elri.v1.sync.PullResponse
@@ -774,7 +850,7 @@ export type PullResponseJson = {
  * Use `create(PullResponseSchema)` to create a new message.
  */
 export const PullResponseSchema: GenMessage<PullResponse, {jsonType: PullResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 19);
+  messageDesc(file_elri_v1_sync_sync, 21);
 
 /**
  * @generated from message elri.v1.sync.SubscribeRequest
@@ -801,7 +877,7 @@ export type SubscribeRequestJson = {
  * Use `create(SubscribeRequestSchema)` to create a new message.
  */
 export const SubscribeRequestSchema: GenMessage<SubscribeRequest, {jsonType: SubscribeRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 20);
+  messageDesc(file_elri_v1_sync_sync, 22);
 
 /**
  * @generated from message elri.v1.sync.SubscribeEvent
@@ -838,7 +914,7 @@ export type SubscribeEventJson = {
  * Use `create(SubscribeEventSchema)` to create a new message.
  */
 export const SubscribeEventSchema: GenMessage<SubscribeEvent, {jsonType: SubscribeEventJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 21);
+  messageDesc(file_elri_v1_sync_sync, 23);
 
 /**
  *
@@ -949,6 +1025,16 @@ export const SyncService: GenService<{
     methodKind: "server_streaming";
     input: typeof DownloadBlobRequestSchema;
     output: typeof BlobChunkSchema;
+  },
+  /**
+   * Owner/Admin: pins a publication against an expected schema epoch. 
+   *
+   * @generated from rpc elri.v1.sync.SyncService.PinDefinition
+   */
+  pinDefinition: {
+    methodKind: "unary";
+    input: typeof PinDefinitionRequestSchema;
+    output: typeof PinDefinitionResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_sync_sync, 0);

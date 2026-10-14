@@ -24,6 +24,8 @@ enum ObjectKind {
     OBJECT_KIND_RULE = 9;
     /* A tree of interface nodes drawn by the renderer; see elri.v1.ui. */
     OBJECT_KIND_INTERFACE = 10;
+    /* An immutable published version of a definition; see elri.v1.definition. */
+    OBJECT_KIND_PUBLICATION = 11;
 }
 
 /* Items of a list value; scalars only. */

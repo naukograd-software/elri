@@ -246,6 +246,23 @@ pub struct SpaceLogRow {
     pub accepted_at: i64,
     /// Purge entries: the erased Object.
     pub purged_object_id: Option<Uuid>,
+    /// Pin entries: the pin as JSON.
+    pub pin_json: Option<String>,
+}
+
+/// The publication a Space has agreed to use for a definition.
+#[derive(Debug, toasty::Model)]
+#[table = "pins"]
+pub struct PinRow {
+    /// The definition.
+    #[key]
+    pub definition_id: Uuid,
+    /// The publication pinned.
+    pub publication_id: Uuid,
+    /// Its version number.
+    pub version: i64,
+    /// Schema epoch after this pin.
+    pub epoch: i64,
 }
 
 /// Attachment bytes this device holds for the Space, by digest.

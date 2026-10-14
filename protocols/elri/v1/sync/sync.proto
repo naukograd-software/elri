@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package elri.v1.sync;
 
+import "elri/v1/definition/domain.proto";
 import "elri/v1/space/domain.proto";
 import "elri/v1/sync/domain.proto";
 
@@ -32,6 +33,18 @@ service SyncService {
     rpc UploadBlob(stream UploadBlobRequest) returns (UploadBlobResponse);
     /* Streams attachment bytes of a Space the caller belongs to. */
     rpc DownloadBlob(DownloadBlobRequest) returns (stream BlobChunk);
+    /* Owner/Admin: pins a publication against an expected schema epoch. */
+    rpc PinDefinition(PinDefinitionRequest) returns (PinDefinitionResponse);
+}
+
+message PinDefinitionRequest {
+    string space_id = 1;
+    string publication_id = 2;
+    int64 expected_epoch = 3;
+}
+
+message PinDefinitionResponse {
+    elri.v1.definition.Pin pin = 1;
 }
 
 message BlobHeader {

@@ -41,8 +41,9 @@ pub struct Envelope {
     pub actor: ::prost::alloc::string::String,
 }
 ///
-/// One position in the Space log: an accepted Change, or the purge of an
-/// Object, in which case `change` is unset and `purged_object_id` names it.
+/// One position in the Space log: an accepted Change; the purge of an Object
+/// (`change` unset, `purged_object_id` names it); or a schema pin (`change`
+/// unset, `pin` set).
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Entry {
     #[prost(int64, tag = "1")]
@@ -53,6 +54,22 @@ pub struct Entry {
     pub accepted_at_ms: i64,
     #[prost(string, tag = "4")]
     pub purged_object_id: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "5")]
+    pub pin: ::core::option::Option<super::definition::Pin>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PinDefinitionRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub publication_id: ::prost::alloc::string::String,
+    #[prost(int64, tag = "3")]
+    pub expected_epoch: i64,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PinDefinitionResponse {
+    #[prost(message, optional, tag = "1")]
+    pub pin: ::core::option::Option<super::definition::Pin>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BlobHeader {

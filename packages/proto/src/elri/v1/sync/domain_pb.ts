@@ -4,6 +4,8 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Pin, PinJson } from "../definition/domain_pb.ts";
+import { file_elri_v1_definition_domain } from "../definition/domain_pb.ts";
 import type { ObjectKind, ObjectKindJson } from "../object/domain_pb.ts";
 import { file_elri_v1_object_domain } from "../object/domain_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/sync/domain.proto.
  */
 export const file_elri_v1_sync_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChllbHJpL3YxL3N5bmMvZG9tYWluLnByb3RvEgxlbHJpLnYxLnN5bmMijgEKBFBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEhQKDGZyb21fdmVyc2lvbhgDIAEoDBISCgp0b192ZXJzaW9uGAQgASgMEg0KBWJ5dGVzGAUgASgMEhAKCHNwYWNlX2lkGAYgASgJIoQBCghFbnZlbG9wZRIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkSFQoNY3JlYXRlZF9hdF9tcxgEIAEoAxIhCgVwYXJ0cxgFIAMoCzISLmVscmkudjEuc3luYy5QYXJ0Eg0KBWFjdG9yGAYgASgJIm4KBUVudHJ5EgsKA3NlcRgBIAEoAxImCgZjaGFuZ2UYAiABKAsyFi5lbHJpLnYxLnN5bmMuRW52ZWxvcGUSFgoOYWNjZXB0ZWRfYXRfbXMYAyABKAMSGAoQcHVyZ2VkX29iamVjdF9pZBgEIAEoCWIGcHJvdG8z", [file_elri_v1_object_domain]);
+  fileDesc("ChllbHJpL3YxL3N5bmMvZG9tYWluLnByb3RvEgxlbHJpLnYxLnN5bmMijgEKBFBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEhQKDGZyb21fdmVyc2lvbhgDIAEoDBISCgp0b192ZXJzaW9uGAQgASgMEg0KBWJ5dGVzGAUgASgMEhAKCHNwYWNlX2lkGAYgASgJIoQBCghFbnZlbG9wZRIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkSFQoNY3JlYXRlZF9hdF9tcxgEIAEoAxIhCgVwYXJ0cxgFIAMoCzISLmVscmkudjEuc3luYy5QYXJ0Eg0KBWFjdG9yGAYgASgJIpQBCgVFbnRyeRILCgNzZXEYASABKAMSJgoGY2hhbmdlGAIgASgLMhYuZWxyaS52MS5zeW5jLkVudmVsb3BlEhYKDmFjY2VwdGVkX2F0X21zGAMgASgDEhgKEHB1cmdlZF9vYmplY3RfaWQYBCABKAkSJAoDcGluGAUgASgLMhcuZWxyaS52MS5kZWZpbml0aW9uLlBpbmIGcHJvdG8z", [file_elri_v1_definition_domain, file_elri_v1_object_domain]);
 
 /**
  * The operations a Change added to one document. 
@@ -206,8 +208,9 @@ export const EnvelopeSchema: GenMessage<Envelope, {jsonType: EnvelopeJson}> = /*
 
 /**
  *
- * One position in the Space log: an accepted Change, or the purge of an
- * Object, in which case `change` is unset and `purged_object_id` names it.
+ * One position in the Space log: an accepted Change; the purge of an Object
+ * (`change` unset, `purged_object_id` names it); or a schema pin (`change`
+ * unset, `pin` set).
  *
  * @generated from message elri.v1.sync.Entry
  */
@@ -231,12 +234,18 @@ export type Entry = Message<"elri.v1.sync.Entry"> & {
    * @generated from field: string purged_object_id = 4;
    */
   purgedObjectId: string;
+
+  /**
+   * @generated from field: elri.v1.definition.Pin pin = 5;
+   */
+  pin?: Pin | undefined;
 };
 
 /**
  *
- * One position in the Space log: an accepted Change, or the purge of an
- * Object, in which case `change` is unset and `purged_object_id` names it.
+ * One position in the Space log: an accepted Change; the purge of an Object
+ * (`change` unset, `purged_object_id` names it); or a schema pin (`change`
+ * unset, `pin` set).
  *
  * @generated from message elri.v1.sync.Entry
  */
@@ -260,6 +269,11 @@ export type EntryJson = {
    * @generated from field: string purged_object_id = 4;
    */
   purgedObjectId?: string;
+
+  /**
+   * @generated from field: elri.v1.definition.Pin pin = 5;
+   */
+  pin?: PinJson;
 };
 
 /**

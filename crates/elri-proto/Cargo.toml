@@ -31,6 +31,6 @@ proto_full = ["elri-v1-account","elri-v1-attachment","elri-v1-backup","elri-v1-c
 "elri-v1-script" = ["elri-v1-object"]
 "elri-v1-search" = ["elri-v1-object"]
 "elri-v1-space" = []
-"elri-v1-sync" = ["elri-v1-object","elri-v1-space"]
+"elri-v1-sync" = ["elri-v1-definition","elri-v1-object","elri-v1-space"]
 "elri-v1-ui" = []
 ## @@protoc_insertion_point(features)

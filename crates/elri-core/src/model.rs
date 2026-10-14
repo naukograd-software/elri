@@ -22,7 +22,7 @@
 
 use std::collections::HashMap;
 
-use elri_proto::elri::v1::definition::{FieldKind, TypeField};
+use elri_proto::elri::v1::definition::{FieldKind, Publication, TypeField};
 use elri_proto::elri::v1::object::{
     value, Object, ObjectKind, Participant, Placement, Value, ValueList,
 };
@@ -91,8 +91,35 @@ pub fn is_managed(kind: ObjectKind) -> bool {
     is_definition(kind)
         || matches!(
             kind,
-            ObjectKind::Attachment | ObjectKind::Script | ObjectKind::Rule | ObjectKind::Interface
+            ObjectKind::Attachment
+                | ObjectKind::Script
+                | ObjectKind::Rule
+                | ObjectKind::Interface
+                | ObjectKind::Publication
         )
+}
+
+/// The protocol view of a publication Object.
+pub fn publication_of(o: &Object) -> Option<Publication> {
+    if o.kind() != ObjectKind::Publication {
+        return None;
+    }
+    let deps: HashMap<String, i32> =
+        serde_json::from_str(string_field(o, reserved::DEPS).unwrap_or("{}")).unwrap_or_default();
+    Some(Publication {
+        id: o.id.clone(),
+        space_id: o.space_id.clone(),
+        definition_id: string_field(o, reserved::OF).unwrap_or_default().to_owned(),
+        version: i32::try_from(int_field(o, reserved::VERSION).unwrap_or(0)).unwrap_or(0),
+        snapshot_json: string_field(o, reserved::SNAPSHOT)
+            .unwrap_or("{}")
+            .to_owned(),
+        dependencies: deps,
+        digest: string_field(o, reserved::DIGEST)
+            .unwrap_or_default()
+            .to_owned(),
+        created_at_ms: o.created_at_ms,
+    })
 }
 
 /// An integer field, if present.
@@ -149,6 +176,16 @@ pub mod reserved {
     pub const SIZE: &str = "$size";
     /// Media type of an attachment.
     pub const MEDIA_TYPE: &str = "$media_type";
+    /// Publications: the definition published.
+    pub const OF: &str = "$of";
+    /// Publications: the version number.
+    pub const VERSION: &str = "$version";
+    /// Publications: canonical JSON snapshot of the definition.
+    pub const SNAPSHOT: &str = "$snapshot";
+    /// Publications: dependency versions as JSON.
+    pub const DEPS: &str = "$deps";
+    /// Publications: hex SHA-256 over snapshot and dependencies.
+    pub const DIGEST: &str = "$digest";
 }
 
 const REF_TAG: &str = "$ref";

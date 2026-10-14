@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, firstResponse, iterateStream, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { AddMemberRequest, AddMemberResponse, BlobChunk, CreateSpaceRequest, CreateSpaceResponse, DownloadBlobRequest, HelloRequest, HelloResponse, ListSpacesRequest, ListSpacesResponse, PullRequest, PullResponse, PurgeObjectRequest, PurgeObjectResponse, SubmitRequest, SubmitResponse, SubscribeEvent, SubscribeRequest, UploadBlobRequest, UploadBlobResponse } from "./sync_pb.ts";
-import { AddMemberRequestSchema, AddMemberResponseSchema, BlobChunkSchema, CreateSpaceRequestSchema, CreateSpaceResponseSchema, DownloadBlobRequestSchema, HelloRequestSchema, HelloResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, PullRequestSchema, PullResponseSchema, PurgeObjectRequestSchema, PurgeObjectResponseSchema, SubmitRequestSchema, SubmitResponseSchema, SubscribeEventSchema, SubscribeRequestSchema, UploadBlobRequestSchema, UploadBlobResponseSchema } from "./sync_pb.ts";
+import type { AddMemberRequest, AddMemberResponse, BlobChunk, CreateSpaceRequest, CreateSpaceResponse, DownloadBlobRequest, HelloRequest, HelloResponse, ListSpacesRequest, ListSpacesResponse, PinDefinitionRequest, PinDefinitionResponse, PullRequest, PullResponse, PurgeObjectRequest, PurgeObjectResponse, SubmitRequest, SubmitResponse, SubscribeEvent, SubscribeRequest, UploadBlobRequest, UploadBlobResponse } from "./sync_pb.ts";
+import { AddMemberRequestSchema, AddMemberResponseSchema, BlobChunkSchema, CreateSpaceRequestSchema, CreateSpaceResponseSchema, DownloadBlobRequestSchema, HelloRequestSchema, HelloResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, PinDefinitionRequestSchema, PinDefinitionResponseSchema, PullRequestSchema, PullResponseSchema, PurgeObjectRequestSchema, PurgeObjectResponseSchema, SubmitRequestSchema, SubmitResponseSchema, SubscribeEventSchema, SubscribeRequestSchema, UploadBlobRequestSchema, UploadBlobResponseSchema } from "./sync_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -97,6 +97,14 @@ const SyncService_DownloadBlob: MethodInfo<DownloadBlobRequest, BlobChunk> = {
   kind: "server_streaming",
   input: DownloadBlobRequestSchema,
   output: BlobChunkSchema,
+};
+
+const SyncService_PinDefinition: MethodInfo<PinDefinitionRequest, PinDefinitionResponse> = {
+  typeName: "elri.v1.sync.SyncService",
+  name: "PinDefinition",
+  kind: "unary",
+  input: PinDefinitionRequestSchema,
+  output: PinDefinitionResponseSchema,
 };
 
 /**
@@ -209,6 +217,16 @@ export class SyncServiceClient {
   async *downloadBlob(req: DownloadBlobRequest, options?: CallOptions): AsyncIterable<BlobChunk> {
     const res = await this.transport.stream(SyncService_DownloadBlob, (async function* () { yield req; })(), { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     yield* iterateStream(res, options);
+  }
+
+  /**
+   * Owner/Admin: pins a publication against an expected schema epoch. 
+   *
+   * @generated from rpc elri.v1.sync.SyncService.PinDefinition
+   */
+  async pinDefinition(req: PinDefinitionRequest, options?: CallOptions): Promise<PinDefinitionResponse> {
+    const res = await this.transport.unary(SyncService_PinDefinition, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
   }
 
 }

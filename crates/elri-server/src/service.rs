@@ -28,9 +28,9 @@ use elri_proto::elri::v1::sync::sync_service_ws::{
 use elri_proto::elri::v1::sync::{
     upload_blob_request, AddMemberRequest, AddMemberResponse, BlobChunk, CreateSpaceRequest,
     CreateSpaceResponse, DownloadBlobRequest, HelloRequest, HelloResponse, ListSpacesRequest,
-    ListSpacesResponse, PullRequest, PullResponse, PurgeObjectRequest, PurgeObjectResponse,
-    SubmitRequest, SubmitResponse, SubscribeEvent, SubscribeRequest, UploadBlobRequest,
-    UploadBlobResponse,
+    ListSpacesResponse, PinDefinitionRequest, PinDefinitionResponse, PullRequest, PullResponse,
+    PurgeObjectRequest, PurgeObjectResponse, SubmitRequest, SubmitResponse, SubscribeEvent,
+    SubscribeRequest, UploadBlobRequest, UploadBlobResponse,
 };
 use uuid::Uuid;
 use ws_proto::{Code, Metadata, Request, Response, Server, Status};
@@ -66,7 +66,10 @@ fn storage(e: elri_core::store::StoreError) -> Status {
     use elri_core::store::StoreError as E;
     match e {
         E::SpaceNotFound(_) | E::ObjectNotFound(_) => Status::new(Code::NotFound, e.to_string()),
-        E::NotDeleted(_) | E::Purged(_) => Status::new(Code::FailedPrecondition, e.to_string()),
+        E::NotDeleted(_) | E::Purged(_) | E::EpochMoved { .. } => {
+            Status::new(Code::FailedPrecondition, e.to_string())
+        }
+        E::NotPublication(_) => invalid(e.to_string()),
         other => {
             tracing::error!(error = %other, "storage failure");
             Status::new(Code::Internal, "storage failure")
@@ -515,6 +518,33 @@ impl SyncServiceHandler for State {
         let has_more = entries.len() > limit;
         let entries = entries.into_iter().take(limit).collect();
         Ok(Response::new(PullResponse { entries, has_more }))
+    }
+
+    async fn pin_definition(
+        &self,
+        req: Request<PinDefinitionRequest>,
+    ) -> Result<Response<PinDefinitionResponse>, Status> {
+        let user = self.user(&req.header).await?;
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let publication = parse_id(&req.msg.publication_id, "publication_id")?;
+        if !self.role(space_id, &user).await?.can_manage() {
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "owner or admin required",
+            ));
+        }
+        let space = self
+            .spaces
+            .space(ObjectId::from_uuid(space_id))
+            .await
+            .map_err(storage)?;
+        let pin = space
+            .pin_definition(ObjectId::from_uuid(publication), req.msg.expected_epoch)
+            .await
+            .map_err(storage)?;
+        let seq = space.last_seq().await.map_err(storage)?;
+        let _ = self.events.send((space_id, seq));
+        Ok(Response::new(PinDefinitionResponse { pin: Some(pin) }))
     }
 
     async fn upload_blob(

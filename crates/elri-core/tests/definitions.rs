@@ -8,9 +8,10 @@ use std::collections::HashMap;
 use elri_core::{BuildInfo, Config, Core, Endpoint};
 use elri_proto::elri::v1::definition::definition_service_ws::DefinitionServiceClient;
 use elri_proto::elri::v1::definition::{
-    CreateFieldDefinitionRequest, CreateTypeDefinitionRequest, FieldKind,
-    ListFieldDefinitionsRequest, ListTypeDefinitionsRequest, TypeField,
-    UpdateFieldDefinitionRequest, UpdateTypeDefinitionRequest,
+    CreateFieldDefinitionRequest, CreateTypeDefinitionRequest, FieldKind, GetSchemaRequest,
+    ListFieldDefinitionsRequest, ListPublicationsRequest, ListTypeDefinitionsRequest,
+    PinDefinitionRequest, PublishDefinitionRequest, TypeField, UpdateFieldDefinitionRequest,
+    UpdateTypeDefinitionRequest,
 };
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
@@ -256,4 +257,219 @@ async fn definitions_fix_field_kinds() {
         }))
         .await
         .expect("no rule after deletion");
+}
+
+#[tokio::test]
+async fn publications_are_immutable_and_pins_move_the_epoch() {
+    let dir = tmp_dir("pins");
+    let _core = Core::start(Config::new(
+        &dir,
+        BuildInfo {
+            version: "test",
+            commit: "",
+        },
+    ))
+    .await
+    .expect("start");
+    let endpoint = Endpoint::read(&dir).expect("endpoint");
+    let conn = Client::dial(&endpoint.url, ClientConfig::default())
+        .await
+        .expect("dial");
+    let sess = Session {
+        endpoint,
+        spaces: SpaceServiceClient::new(conn.clone()),
+        objects: ObjectServiceClient::new(conn.clone()),
+        defs: DefinitionServiceClient::new(conn),
+    };
+    let space = sess
+        .spaces
+        .create_space(sess.authed(CreateSpaceRequest { name: "s".into() }))
+        .await
+        .expect("space")
+        .msg
+        .space
+        .expect("space");
+    let due = sess
+        .defs
+        .create_field_definition(sess.authed(CreateFieldDefinitionRequest {
+            space_id: space.id.clone(),
+            name: "Due".into(),
+            description: String::new(),
+            kind: FieldKind::Time.into(),
+        }))
+        .await
+        .expect("field")
+        .msg
+        .definition
+        .expect("definition");
+    let task = sess
+        .defs
+        .create_type_definition(sess.authed(CreateTypeDefinitionRequest {
+            space_id: space.id.clone(),
+            name: "Task".into(),
+            description: String::new(),
+            fields: vec![TypeField {
+                field_id: due.id.clone(),
+                required: true,
+            }],
+        }))
+        .await
+        .expect("type")
+        .msg
+        .definition
+        .expect("definition");
+
+    // Publishing the type publishes its unpublished field first; the
+    // dependency is exact and the digest covers both.
+    let p1 = sess
+        .defs
+        .publish_definition(sess.authed(PublishDefinitionRequest {
+            space_id: space.id.clone(),
+            id: task.id.clone(),
+        }))
+        .await
+        .expect("publish")
+        .msg
+        .publication
+        .expect("publication");
+    assert_eq!(p1.version, 1);
+    assert_eq!(p1.definition_id, task.id);
+    assert_eq!(p1.dependencies.get(&due.id), Some(&1));
+    assert_eq!(p1.digest.len(), 64);
+    let snapshot: serde_json::Value = serde_json::from_str(&p1.snapshot_json).expect("json");
+    assert_eq!(snapshot["name"], "Task");
+    assert_eq!(snapshot["fields"][0]["field_id"], due.id);
+    assert_eq!(snapshot["fields"][0]["version"], 1);
+    let all = sess
+        .defs
+        .list_publications(sess.authed(ListPublicationsRequest {
+            space_id: space.id.clone(),
+            definition_id: String::new(),
+        }))
+        .await
+        .expect("list")
+        .msg
+        .publications;
+    assert_eq!(all.len(), 2, "type and field");
+
+    // Renaming the live definition does not touch the publication; a second
+    // publication is version 2 with the new name.
+    sess.defs
+        .update_type_definition(sess.authed(UpdateTypeDefinitionRequest {
+            space_id: space.id.clone(),
+            id: task.id.clone(),
+            name: Some("Chore".into()),
+            ..Default::default()
+        }))
+        .await
+        .expect("rename");
+    let p2 = sess
+        .defs
+        .publish_definition(sess.authed(PublishDefinitionRequest {
+            space_id: space.id.clone(),
+            id: task.id.clone(),
+        }))
+        .await
+        .expect("publish")
+        .msg
+        .publication
+        .expect("publication");
+    assert_eq!(p2.version, 2);
+    assert_ne!(p2.digest, p1.digest);
+    let still = sess
+        .defs
+        .list_publications(sess.authed(ListPublicationsRequest {
+            space_id: space.id.clone(),
+            definition_id: task.id.clone(),
+        }))
+        .await
+        .expect("list")
+        .msg
+        .publications;
+    assert_eq!(still[1].snapshot_json, p1.snapshot_json);
+
+    // Pins move the epoch; a stale expected epoch is refused.
+    let schema = sess
+        .defs
+        .get_schema(sess.authed(GetSchemaRequest {
+            space_id: space.id.clone(),
+        }))
+        .await
+        .expect("schema")
+        .msg
+        .schema
+        .expect("schema");
+    assert_eq!(schema.epoch, 0);
+    assert!(schema.pins.is_empty());
+    let pin = sess
+        .defs
+        .pin_definition(sess.authed(PinDefinitionRequest {
+            space_id: space.id.clone(),
+            publication_id: p1.id.clone(),
+            expected_epoch: 0,
+        }))
+        .await
+        .expect("pin")
+        .msg
+        .pin
+        .expect("pin");
+    assert_eq!(pin.epoch, 1);
+    assert_eq!(pin.version, 1);
+    let stale = sess
+        .defs
+        .pin_definition(sess.authed(PinDefinitionRequest {
+            space_id: space.id.clone(),
+            publication_id: p2.id.clone(),
+            expected_epoch: 0,
+        }))
+        .await
+        .expect_err("epoch moved");
+    assert_eq!(stale.code, Code::FailedPrecondition);
+    let not_a_publication = sess
+        .defs
+        .pin_definition(sess.authed(PinDefinitionRequest {
+            space_id: space.id.clone(),
+            publication_id: task.id.clone(),
+            expected_epoch: 1,
+        }))
+        .await
+        .expect_err("not a publication");
+    assert_eq!(not_a_publication.code, Code::InvalidArgument);
+    sess.defs
+        .pin_definition(sess.authed(PinDefinitionRequest {
+            space_id: space.id.clone(),
+            publication_id: p2.id.clone(),
+            expected_epoch: 1,
+        }))
+        .await
+        .expect("pin v2");
+    let schema = sess
+        .defs
+        .get_schema(sess.authed(GetSchemaRequest {
+            space_id: space.id.clone(),
+        }))
+        .await
+        .expect("schema")
+        .msg
+        .schema
+        .expect("schema");
+    assert_eq!(schema.epoch, 2);
+    assert_eq!(schema.pins.len(), 1);
+    assert_eq!(schema.pins[0].version, 2);
+
+    // A pinned field keeps enforcing its published kind.
+    let mut fields = HashMap::new();
+    fields.insert(due.id.clone(), s("not a time"));
+    let err = sess
+        .objects
+        .create_object(sess.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: ObjectKind::Entity.into(),
+            fields,
+            ..Default::default()
+        }))
+        .await
+        .expect_err("kind enforced");
+    assert_eq!(err.code, Code::InvalidArgument);
+    let _ = t(0);
 }

@@ -63,6 +63,56 @@ pub struct RoleDefinition {
     #[prost(int64, optional, tag = "7")]
     pub deleted_at_ms: ::core::option::Option<i64>,
 }
+///
+/// An immutable published version of a definition: its logical snapshot, the
+/// exact versions of the definitions it depends on, and a digest over both.
+/// Pins reference publications, never live definitions, so what a Space
+/// agreed on cannot drift.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Publication {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub space_id: ::prost::alloc::string::String,
+    /// The definition published. 
+    #[prost(string, tag = "3")]
+    pub definition_id: ::prost::alloc::string::String,
+    /// 1, 2, 3, ... per definition. 
+    #[prost(int32, tag = "4")]
+    pub version: i32,
+    /// Canonical JSON of the definition at publication. 
+    #[prost(string, tag = "5")]
+    pub snapshot_json: ::prost::alloc::string::String,
+    /// Definition id → version of the publications this one depends on. 
+    #[prost(map = "string, int32", tag = "6")]
+    pub dependencies: ::std::collections::HashMap<::prost::alloc::string::String, i32>,
+    /// Hex SHA-256 over the canonical snapshot and dependencies. 
+    #[prost(string, tag = "7")]
+    pub digest: ::prost::alloc::string::String,
+    #[prost(int64, tag = "8")]
+    pub created_at_ms: i64,
+}
+/// The version of a definition a Space has agreed to use. 
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Pin {
+    #[prost(string, tag = "1")]
+    pub definition_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub publication_id: ::prost::alloc::string::String,
+    #[prost(int32, tag = "3")]
+    pub version: i32,
+    /// Schema epoch after this pin was applied. 
+    #[prost(int64, tag = "4")]
+    pub epoch: i64,
+}
+/// Every pin of a Space, under one epoch that changes with each pin. 
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Schema {
+    #[prost(int64, tag = "1")]
+    pub epoch: i64,
+    #[prost(message, repeated, tag = "2")]
+    pub pins: ::prost::alloc::vec::Vec<Pin>,
+}
 //
 // Definitions are Objects: a field definition fixes the kind of value a field
 // holds, a type definition groups field definitions, a role definition names a
@@ -118,6 +168,56 @@ impl FieldKind {
             _ => None,
         }
     }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PublishDefinitionRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PublishDefinitionResponse {
+    #[prost(message, optional, tag = "1")]
+    pub publication: ::core::option::Option<Publication>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListPublicationsRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    /// Only publications of this definition, if set. 
+    #[prost(string, tag = "2")]
+    pub definition_id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListPublicationsResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub publications: ::prost::alloc::vec::Vec<Publication>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PinDefinitionRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub publication_id: ::prost::alloc::string::String,
+    /// The epoch the caller saw; the pin is refused if it moved. 
+    #[prost(int64, tag = "3")]
+    pub expected_epoch: i64,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PinDefinitionResponse {
+    #[prost(message, optional, tag = "1")]
+    pub pin: ::core::option::Option<Pin>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetSchemaRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetSchemaResponse {
+    #[prost(message, optional, tag = "1")]
+    pub schema: ::core::option::Option<Schema>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateFieldDefinitionRequest {

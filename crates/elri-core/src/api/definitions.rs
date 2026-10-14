@@ -9,10 +9,12 @@ use elri_proto::elri::v1::definition::definition_service_ws::{
 use elri_proto::elri::v1::definition::{
     self as dpb, CreateFieldDefinitionRequest, CreateFieldDefinitionResponse,
     CreateRoleDefinitionRequest, CreateRoleDefinitionResponse, CreateTypeDefinitionRequest,
-    CreateTypeDefinitionResponse, ListFieldDefinitionsRequest, ListFieldDefinitionsResponse,
+    CreateTypeDefinitionResponse, GetSchemaRequest, GetSchemaResponse, ListFieldDefinitionsRequest,
+    ListFieldDefinitionsResponse, ListPublicationsRequest, ListPublicationsResponse,
     ListRoleDefinitionsRequest, ListRoleDefinitionsResponse, ListTypeDefinitionsRequest,
-    ListTypeDefinitionsResponse, UpdateFieldDefinitionRequest, UpdateFieldDefinitionResponse,
-    UpdateTypeDefinitionRequest, UpdateTypeDefinitionResponse,
+    ListTypeDefinitionsResponse, PinDefinitionRequest, PinDefinitionResponse, Publication,
+    PublishDefinitionRequest, PublishDefinitionResponse, UpdateFieldDefinitionRequest,
+    UpdateFieldDefinitionResponse, UpdateTypeDefinitionRequest, UpdateTypeDefinitionResponse,
 };
 use ws_proto::{Request, Response, Server, Status};
 
@@ -21,10 +23,12 @@ use elri_proto::elri::v1::object::{Object, ObjectKind};
 
 use super::{invalid, parse_id, Services};
 use crate::model::{
-    field_def_kind, int_value, now_ms, reserved, string_field, string_value, ModelError, ObjectDoc,
-    ObjectId,
+    field_def_kind, int_value, is_definition, now_ms, publication_of, reserved, string_field,
+    string_value, ModelError, ObjectDoc, ObjectId, SpaceId,
 };
+use crate::store::SpaceStore;
 use crate::store::{ObjectFilter, StoreError};
+use elri_proto::elri::v1::space::Authority;
 
 pub(super) fn register(server: &Server, services: Arc<Services>) {
     register_definition_service_arc(server, services);
@@ -178,7 +182,224 @@ impl Services {
     }
 }
 
+fn canonical(v: &serde_json::Value) -> String {
+    // serde_json keeps object keys sorted when built from a BTreeMap; the
+    // snapshots below are built that way, so this is canonical.
+    v.to_string()
+}
+
+fn digest(snapshot: &str, deps: &std::collections::BTreeMap<String, i32>) -> String {
+    use sha2::Digest as _;
+    let mut h = sha2::Sha256::new();
+    h.update(snapshot.as_bytes());
+    h.update(b"\0");
+    h.update(serde_json::to_string(deps).unwrap_or_default().as_bytes());
+    h.finalize()
+        .iter()
+        .fold(String::with_capacity(64), |mut s, b| {
+            use std::fmt::Write as _;
+            let _ = write!(s, "{b:02x}");
+            s
+        })
+}
+
+impl Services {
+    async fn publications(
+        &self,
+        space: &SpaceStore,
+        of: Option<&str>,
+    ) -> Result<Vec<Publication>, Status> {
+        let objects = space
+            .list(&ObjectFilter {
+                kind: Some(ObjectKind::Publication),
+                limit: 10_000,
+                ..ObjectFilter::default()
+            })
+            .await?;
+        let mut out: Vec<Publication> = objects
+            .iter()
+            .filter_map(publication_of)
+            .filter(|p| of.is_none_or(|id| p.definition_id == id))
+            .collect();
+        out.sort_by(|a, b| {
+            a.definition_id
+                .cmp(&b.definition_id)
+                .then(b.version.cmp(&a.version))
+        });
+        Ok(out)
+    }
+
+    /// Publishes a definition as its next version. A type definition's
+    /// fields are published first when they have no publication yet, so
+    /// the dependencies are exact.
+    async fn publish(
+        &self,
+        space: &SpaceStore,
+        space_id: SpaceId,
+        id: ObjectId,
+    ) -> Result<Publication, Status> {
+        let def = space.get(id).await?;
+        if !is_definition(def.kind()) {
+            return Err(invalid("id does not name a definition"));
+        }
+        let mut deps: std::collections::BTreeMap<String, i32> = std::collections::BTreeMap::new();
+        let mut snapshot = serde_json::Map::new();
+        snapshot.insert("name".into(), serde_json::Value::String(name_of(&def)));
+        snapshot.insert(
+            "description".into(),
+            serde_json::Value::String(description_of(&def)),
+        );
+        snapshot.insert(
+            "kind".into(),
+            serde_json::Value::String(def.kind().as_str_name().to_lowercase()),
+        );
+        match def.kind() {
+            ObjectKind::FieldDef => {
+                let kind = field_def_kind(&def).unwrap_or(FieldKind::Unspecified);
+                snapshot.insert("kind".into(), serde_json::Value::from(kind as i32));
+                snapshot.insert(
+                    "kind_name".into(),
+                    serde_json::Value::String(kind.as_str_name().to_lowercase()),
+                );
+            }
+            ObjectKind::TypeDef => {
+                let mut fields = Vec::new();
+                for f in &def.type_fields {
+                    let version = match ObjectId::parse(&f.field_id) {
+                        Ok(fid) if space.exists(fid).await? => {
+                            let latest = self
+                                .publications(space, Some(&f.field_id))
+                                .await?
+                                .into_iter()
+                                .next();
+                            let p = match latest {
+                                Some(p) => p,
+                                None => Box::pin(self.publish(space, space_id, fid)).await?,
+                            };
+                            deps.insert(f.field_id.clone(), p.version);
+                            p.version
+                        }
+                        // A field id without a definition in this Space is
+                        // free-form: nothing to pin.
+                        _ => 0,
+                    };
+                    let mut entry = serde_json::Map::new();
+                    entry.insert(
+                        "field_id".into(),
+                        serde_json::Value::String(f.field_id.clone()),
+                    );
+                    entry.insert("required".into(), serde_json::Value::Bool(f.required));
+                    entry.insert("version".into(), serde_json::Value::from(version));
+                    fields.push(serde_json::Value::Object(entry));
+                }
+                snapshot.insert("fields".into(), serde_json::Value::Array(fields));
+            }
+            _ => {}
+        }
+        let snapshot: serde_json::Value = serde_json::Value::Object(
+            snapshot
+                .into_iter()
+                .collect::<std::collections::BTreeMap<_, _>>()
+                .into_iter()
+                .collect(),
+        );
+        let snapshot_json = canonical(&snapshot);
+        let next = self
+            .publications(space, Some(&def.id))
+            .await?
+            .first()
+            .map_or(1, |p| p.version + 1);
+        let doc = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Publication, now_ms())
+            .map_err(StoreError::from)?;
+        doc.set_field(reserved::OF, &string_value(&def.id))
+            .map_err(StoreError::from)?;
+        doc.set_field(reserved::VERSION, &int_value(i64::from(next)))
+            .map_err(StoreError::from)?;
+        doc.set_field(reserved::SNAPSHOT, &string_value(&snapshot_json))
+            .map_err(StoreError::from)?;
+        doc.set_field(
+            reserved::DEPS,
+            &string_value(serde_json::to_string(&deps).unwrap_or_default()),
+        )
+        .map_err(StoreError::from)?;
+        doc.set_field(
+            reserved::DIGEST,
+            &string_value(digest(&snapshot_json, &deps)),
+        )
+        .map_err(StoreError::from)?;
+        doc.touch(now_ms()).map_err(StoreError::from)?;
+        let rec = space.insert(&doc).await?;
+        publication_of(&rec).ok_or_else(|| Status::new(ws_proto::Code::Internal, "publication"))
+    }
+}
+
 impl DefinitionServiceHandler for Services {
+    async fn publish_definition(
+        &self,
+        req: Request<PublishDefinitionRequest>,
+    ) -> Result<Response<PublishDefinitionResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let id = parse_id(&req.msg.id, "id")?;
+        let space = self.store.space(space_id).await?;
+        let publication = self.publish(&space, space_id, id).await?;
+        Ok(Response::new(PublishDefinitionResponse {
+            publication: Some(publication),
+        }))
+    }
+
+    async fn list_publications(
+        &self,
+        req: Request<ListPublicationsRequest>,
+    ) -> Result<Response<ListPublicationsResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let space = self.store.space(space_id).await?;
+        let of = if req.msg.definition_id.is_empty() {
+            None
+        } else {
+            Some(req.msg.definition_id.as_str())
+        };
+        Ok(Response::new(ListPublicationsResponse {
+            publications: self.publications(&space, of).await?,
+        }))
+    }
+
+    async fn pin_definition(
+        &self,
+        req: Request<PinDefinitionRequest>,
+    ) -> Result<Response<PinDefinitionResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let publication = parse_id(&req.msg.publication_id, "publication_id")?;
+        let authority = self
+            .store
+            .list_spaces()
+            .await?
+            .into_iter()
+            .find(|s| s.id == space_id.to_string())
+            .map_or(Authority::Local, |s| s.authority());
+        let pin = if authority == Authority::Server {
+            self.remote
+                .pin_definition(space_id, publication, req.msg.expected_epoch)
+                .await?
+        } else {
+            self.store
+                .space(space_id)
+                .await?
+                .pin_definition(publication, req.msg.expected_epoch)
+                .await?
+        };
+        Ok(Response::new(PinDefinitionResponse { pin: Some(pin) }))
+    }
+
+    async fn get_schema(
+        &self,
+        req: Request<GetSchemaRequest>,
+    ) -> Result<Response<GetSchemaResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        Ok(Response::new(GetSchemaResponse {
+            schema: Some(self.store.space(space_id).await?.schema().await?),
+        }))
+    }
+
     async fn create_field_definition(
         &self,
         req: Request<CreateFieldDefinitionRequest>,

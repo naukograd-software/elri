@@ -61,3 +61,40 @@ message RoleDefinition {
     int64 updated_at_ms = 6;
     optional int64 deleted_at_ms = 7;
 }
+
+/*
+An immutable published version of a definition: its logical snapshot, the
+exact versions of the definitions it depends on, and a digest over both.
+Pins reference publications, never live definitions, so what a Space
+agreed on cannot drift.
+*/
+message Publication {
+    string id = 1;
+    string space_id = 2;
+    /* The definition published. */
+    string definition_id = 3;
+    /* 1, 2, 3, ... per definition. */
+    int32 version = 4;
+    /* Canonical JSON of the definition at publication. */
+    string snapshot_json = 5;
+    /* Definition id → version of the publications this one depends on. */
+    map<string, int32> dependencies = 6;
+    /* Hex SHA-256 over the canonical snapshot and dependencies. */
+    string digest = 7;
+    int64 created_at_ms = 8;
+}
+
+/* The version of a definition a Space has agreed to use. */
+message Pin {
+    string definition_id = 1;
+    string publication_id = 2;
+    int32 version = 3;
+    /* Schema epoch after this pin was applied. */
+    int64 epoch = 4;
+}
+
+/* Every pin of a Space, under one epoch that changes with each pin. */
+message Schema {
+    int64 epoch = 1;
+    repeated Pin pins = 2;
+}

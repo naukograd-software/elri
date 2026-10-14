@@ -20,6 +20,56 @@ service DefinitionService {
 
     rpc CreateRoleDefinition(CreateRoleDefinitionRequest) returns (CreateRoleDefinitionResponse);
     rpc ListRoleDefinitions(ListRoleDefinitionsRequest) returns (ListRoleDefinitionsResponse);
+    /* Freezes a definition as its next version; type definitions pin the
+       current publications of their fields as dependencies. */
+    rpc PublishDefinition(PublishDefinitionRequest) returns (PublishDefinitionResponse);
+    rpc ListPublications(ListPublicationsRequest) returns (ListPublicationsResponse);
+    /*
+    Makes a publication the Space's agreed version of its definition,
+    against an expected schema epoch. Local Spaces apply it at once; a
+    server Space asks the server (Owner/Admin) and the pin arrives with
+    the log.
+    */
+    rpc PinDefinition(PinDefinitionRequest) returns (PinDefinitionResponse);
+    rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+}
+
+message PublishDefinitionRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message PublishDefinitionResponse {
+    Publication publication = 1;
+}
+
+message ListPublicationsRequest {
+    string space_id = 1;
+    /* Only publications of this definition, if set. */
+    string definition_id = 2;
+}
+
+message ListPublicationsResponse {
+    repeated Publication publications = 1;
+}
+
+message PinDefinitionRequest {
+    string space_id = 1;
+    string publication_id = 2;
+    /* The epoch the caller saw; the pin is refused if it moved. */
+    int64 expected_epoch = 3;
+}
+
+message PinDefinitionResponse {
+    Pin pin = 1;
+}
+
+message GetSchemaRequest {
+    string space_id = 1;
+}
+
+message GetSchemaResponse {
+    Schema schema = 1;
 }
 
 message CreateFieldDefinitionRequest {

@@ -45,6 +45,22 @@ pub mod definition_service_ws {
         route: "/elri.v1.definition.DefinitionService/ListRoleDefinitions",
         kind: StreamKind::Unary,
     };
+    pub const PUBLISH_DEFINITION: MethodSpec = MethodSpec {
+        route: "/elri.v1.definition.DefinitionService/PublishDefinition",
+        kind: StreamKind::Unary,
+    };
+    pub const LIST_PUBLICATIONS: MethodSpec = MethodSpec {
+        route: "/elri.v1.definition.DefinitionService/ListPublications",
+        kind: StreamKind::Unary,
+    };
+    pub const PIN_DEFINITION: MethodSpec = MethodSpec {
+        route: "/elri.v1.definition.DefinitionService/PinDefinition",
+        kind: StreamKind::Unary,
+    };
+    pub const GET_SCHEMA: MethodSpec = MethodSpec {
+        route: "/elri.v1.definition.DefinitionService/GetSchema",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `DefinitionService` service. Implement with `async fn`.
     pub trait DefinitionServiceHandler: Send + Sync + 'static {
         fn create_field_definition(
@@ -95,6 +111,37 @@ pub mod definition_service_ws {
             req: Request<super::ListRoleDefinitionsRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::ListRoleDefinitionsResponse>, Status>,
+        > + Send;
+        ///  Freezes a definition as its next version; type definitions pin the
+        /// current publications of their fields as dependencies.
+        fn publish_definition(
+            &self,
+            req: Request<super::PublishDefinitionRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::PublishDefinitionResponse>, Status>,
+        > + Send;
+        fn list_publications(
+            &self,
+            req: Request<super::ListPublicationsRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::ListPublicationsResponse>, Status>,
+        > + Send;
+        ///
+        /// Makes a publication the Space's agreed version of its definition,
+        /// against an expected schema epoch. Local Spaces apply it at once; a
+        /// server Space asks the server (Owner/Admin) and the pin arrives with
+        /// the log.
+        fn pin_definition(
+            &self,
+            req: Request<super::PinDefinitionRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::PinDefinitionResponse>, Status>,
+        > + Send;
+        fn get_schema(
+            &self,
+            req: Request<super::GetSchemaRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::GetSchemaResponse>, Status>,
         > + Send;
     }
     /// Registers `handler` on `server` for every `DefinitionService` method.
@@ -197,6 +244,50 @@ pub mod definition_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    PUBLISH_DEFINITION.route,
+                    move |req: Request<super::PublishDefinitionRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.publish_definition(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    LIST_PUBLICATIONS.route,
+                    move |req: Request<super::ListPublicationsRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.list_publications(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    PIN_DEFINITION.route,
+                    move |req: Request<super::PinDefinitionRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.pin_definition(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    GET_SCHEMA.route,
+                    move |req: Request<super::GetSchemaRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.get_schema(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `DefinitionService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -259,6 +350,37 @@ pub mod definition_service_ws {
             req: impl Into<Request<super::ListRoleDefinitionsRequest>>,
         ) -> Result<Response<super::ListRoleDefinitionsResponse>, Status> {
             self.conn.invoke_unary(LIST_ROLE_DEFINITIONS, req.into()).await
+        }
+        ///  Freezes a definition as its next version; type definitions pin the
+        /// current publications of their fields as dependencies.
+        pub async fn publish_definition(
+            &self,
+            req: impl Into<Request<super::PublishDefinitionRequest>>,
+        ) -> Result<Response<super::PublishDefinitionResponse>, Status> {
+            self.conn.invoke_unary(PUBLISH_DEFINITION, req.into()).await
+        }
+        pub async fn list_publications(
+            &self,
+            req: impl Into<Request<super::ListPublicationsRequest>>,
+        ) -> Result<Response<super::ListPublicationsResponse>, Status> {
+            self.conn.invoke_unary(LIST_PUBLICATIONS, req.into()).await
+        }
+        ///
+        /// Makes a publication the Space's agreed version of its definition,
+        /// against an expected schema epoch. Local Spaces apply it at once; a
+        /// server Space asks the server (Owner/Admin) and the pin arrives with
+        /// the log.
+        pub async fn pin_definition(
+            &self,
+            req: impl Into<Request<super::PinDefinitionRequest>>,
+        ) -> Result<Response<super::PinDefinitionResponse>, Status> {
+            self.conn.invoke_unary(PIN_DEFINITION, req.into()).await
+        }
+        pub async fn get_schema(
+            &self,
+            req: impl Into<Request<super::GetSchemaRequest>>,
+        ) -> Result<Response<super::GetSchemaResponse>, Status> {
+            self.conn.invoke_unary(GET_SCHEMA, req.into()).await
         }
     }
 }

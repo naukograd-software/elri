@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CreateFieldDefinitionRequest, CreateFieldDefinitionResponse, CreateRoleDefinitionRequest, CreateRoleDefinitionResponse, CreateTypeDefinitionRequest, CreateTypeDefinitionResponse, ListFieldDefinitionsRequest, ListFieldDefinitionsResponse, ListRoleDefinitionsRequest, ListRoleDefinitionsResponse, ListTypeDefinitionsRequest, ListTypeDefinitionsResponse, UpdateFieldDefinitionRequest, UpdateFieldDefinitionResponse, UpdateTypeDefinitionRequest, UpdateTypeDefinitionResponse } from "./definition_pb.ts";
-import { CreateFieldDefinitionRequestSchema, CreateFieldDefinitionResponseSchema, CreateRoleDefinitionRequestSchema, CreateRoleDefinitionResponseSchema, CreateTypeDefinitionRequestSchema, CreateTypeDefinitionResponseSchema, ListFieldDefinitionsRequestSchema, ListFieldDefinitionsResponseSchema, ListRoleDefinitionsRequestSchema, ListRoleDefinitionsResponseSchema, ListTypeDefinitionsRequestSchema, ListTypeDefinitionsResponseSchema, UpdateFieldDefinitionRequestSchema, UpdateFieldDefinitionResponseSchema, UpdateTypeDefinitionRequestSchema, UpdateTypeDefinitionResponseSchema } from "./definition_pb.ts";
+import type { CreateFieldDefinitionRequest, CreateFieldDefinitionResponse, CreateRoleDefinitionRequest, CreateRoleDefinitionResponse, CreateTypeDefinitionRequest, CreateTypeDefinitionResponse, GetSchemaRequest, GetSchemaResponse, ListFieldDefinitionsRequest, ListFieldDefinitionsResponse, ListPublicationsRequest, ListPublicationsResponse, ListRoleDefinitionsRequest, ListRoleDefinitionsResponse, ListTypeDefinitionsRequest, ListTypeDefinitionsResponse, PinDefinitionRequest, PinDefinitionResponse, PublishDefinitionRequest, PublishDefinitionResponse, UpdateFieldDefinitionRequest, UpdateFieldDefinitionResponse, UpdateTypeDefinitionRequest, UpdateTypeDefinitionResponse } from "./definition_pb.ts";
+import { CreateFieldDefinitionRequestSchema, CreateFieldDefinitionResponseSchema, CreateRoleDefinitionRequestSchema, CreateRoleDefinitionResponseSchema, CreateTypeDefinitionRequestSchema, CreateTypeDefinitionResponseSchema, GetSchemaRequestSchema, GetSchemaResponseSchema, ListFieldDefinitionsRequestSchema, ListFieldDefinitionsResponseSchema, ListPublicationsRequestSchema, ListPublicationsResponseSchema, ListRoleDefinitionsRequestSchema, ListRoleDefinitionsResponseSchema, ListTypeDefinitionsRequestSchema, ListTypeDefinitionsResponseSchema, PinDefinitionRequestSchema, PinDefinitionResponseSchema, PublishDefinitionRequestSchema, PublishDefinitionResponseSchema, UpdateFieldDefinitionRequestSchema, UpdateFieldDefinitionResponseSchema, UpdateTypeDefinitionRequestSchema, UpdateTypeDefinitionResponseSchema } from "./definition_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -83,6 +83,38 @@ const DefinitionService_ListRoleDefinitions: MethodInfo<ListRoleDefinitionsReque
   output: ListRoleDefinitionsResponseSchema,
 };
 
+const DefinitionService_PublishDefinition: MethodInfo<PublishDefinitionRequest, PublishDefinitionResponse> = {
+  typeName: "elri.v1.definition.DefinitionService",
+  name: "PublishDefinition",
+  kind: "unary",
+  input: PublishDefinitionRequestSchema,
+  output: PublishDefinitionResponseSchema,
+};
+
+const DefinitionService_ListPublications: MethodInfo<ListPublicationsRequest, ListPublicationsResponse> = {
+  typeName: "elri.v1.definition.DefinitionService",
+  name: "ListPublications",
+  kind: "unary",
+  input: ListPublicationsRequestSchema,
+  output: ListPublicationsResponseSchema,
+};
+
+const DefinitionService_PinDefinition: MethodInfo<PinDefinitionRequest, PinDefinitionResponse> = {
+  typeName: "elri.v1.definition.DefinitionService",
+  name: "PinDefinition",
+  kind: "unary",
+  input: PinDefinitionRequestSchema,
+  output: PinDefinitionResponseSchema,
+};
+
+const DefinitionService_GetSchema: MethodInfo<GetSchemaRequest, GetSchemaResponse> = {
+  typeName: "elri.v1.definition.DefinitionService",
+  name: "GetSchema",
+  kind: "unary",
+  input: GetSchemaRequestSchema,
+  output: GetSchemaResponseSchema,
+};
+
 /**
  *
  * Typed access to definitions. They are ordinary Objects too: ObjectService
@@ -156,6 +188,47 @@ export class DefinitionServiceClient {
    */
   async listRoleDefinitions(req: ListRoleDefinitionsRequest, options?: CallOptions): Promise<ListRoleDefinitionsResponse> {
     const res = await this.transport.unary(DefinitionService_ListRoleDefinitions, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Freezes a definition as its next version; type definitions pin the
+   * current publications of their fields as dependencies. 
+   *
+   * @generated from rpc elri.v1.definition.DefinitionService.PublishDefinition
+   */
+  async publishDefinition(req: PublishDefinitionRequest, options?: CallOptions): Promise<PublishDefinitionResponse> {
+    const res = await this.transport.unary(DefinitionService_PublishDefinition, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * @generated from rpc elri.v1.definition.DefinitionService.ListPublications
+   */
+  async listPublications(req: ListPublicationsRequest, options?: CallOptions): Promise<ListPublicationsResponse> {
+    const res = await this.transport.unary(DefinitionService_ListPublications, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   *
+   * Makes a publication the Space's agreed version of its definition,
+   * against an expected schema epoch. Local Spaces apply it at once; a
+   * server Space asks the server (Owner/Admin) and the pin arrives with
+   * the log.
+   *
+   * @generated from rpc elri.v1.definition.DefinitionService.PinDefinition
+   */
+  async pinDefinition(req: PinDefinitionRequest, options?: CallOptions): Promise<PinDefinitionResponse> {
+    const res = await this.transport.unary(DefinitionService_PinDefinition, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * @generated from rpc elri.v1.definition.DefinitionService.GetSchema
+   */
+  async getSchema(req: GetSchemaRequest, options?: CallOptions): Promise<GetSchemaResponse> {
+    const res = await this.transport.unary(DefinitionService_GetSchema, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 
