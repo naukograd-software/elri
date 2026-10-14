@@ -84,7 +84,8 @@ pub enum StoreError {
 pub struct RemoteConfig {
     /// WebSocket URL.
     pub url: String,
-    /// Access token.
+    /// Access token; kept in the secret store, never in the database. Empty
+    /// when read from the database.
     pub token: String,
     /// User id on the server.
     pub user_id: String,
@@ -306,13 +307,14 @@ impl Store {
             .await?
             .map(|r| RemoteConfig {
                 url: r.url,
-                token: r.token,
+                token: String::new(),
                 user_id: r.user_id,
                 user_name: r.user_name,
             }))
     }
 
-    /// Stores the server configuration, replacing any previous one.
+    /// Stores the server configuration, replacing any previous one. The
+    /// token is not stored here.
     pub async fn set_remote(&self, cfg: &RemoteConfig) -> Result<(), StoreError> {
         let mut db = self.device.lock().await;
         RemoteRow::filter_by_key("server".to_owned())
@@ -322,7 +324,6 @@ impl Store {
         toasty::create!(RemoteRow {
             key: "server".to_owned(),
             url: cfg.url.clone(),
-            token: cfg.token.clone(),
             user_id: cfg.user_id.clone(),
             user_name: cfg.user_name.clone(),
         })

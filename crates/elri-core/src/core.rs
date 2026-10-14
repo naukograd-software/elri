@@ -12,6 +12,7 @@ use tokio::task::JoinHandle;
 use crate::api;
 use crate::device::{DeviceError, DeviceId, LaunchToken};
 use crate::remote::Remote;
+use crate::secrets::{Secrets, SecretsBackend, SecretsError};
 use crate::store::{Store, StoreError};
 
 /// Version information baked into the binary that embeds the core.
@@ -37,6 +38,8 @@ pub struct Config {
     /// presents `tauri://localhost` or `http://tauri.localhost`; the Vite dev
     /// server presents `http://127.0.0.1:<port>`.
     pub allowed_origins: Vec<String>,
+    /// Where the server token is kept.
+    pub secrets: SecretsBackend,
 }
 
 impl Config {
@@ -53,6 +56,7 @@ impl Config {
                 "tauri.localhost".to_owned(),
                 "127.0.0.1:*".to_owned(),
             ],
+            secrets: SecretsBackend::File,
         }
     }
 }
@@ -112,6 +116,9 @@ pub enum CoreError {
     /// Storage could not be opened.
     #[error(transparent)]
     Store(#[from] StoreError),
+    /// The secret store could not be opened.
+    #[error(transparent)]
+    Secrets(#[from] SecretsError),
     /// File system failure.
     #[error("{path}: {source}")]
     Io {
@@ -188,7 +195,12 @@ impl Core {
         let device_id = DeviceId::load_or_create(&config.data_dir)?;
         let token = LaunchToken::generate();
         let store = Arc::new(Store::open(&config.data_dir, device_id).await?);
-        let remote = Arc::new(Remote::new(Arc::clone(&store), device_id.as_string()));
+        let secrets = Secrets::open(config.secrets, &config.data_dir, &device_id.as_string())?;
+        let remote = Arc::new(Remote::new(
+            Arc::clone(&store),
+            device_id.as_string(),
+            secrets,
+        ));
 
         let listener = TcpListener::bind(config.bind)
             .await

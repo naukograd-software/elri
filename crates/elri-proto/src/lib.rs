@@ -1,6 +1,12 @@
 // @generated
 pub mod elri {
     pub mod v1 {
+        #[cfg(feature = "elri-v1-account")]
+        // @@protoc_insertion_point(attribute:elri.v1.account)
+        pub mod account {
+            include!("elri/v1/account/elri.v1.account.rs");
+            // @@protoc_insertion_point(elri.v1.account)
+        }
         #[cfg(feature = "elri-v1-change")]
         // @@protoc_insertion_point(attribute:elri.v1.change)
         pub mod change {

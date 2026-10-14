@@ -5,6 +5,19 @@ use std::sync::Arc;
 use elri_core::change::{rejected, Outcome, Reason};
 use elri_core::model::ObjectId;
 use elri_core::sync::{envelope_space, validate_envelope};
+use elri_proto::elri::v1::account::account_service_ws::{
+    register_account_service_arc, AccountServiceHandler,
+};
+use elri_proto::elri::v1::account::admin_service_ws::{
+    register_admin_service_arc, AdminServiceHandler,
+};
+use elri_proto::elri::v1::account::{
+    self as apb, CreateUserRequest, CreateUserResponse, IssueTokenRequest, IssueTokenResponse,
+    IssueUserTokenRequest, IssueUserTokenResponse, ListTokensRequest, ListTokensResponse,
+    ListUserTokensRequest, ListUserTokensResponse, ListUsersRequest, ListUsersResponse,
+    RevokeTokenRequest, RevokeTokenResponse, RevokeUserTokenRequest, RevokeUserTokenResponse,
+    SetAdminRequest, SetAdminResponse, WhoAmIRequest, WhoAmIResponse,
+};
 use elri_proto::elri::v1::space::{self as spb, Authority};
 use elri_proto::elri::v1::sync::sync_service_ws::{
     register_sync_service_arc, SubscribeServerStream, SyncServiceHandler,
@@ -17,20 +30,24 @@ use elri_proto::elri::v1::sync::{
 use uuid::Uuid;
 use ws_proto::{Code, Metadata, Request, Response, Server, Status};
 
-use crate::store::{Role, ServerStoreError, User};
+use crate::store::{Auth, Role, ServerStoreError, Token, User};
 use crate::State;
 
 /// Protocol version this server speaks.
 pub const PROTOCOL_VERSION: u32 = 1;
 
 pub(crate) fn register(server: &Server, state: Arc<State>) {
-    register_sync_service_arc(server, state);
+    register_sync_service_arc(server, Arc::clone(&state));
+    register_account_service_arc(server, Arc::clone(&state));
+    register_admin_service_arc(server, state);
 }
 
 impl From<ServerStoreError> for Status {
     fn from(e: ServerStoreError) -> Self {
         match e {
-            ServerStoreError::UserNotFound(_) => Status::new(Code::NotFound, e.to_string()),
+            ServerStoreError::UserNotFound(_) | ServerStoreError::TokenNotFound(_) => {
+                Status::new(Code::NotFound, e.to_string())
+            }
             ServerStoreError::UserExists(_) => Status::new(Code::AlreadyExists, e.to_string()),
             other => {
                 tracing::error!(error = %other, "registry failure");
@@ -60,7 +77,7 @@ fn parse_id(s: &str, what: &str) -> Result<Uuid, Status> {
 }
 
 impl State {
-    async fn user(&self, header: &Metadata) -> Result<User, Status> {
+    async fn auth(&self, header: &Metadata) -> Result<Auth, Status> {
         let token = header
             .get("authorization")
             .and_then(|h| h.strip_prefix("Bearer "))
@@ -71,11 +88,205 @@ impl State {
             .ok_or_else(|| Status::new(Code::Unauthenticated, "invalid token"))
     }
 
+    async fn user(&self, header: &Metadata) -> Result<User, Status> {
+        Ok(self.auth(header).await?.user)
+    }
+
+    async fn admin(&self, header: &Metadata) -> Result<User, Status> {
+        let user = self.user(header).await?;
+        if !user.admin {
+            return Err(Status::new(Code::PermissionDenied, "admin required"));
+        }
+        Ok(user)
+    }
+
+    async fn named_user(&self, name: &str) -> Result<User, Status> {
+        self.registry
+            .user_by_name(name)
+            .await?
+            .ok_or_else(|| Status::new(Code::NotFound, "user not found"))
+    }
+
+    /// A token the caller may manage: their own, or any for an admin.
+    async fn owned_token(&self, auth: &Auth, id: &str) -> Result<Token, Status> {
+        let id = parse_id(id, "id")?;
+        let token = self.registry.token(id).await?;
+        if token.user_id != auth.user.id && !auth.user.admin {
+            return Err(Status::new(Code::NotFound, "token not found"));
+        }
+        Ok(token)
+    }
+
     async fn role(&self, space: Uuid, user: &User) -> Result<Role, Status> {
         self.registry
             .role(space, user.id)
             .await?
             .ok_or_else(|| Status::new(Code::PermissionDenied, "not a member of this space"))
+    }
+}
+
+fn user_to_pb(u: &User) -> apb::User {
+    apb::User {
+        id: u.id.to_string(),
+        name: u.name.clone(),
+        admin: u.admin,
+        created_at_ms: u.created_at,
+    }
+}
+
+fn token_to_pb(t: &Token) -> apb::Token {
+    apb::Token {
+        id: t.id.to_string(),
+        user_id: t.user_id.to_string(),
+        label: t.label.clone(),
+        created_at_ms: t.created_at,
+        last_used_at_ms: t.last_used_at,
+        last_device_id: t.last_device_id.clone(),
+        revoked_at_ms: t.revoked_at,
+    }
+}
+
+fn require_name(name: &str) -> Result<&str, Status> {
+    let n = name.trim();
+    if n.is_empty() {
+        return Err(invalid("name is required"));
+    }
+    Ok(n)
+}
+
+impl AccountServiceHandler for State {
+    async fn who_am_i(
+        &self,
+        req: Request<WhoAmIRequest>,
+    ) -> Result<Response<WhoAmIResponse>, Status> {
+        let auth = self.auth(&req.header).await?;
+        let token = self.registry.token(auth.token_id).await?;
+        Ok(Response::new(WhoAmIResponse {
+            user: Some(user_to_pb(&auth.user)),
+            token: Some(token_to_pb(&token)),
+        }))
+    }
+
+    async fn list_tokens(
+        &self,
+        req: Request<ListTokensRequest>,
+    ) -> Result<Response<ListTokensResponse>, Status> {
+        let user = self.user(&req.header).await?;
+        let tokens = self
+            .registry
+            .tokens(user.id, req.msg.include_revoked)
+            .await?;
+        Ok(Response::new(ListTokensResponse {
+            tokens: tokens.iter().map(token_to_pb).collect(),
+        }))
+    }
+
+    async fn issue_token(
+        &self,
+        req: Request<IssueTokenRequest>,
+    ) -> Result<Response<IssueTokenResponse>, Status> {
+        let user = self.user(&req.header).await?;
+        let (token, secret) = self.registry.issue_token(user.id, &req.msg.label).await?;
+        Ok(Response::new(IssueTokenResponse {
+            token: Some(token_to_pb(&token)),
+            secret,
+        }))
+    }
+
+    async fn revoke_token(
+        &self,
+        req: Request<RevokeTokenRequest>,
+    ) -> Result<Response<RevokeTokenResponse>, Status> {
+        let auth = self.auth(&req.header).await?;
+        let token = self.owned_token(&auth, &req.msg.id).await?;
+        self.registry.revoke_token(token.id).await?;
+        Ok(Response::new(RevokeTokenResponse {}))
+    }
+}
+
+impl AdminServiceHandler for State {
+    async fn create_user(
+        &self,
+        req: Request<CreateUserRequest>,
+    ) -> Result<Response<CreateUserResponse>, Status> {
+        self.admin(&req.header).await?;
+        let name = require_name(&req.msg.name)?;
+        let (user, token, secret) = self
+            .registry
+            .create_user(name, req.msg.admin, &req.msg.label)
+            .await?;
+        Ok(Response::new(CreateUserResponse {
+            user: Some(user_to_pb(&user)),
+            token: Some(token_to_pb(&token)),
+            secret,
+        }))
+    }
+
+    async fn list_users(
+        &self,
+        req: Request<ListUsersRequest>,
+    ) -> Result<Response<ListUsersResponse>, Status> {
+        self.admin(&req.header).await?;
+        let users = self.registry.users().await?;
+        Ok(Response::new(ListUsersResponse {
+            users: users.iter().map(user_to_pb).collect(),
+        }))
+    }
+
+    async fn set_admin(
+        &self,
+        req: Request<SetAdminRequest>,
+    ) -> Result<Response<SetAdminResponse>, Status> {
+        let me = self.admin(&req.header).await?;
+        let target = self.named_user(&req.msg.user_name).await?;
+        if target.id == me.id && !req.msg.admin {
+            return Err(Status::new(
+                Code::FailedPrecondition,
+                "an admin cannot demote themself",
+            ));
+        }
+        let user = self.registry.set_admin(target.id, req.msg.admin).await?;
+        Ok(Response::new(SetAdminResponse {
+            user: Some(user_to_pb(&user)),
+        }))
+    }
+
+    async fn issue_user_token(
+        &self,
+        req: Request<IssueUserTokenRequest>,
+    ) -> Result<Response<IssueUserTokenResponse>, Status> {
+        self.admin(&req.header).await?;
+        let target = self.named_user(&req.msg.user_name).await?;
+        let (token, secret) = self.registry.issue_token(target.id, &req.msg.label).await?;
+        Ok(Response::new(IssueUserTokenResponse {
+            token: Some(token_to_pb(&token)),
+            secret,
+        }))
+    }
+
+    async fn list_user_tokens(
+        &self,
+        req: Request<ListUserTokensRequest>,
+    ) -> Result<Response<ListUserTokensResponse>, Status> {
+        self.admin(&req.header).await?;
+        let target = self.named_user(&req.msg.user_name).await?;
+        let tokens = self
+            .registry
+            .tokens(target.id, req.msg.include_revoked)
+            .await?;
+        Ok(Response::new(ListUserTokensResponse {
+            tokens: tokens.iter().map(token_to_pb).collect(),
+        }))
+    }
+
+    async fn revoke_user_token(
+        &self,
+        req: Request<RevokeUserTokenRequest>,
+    ) -> Result<Response<RevokeUserTokenResponse>, Status> {
+        self.admin(&req.header).await?;
+        let id = parse_id(&req.msg.id, "id")?;
+        self.registry.revoke_token(id).await?;
+        Ok(Response::new(RevokeUserTokenResponse {}))
     }
 }
 
@@ -90,16 +301,21 @@ fn role_to_pb(r: Role) -> spb::Role {
 
 impl SyncServiceHandler for State {
     async fn hello(&self, req: Request<HelloRequest>) -> Result<Response<HelloResponse>, Status> {
-        let user = self.user(&req.header).await?;
+        let auth = self.auth(&req.header).await?;
         if req.msg.protocol_version != PROTOCOL_VERSION {
             return Err(Status::new(
                 Code::FailedPrecondition,
                 format!("protocol {PROTOCOL_VERSION} required"),
             ));
         }
+        if !req.msg.device_id.is_empty() {
+            self.registry
+                .note_device(auth.token_id, &req.msg.device_id)
+                .await?;
+        }
         Ok(Response::new(HelloResponse {
-            user_id: user.id.to_string(),
-            user_name: user.name,
+            user_id: auth.user.id.to_string(),
+            user_name: auth.user.name,
             protocol_version: PROTOCOL_VERSION,
         }))
     }

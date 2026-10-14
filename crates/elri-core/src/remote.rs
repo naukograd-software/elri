@@ -18,7 +18,11 @@ use ws_proto::{Client, ClientConfig, Code, Reconnect, Request, Status};
 
 use crate::change::{Outcome, Reason};
 use crate::model::{ObjectId, SpaceId};
+use crate::secrets::{Secrets, SecretsError};
 use crate::store::{RemoteConfig, SpaceStore, Store, StoreError};
+
+/// Secret-store key of the server token.
+const TOKEN_KEY: &str = "remote-token";
 
 /// Protocol version this core speaks.
 pub const PROTOCOL_VERSION: u32 = 1;
@@ -35,6 +39,12 @@ pub enum RemoteError {
     /// Local storage failed.
     #[error(transparent)]
     Store(#[from] StoreError),
+    /// The secret store failed.
+    #[error(transparent)]
+    Secrets(#[from] SecretsError),
+    /// A server is configured but its token is gone from the secret store.
+    #[error("server token missing from the secret store; connect again")]
+    TokenMissing,
     /// The server's answer could not be understood.
     #[error("bad reply from server: {0}")]
     BadReply(&'static str),
@@ -53,6 +63,7 @@ struct Session {
 pub struct Remote {
     store: Arc<Store>,
     device_id: String,
+    secrets: Secrets,
     session: Mutex<Option<Session>>,
 }
 
@@ -91,18 +102,33 @@ fn authed<T>(token: &str, msg: T) -> Request<T> {
 impl Remote {
     /// Creates the link; nothing connects until [`Remote::resume`] or
     /// [`Remote::connect`].
-    pub fn new(store: Arc<Store>, device_id: String) -> Self {
+    pub fn new(store: Arc<Store>, device_id: String, secrets: Secrets) -> Self {
         Self {
             store,
             device_id,
+            secrets,
             session: Mutex::new(None),
         }
+    }
+
+    /// The stored configuration with its token filled in from the secret
+    /// store.
+    async fn config(&self) -> Result<Option<RemoteConfig>, RemoteError> {
+        let Some(mut cfg) = self.store.remote().await? else {
+            return Ok(None);
+        };
+        cfg.token = self
+            .secrets
+            .get(TOKEN_KEY)
+            .await?
+            .ok_or(RemoteError::TokenMissing)?;
+        Ok(Some(cfg))
     }
 
     /// Reconnects to a previously configured server, if any. Failures are
     /// logged, not returned: the device works offline.
     pub async fn resume(self: &Arc<Self>) {
-        let cfg = match self.store.remote().await {
+        let cfg = match self.config().await {
             Ok(Some(cfg)) => cfg,
             Ok(None) => return,
             Err(e) => {
@@ -139,6 +165,7 @@ impl Remote {
             user_id: hello.user_id,
             user_name: hello.user_name,
         };
+        self.secrets.set(TOKEN_KEY, token).await?;
         self.store.set_remote(&cfg).await?;
         self.close_session().await;
         self.install_session(cfg.clone(), client).await?;
@@ -154,6 +181,7 @@ impl Remote {
     pub async fn disconnect(&self) -> Result<(), RemoteError> {
         self.close_session().await;
         self.store.clear_remote().await?;
+        self.secrets.delete(TOKEN_KEY).await?;
         Ok(())
     }
 

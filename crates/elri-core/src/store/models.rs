@@ -261,8 +261,6 @@ pub struct RemoteRow {
     pub key: String,
     /// WebSocket URL.
     pub url: String,
-    /// Access token.
-    pub token: String,
     /// User id on the server.
     pub user_id: String,
     /// User name on the server.

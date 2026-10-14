@@ -21,6 +21,7 @@ pub mod model;
 pub mod remote;
 pub mod script;
 pub mod search;
+pub mod secrets;
 pub mod store;
 pub mod sync;
 

@@ -135,10 +135,15 @@ impl From<StoreError> for Status {
 impl From<RemoteError> for Status {
     fn from(e: RemoteError) -> Self {
         match e {
-            RemoteError::NotConfigured => Status::new(Code::FailedPrecondition, e.to_string()),
+            RemoteError::NotConfigured | RemoteError::TokenMissing => {
+                Status::new(Code::FailedPrecondition, e.to_string())
+            }
             RemoteError::Rpc(status) => status,
             RemoteError::Store(s) => s.into(),
-            RemoteError::BadReply(_) => Status::new(Code::Internal, e.to_string()),
+            RemoteError::Secrets(_) | RemoteError::BadReply(_) => {
+                tracing::error!(error = %e, "remote failure");
+                Status::new(Code::Internal, e.to_string())
+            }
         }
     }
 }

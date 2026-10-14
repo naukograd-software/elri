@@ -3,6 +3,7 @@
 
 use std::sync::Mutex;
 
+use elri_core::secrets::SecretsBackend;
 use elri_core::{BuildInfo, Config, Core, Endpoint};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
@@ -48,13 +49,16 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![core_endpoint])
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
-            let config = Config::new(
+            let mut config = Config::new(
                 data_dir,
                 BuildInfo {
                     version: env!("CARGO_PKG_VERSION"),
                     commit: option_env!("ELRI_COMMIT").unwrap_or(""),
                 },
             );
+            // The desktop keeps the server token in the OS credential store;
+            // mobile builds have no store and fall back to the data directory.
+            config.secrets = SecretsBackend::Auto;
             let core = match tauri::async_runtime::block_on(Core::start(config)) {
                 Ok(core) => core,
                 Err(e) => {

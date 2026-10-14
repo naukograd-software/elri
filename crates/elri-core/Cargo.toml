@@ -23,6 +23,13 @@ serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 rand.workspace = true
+keyring = { workspace = true, optional = true }
+
+[features]
+default = ["keyring"]
+# The operating system's credential store for the server token. Off on
+# Android and iOS, where the file backend is used.
+keyring = ["dep:keyring"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "test-util"] }

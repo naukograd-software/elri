@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package elri.v1.account;
+
+/* A user of the server. */
+message User {
+    string id = 1;
+    string name = 2;
+    /* May create users and manage anyone's tokens. */
+    bool admin = 3;
+    int64 created_at_ms = 4;
+}
+
+/*
+An access token: one per device or integration, so each can be revoked on
+its own. The secret itself is shown once, at issue; the server keeps only
+its hash.
+*/
+message Token {
+    string id = 1;
+    string user_id = 2;
+    /* Free text chosen at issue, such as the device's name. */
+    string label = 3;
+    int64 created_at_ms = 4;
+    optional int64 last_used_at_ms = 5;
+    /* The device that last said hello with it. */
+    string last_device_id = 6;
+    optional int64 revoked_at_ms = 7;
+}

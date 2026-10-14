@@ -19,7 +19,7 @@ rust-version = "1.95"
 [workspace.dependencies]
 # internal
 elri-proto = { path = "crates/elri-proto" }
-elri-core = { path = "crates/elri-core" }
+elri-core = { path = "crates/elri-core", default-features = false }
 
 # transport
 ws-proto = { git = "https://github.com/gopherex/ws-proto", tag = "v1.8.0" }
@@ -53,6 +53,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rand = "0.9"
 sha2 = "0.11.1"
+keyring = "4.2.0"
 clap = { version = "4", features = ["derive", "env"] }
 
 # shell

@@ -18,10 +18,11 @@ workspace = true
 tauri-build = { workspace = true, features = [] }
 
 [dependencies]
-elri-core.workspace = true
+elri-core = { workspace = true, default-features = false }
 tauri = { workspace = true, features = ["tray-icon"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+elri-core = { workspace = true, features = ["keyring"] }
 tauri-plugin-single-instance.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 serde.workspace = true

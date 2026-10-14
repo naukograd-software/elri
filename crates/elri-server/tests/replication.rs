@@ -23,8 +23,12 @@ use elri_proto::elri::v1::space::Role;
 use elri_server::{Config as ServerConfig, Server};
 use ws_proto::{Client, ClientConfig, Request};
 
+fn tmp_dir_of(name: &str) -> std::path::PathBuf {
+    std::env::temp_dir().join(format!("elri-repl-{name}-{}", std::process::id()))
+}
+
 fn tmp_dir(name: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("elri-repl-{name}-{}", std::process::id()));
+    let dir = tmp_dir_of(name);
     let _ = std::fs::remove_dir_all(&dir);
     dir
 }
@@ -96,22 +100,22 @@ async fn changes_flow_between_devices_through_the_server() {
     })
     .await
     .expect("server");
-    let (_, alice_token) = server
+    let (_, _, alice_token) = server
         .state()
         .registry
-        .create_user("alice")
+        .create_user("alice", false, "test")
         .await
         .expect("alice");
-    let (_, bob_token) = server
+    let (_, _, bob_token) = server
         .state()
         .registry
-        .create_user("bob")
+        .create_user("bob", false, "test")
         .await
         .expect("bob");
-    let (_, viewer_token) = server
+    let (_, _, viewer_token) = server
         .state()
         .registry
-        .create_user("viewer")
+        .create_user("viewer", false, "test")
         .await
         .expect("viewer");
 
@@ -130,6 +134,28 @@ async fn changes_flow_between_devices_through_the_server() {
         .expect("connect a")
         .msg;
     assert_eq!(hello.user_name, "alice");
+    // The token went to the secret store (the file backend here), never
+    // into the device database.
+    let a_dir = tmp_dir_of("a");
+    let secrets = std::fs::read_to_string(a_dir.join("secrets.json")).expect("secrets file");
+    assert!(secrets.contains(&alice_token));
+    let device_db = std::fs::read(a_dir.join("device.db")).expect("device db");
+    assert!(
+        !device_db
+            .windows(alice_token.len())
+            .any(|w| w == alice_token.as_bytes()),
+        "token must not be stored in device.db"
+    );
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        let mode = std::fs::metadata(a_dir.join("secrets.json"))
+            .expect("stat")
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode, 0o600);
+    }
     b.remote
         .connect(b.authed(ConnectRequest {
             url: server.url(),

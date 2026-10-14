@@ -18,7 +18,7 @@ path = "src/main.rs"
 workspace = true
 
 [dependencies]
-elri-core.workspace = true
+elri-core = { workspace = true, features = ["keyring"] }
 elri-proto.workspace = true
 ws-proto.workspace = true
 toasty.workspace = true
@@ -31,6 +31,7 @@ thiserror.workspace = true
 uuid.workspace = true
 rand.workspace = true
 sha2.workspace = true
+serde_json.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true

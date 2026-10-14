@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package elri.v1.account;
+
+import "elri/v1/account/domain.proto";
+
+/* The caller's own account: identity and the tokens that act as it. */
+service AccountService {
+    rpc WhoAmI(WhoAmIRequest) returns (WhoAmIResponse);
+    rpc ListTokens(ListTokensRequest) returns (ListTokensResponse);
+    /* Issues one more token for the caller; the secret is returned once. */
+    rpc IssueToken(IssueTokenRequest) returns (IssueTokenResponse);
+    /* Revokes one of the caller's tokens, the current one included. */
+    rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse);
+}
+
+/* Server administration; every call requires an admin user. */
+service AdminService {
+    /* Creates a user with a first token; the secret is returned once. */
+    rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+    rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+    rpc SetAdmin(SetAdminRequest) returns (SetAdminResponse);
+    rpc IssueUserToken(IssueUserTokenRequest) returns (IssueUserTokenResponse);
+    rpc ListUserTokens(ListUserTokensRequest) returns (ListUserTokensResponse);
+    rpc RevokeUserToken(RevokeUserTokenRequest) returns (RevokeUserTokenResponse);
+}
+
+message WhoAmIRequest {}
+
+message WhoAmIResponse {
+    User user = 1;
+    /* The token this call was made with. */
+    Token token = 2;
+}
+
+message ListTokensRequest {
+    bool include_revoked = 1;
+}
+
+message ListTokensResponse {
+    repeated Token tokens = 1;
+}
+
+message IssueTokenRequest {
+    string label = 1;
+}
+
+message IssueTokenResponse {
+    Token token = 1;
+    /* Shown once; never stored in clear. */
+    string secret = 2;
+}
+
+message RevokeTokenRequest {
+    string id = 1;
+}
+
+message RevokeTokenResponse {}
+
+message CreateUserRequest {
+    string name = 1;
+    bool admin = 2;
+    /* Label of the first token. */
+    string label = 3;
+}
+
+message CreateUserResponse {
+    User user = 1;
+    Token token = 2;
+    string secret = 3;
+}
+
+message ListUsersRequest {}
+
+message ListUsersResponse {
+    repeated User users = 1;
+}
+
+message SetAdminRequest {
+    string user_name = 1;
+    bool admin = 2;
+}
+
+message SetAdminResponse {
+    User user = 1;
+}
+
+message IssueUserTokenRequest {
+    string user_name = 1;
+    string label = 2;
+}
+
+message IssueUserTokenResponse {
+    Token token = 1;
+    string secret = 2;
+}
+
+message ListUserTokensRequest {
+    string user_name = 1;
+    bool include_revoked = 2;
+}
+
+message ListUserTokensResponse {
+    repeated Token tokens = 1;
+}
+
+message RevokeUserTokenRequest {
+    string id = 1;
+}
+
+message RevokeUserTokenResponse {}

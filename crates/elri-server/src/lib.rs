@@ -3,9 +3,8 @@
 //! core uses, so a Space file on the server has the same shape as on a
 //! device.
 
+pub mod service;
 pub mod store;
-
-mod service;
 
 use std::net::SocketAddr;
 use std::path::PathBuf;
