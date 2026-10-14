@@ -46,6 +46,10 @@ use elri_proto::elri::v1::search::SearchRequest;
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::Role;
 use elri_proto::elri::v1::space::{CreateSpaceRequest, ListSpacesRequest};
+use elri_proto::elri::v1::transfer::transfer_service_ws::TransferServiceClient;
+use elri_proto::elri::v1::transfer::{
+    ExportObjectsRequest, ImportObjectsRequest, MoveObjectsRequest,
+};
 use elri_proto::elri::v1::ui::interface_service_ws::InterfaceServiceClient;
 use elri_proto::elri::v1::ui::{
     CreateInterfaceRequest, EvaluateRequest, Interface, ListInterfacesRequest, Node,
@@ -110,6 +114,11 @@ enum Cmd {
     Rule {
         #[command(subcommand)]
         cmd: RuleCmd,
+    },
+    /// Objects between Spaces: export, import, move.
+    Transfer {
+        #[command(subcommand)]
+        cmd: TransferCmd,
     },
     /// Interfaces: trees of catalog nodes the renderer draws.
     Ui {
@@ -251,6 +260,39 @@ enum RuleCmd {
         id: String,
         #[arg(long)]
         off: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum TransferCmd {
+    /// Export Objects to a bundle file.
+    Export {
+        #[arg(long)]
+        space: String,
+        /// Where to write the bundle.
+        #[arg(long)]
+        out: PathBuf,
+        /// Also what they refer to within the Space.
+        #[arg(long)]
+        deps: bool,
+        ids: Vec<String>,
+    },
+    /// Import a bundle file as copies with fresh ids.
+    Import {
+        #[arg(long)]
+        space: String,
+        file: PathBuf,
+        /// Keep the original ids (refused if any is taken).
+        #[arg(long)]
+        keep_ids: bool,
+    },
+    /// Move Objects between two local Spaces, keeping their ids.
+    Move {
+        #[arg(long)]
+        from: String,
+        #[arg(long)]
+        to: String,
+        ids: Vec<String>,
     },
 }
 
@@ -967,6 +1009,76 @@ async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<ser
     }
 }
 
+async fn run_transfer(
+    endpoint: &Endpoint,
+    conn: Client,
+    cmd: TransferCmd,
+) -> Result<serde_json::Value> {
+    let client = TransferServiceClient::new(conn);
+    match cmd {
+        TransferCmd::Export {
+            space,
+            out,
+            deps,
+            ids,
+        } => {
+            let res = client
+                .export_objects(authed(
+                    endpoint,
+                    ExportObjectsRequest {
+                        space_id: space,
+                        ids,
+                        with_dependencies: deps,
+                    },
+                ))
+                .await?
+                .msg;
+            std::fs::write(&out, &res.bundle)?;
+            Ok(json!({ "written": out.display().to_string(), "objects": res.count }))
+        }
+        TransferCmd::Import {
+            space,
+            file,
+            keep_ids,
+        } => {
+            let bundle = std::fs::read(&file)?;
+            let res = client
+                .import_objects(authed(
+                    endpoint,
+                    ImportObjectsRequest {
+                        space_id: space,
+                        bundle: bundle.into(),
+                        keep_ids,
+                    },
+                ))
+                .await?
+                .msg;
+            Ok(json!({
+                "ids": res.ids,
+                "objects": res.objects.iter().map(object_json).collect::<Vec<_>>(),
+            }))
+        }
+        TransferCmd::Move { from, to, ids } => {
+            let res = client
+                .move_objects(authed(
+                    endpoint,
+                    MoveObjectsRequest {
+                        source_space_id: from,
+                        dest_space_id: to,
+                        ids,
+                    },
+                ))
+                .await?
+                .msg;
+            Ok(json!(res
+                .objects
+                .iter()
+                .map(object_json)
+                .collect::<Vec<_>>()))
+        }
+    }
+}
+
 fn interface_json(i: &Interface) -> serde_json::Value {
     json!({
         "id": i.id,
@@ -1377,6 +1489,7 @@ async fn main() -> Result<()> {
         Cmd::Grant { cmd } => run_grant(&endpoint, conn, cmd).await?,
         Cmd::Rule { cmd } => run_rule(&endpoint, conn, cmd).await?,
         Cmd::Ui { cmd } => run_ui(&endpoint, conn, cmd).await?,
+        Cmd::Transfer { cmd } => run_transfer(&endpoint, conn, cmd).await?,
         Cmd::Backup {
             cmd: BackupCmd::Create { dest },
         } => {

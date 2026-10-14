@@ -574,12 +574,11 @@ fn spawn_worker(
             // Wait for a reason to run again: a local write, a server
             // announcement, or a periodic check.
             let announced = async {
-                match &announce {
-                    Some(stream) => stream.recv().await.is_ok_and(|m| m.is_some()),
-                    None => {
-                        tokio::time::sleep(Duration::from_secs(5)).await;
-                        false
-                    }
+                if let Some(stream) = &announce {
+                    stream.recv().await.is_ok_and(|m| m.is_some())
+                } else {
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    false
                 }
             };
             tokio::select! {

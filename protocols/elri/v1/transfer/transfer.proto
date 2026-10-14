@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package elri.v1.transfer;
+
+import "elri/v1/object/domain.proto";
+import "elri/v1/ui/domain.proto";
+
+/*
+Objects move between Spaces by export and import. An import is an explicit
+copy: fresh ids and fresh documents built from logical state, with every
+internal reference rewritten; references to anything outside the bundle
+stay as they are and may be unavailable. Provenance is kept on each copy;
+device grants are not copied; attachment bytes are not included.
+*/
+service TransferService {
+    rpc ExportObjects(ExportObjectsRequest) returns (ExportObjectsResponse);
+    rpc ImportObjects(ImportObjectsRequest) returns (ImportObjectsResponse);
+    /* Moves Objects between two local Spaces of this device, keeping their
+       ids; the source keeps a tombstone that names the destination. */
+    rpc MoveObjects(MoveObjectsRequest) returns (MoveObjectsResponse);
+}
+
+message NodeList {
+    repeated elri.v1.ui.Node nodes = 1;
+}
+
+/* What travels. */
+message Bundle {
+    string exported_from = 1;
+    int64 exported_at_ms = 2;
+    repeated elri.v1.object.Object objects = 3;
+    /* Interface id → its nodes. */
+    map<string, NodeList> interface_nodes = 4;
+}
+
+message ExportObjectsRequest {
+    string space_id = 1;
+    repeated string ids = 2;
+    /* Also export what they refer to within the Space, transitively:
+       definitions, participants, blocks, targets, scripts. */
+    bool with_dependencies = 3;
+}
+
+message ExportObjectsResponse {
+    /* Encoded Bundle. */
+    bytes bundle = 1;
+    int32 count = 2;
+}
+
+message ImportObjectsRequest {
+    string space_id = 1;
+    bytes bundle = 2;
+    /* Keep the original ids instead of minting fresh ones; refused when any
+       is already in the Space. For restoring definitions by identity. */
+    bool keep_ids = 3;
+}
+
+message ImportObjectsResponse {
+    /* Original id → id in this Space. */
+    map<string, string> ids = 1;
+    repeated elri.v1.object.Object objects = 2;
+}
+
+message MoveObjectsRequest {
+    string source_space_id = 1;
+    string dest_space_id = 2;
+    repeated string ids = 3;
+}
+
+message MoveObjectsResponse {
+    repeated elri.v1.object.Object objects = 1;
+}
