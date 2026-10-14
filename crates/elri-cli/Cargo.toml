@@ -1,0 +1,24 @@
+[package]
+name = "elri-cli"
+description = "elri command-line client for a running local core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "elri"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+elri-core.workspace = true
+elri-proto.workspace = true
+ws-proto.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+clap.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true

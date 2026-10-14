@@ -1,0 +1,2 @@
+# Android targets are built with `cargo ndk` (just android); the NDK linker
+# is resolved by cargo-ndk, nothing is hardcoded here.

@@ -1,0 +1,6 @@
+packages:
+  - packages/*
+  - apps/elri
+minimumReleaseAgeExclude:
+  - '@gopherex/protoc-gen-ws-es@1.8.0'
+  - '@gopherex/ws-proto-transport@1.8.0'

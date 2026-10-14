@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package elri.v1.space;
+
+import "elri/v1/space/domain.proto";
+
+/*
+Spaces known to this core: local-only Spaces and server Spaces selected for
+synchronization. Membership and roles are server-authoritative.
+*/
+service SpaceService {
+    rpc ListSpaces(ListSpacesRequest) returns (ListSpacesResponse);
+}
+
+message ListSpacesRequest {}
+
+message ListSpacesResponse {
+    repeated Space spaces = 1;
+}

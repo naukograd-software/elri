@@ -1,0 +1,25 @@
+[package]
+name = "elri-core"
+description = "elri core library: graph, CRDT, storage, sync, authorization, scripting — no shell dependencies"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+elri-proto.workspace = true
+ws-proto.workspace = true
+tokio = { workspace = true, features = ["rt", "net", "sync", "macros", "fs", "io-util"] }
+uuid.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+rand.workspace = true
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "test-util"] }

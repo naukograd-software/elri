@@ -1,0 +1,26 @@
+[package]
+name = "elri-app"
+description = "elri desktop and Android application shell"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+name = "elri_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+[build-dependencies]
+tauri-build = { workspace = true, features = [] }
+
+[dependencies]
+elri-core.workspace = true
+tauri = { workspace = true, features = ["tray-icon"] }
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+serde.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

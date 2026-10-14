@@ -1,0 +1,18 @@
+# Template for protoc-gen-prost-crate; `just proto` copies it to
+# crates/elri-proto/Cargo.toml. Edit here, not there.
+[package]
+name = "elri-proto"
+description = "Generated protobuf messages and ws-proto bindings for elri"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+bytes.workspace = true
+prost.workspace = true
+ws-proto.workspace = true
+
+[features]
+default = ["proto_full"]
+## @@protoc_insertion_point(features)

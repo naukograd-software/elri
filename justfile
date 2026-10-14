@@ -1,0 +1,40 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+default:
+    @just --list
+
+# Regenerate Rust and TypeScript protobuf code from protocols/.
+proto:
+    cd protocols && easyp -cfg easyp.rs.yaml lint
+    rm -rf crates/elri-proto/src/*
+    cd protocols && easyp -cfg easyp.rs.yaml generate
+    rm -rf packages/proto/src/*
+    cd protocols && PATH="$PWD/../packages/proto/node_modules/.bin:$PATH" easyp -cfg easyp.ts.yaml generate
+    cargo fmt -p elri-proto
+
+# Rust validation gate.
+check:
+    cargo fmt --all -- --check
+    cargo clippy --workspace --all-targets --all-features -- -D warnings
+    cargo deny check
+
+test:
+    cargo nextest run --workspace
+
+# Frontend validation gate.
+web:
+    pnpm -r typecheck
+    pnpm -r lint
+
+build:
+    cargo build --workspace
+
+# Local core + renderer in dev mode.
+dev:
+    pnpm --filter @elri/app tauri dev
+
+# Cross-build the core for Android (needs cargo-ndk and an NDK).
+android:
+    cargo ndk -t arm64-v8a build -p elri-core
+
+all: proto check test web

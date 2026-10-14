@@ -1,0 +1,29 @@
+lint:
+  use:
+    - DEFAULT
+  enum_zero_value_suffix: UNSPECIFIED
+  service_suffix: Service
+  ignore: []
+  except:
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_RESPONSE_STANDARD_NAME
+  allow_comment_ignores: false
+deps: []
+generate:
+  inputs:
+    - directory: elri
+  plugins:
+    - name: es
+      out: ../packages/proto/src
+      opts:
+        target: ts
+        import_extension: ts
+        json_types: true
+    - name: ws-es
+      out: ../packages/proto/src
+      opts:
+        target: ts
+        import_extension: ts
+breaking:
+  ignore: []
+  against_git_ref: main

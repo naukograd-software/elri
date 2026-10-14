@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+cargo fmt --all -- --check
+pnpm exec biome check --staged --write --no-errors-on-unmatched
+git update-index --again

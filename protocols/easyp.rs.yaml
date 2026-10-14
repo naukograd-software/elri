@@ -1,0 +1,28 @@
+lint:
+  use:
+    - DEFAULT
+  enum_zero_value_suffix: UNSPECIFIED
+  service_suffix: Service
+  ignore: []
+  except:
+    - RPC_REQUEST_RESPONSE_UNIQUE
+    - RPC_RESPONSE_STANDARD_NAME
+  allow_comment_ignores: false
+deps: []
+generate:
+  inputs:
+    - directory: elri
+  plugins:
+    - name: prost
+      out: ../crates/elri-proto/src
+      opts:
+        bytes: "."
+    - name: ws-rs
+      out: ../crates/elri-proto/src
+    - name: prost-crate
+      out: ../crates/elri-proto
+      opts:
+        gen_crate: elri-proto.Cargo.toml.tmpl
+breaking:
+  ignore: []
+  against_git_ref: main

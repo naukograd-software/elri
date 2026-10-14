@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package elri.v1.space;
+
+/* Role of the current user in a Space. */
+enum Role {
+    ROLE_UNSPECIFIED = 0;
+    ROLE_OWNER = 1;
+    ROLE_ADMIN = 2;
+    ROLE_EDITOR = 3;
+    ROLE_VIEWER = 4;
+}
+
+/* Where the authoritative registry of a Space lives. */
+enum Authority {
+    AUTHORITY_UNSPECIFIED = 0;
+    /* Local-only Space; the local core is the registry. */
+    AUTHORITY_LOCAL = 1;
+    /* Server-hosted Space replicated to this device. */
+    AUTHORITY_SERVER = 2;
+}
+
+message Space {
+    /* UUIDv7, canonical string form. */
+    string id = 1;
+    string name = 2;
+    Role role = 3;
+    Authority authority = 4;
+}

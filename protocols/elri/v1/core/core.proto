@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package elri.v1.core;
+
+/*
+Core service: identity and health of the local core (or the server).
+Every client — renderer, CLI, scripts, extensions — starts here.
+*/
+service CoreService {
+    /* Who am I talking to: build, device, role of this endpoint. */
+    rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+}
+
+message GetInfoRequest {}
+
+/* What kind of endpoint answered. */
+enum EndpointKind {
+    ENDPOINT_KIND_UNSPECIFIED = 0;
+    /* Local core embedded in the application on this device. */
+    ENDPOINT_KIND_LOCAL_CORE = 1;
+    /* Authoritative synchronization server. */
+    ENDPOINT_KIND_SERVER = 2;
+}
+
+message GetInfoResponse {
+    /* Semantic version of the binary. */
+    string version = 1;
+    /* Git commit the binary was built from, if known. */
+    string commit = 2;
+    EndpointKind kind = 3;
+    /* Stable identifier of this device (local core only). */
+    string device_id = 4;
+}

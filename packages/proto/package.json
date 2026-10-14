@@ -1,0 +1,20 @@
+{
+  "name": "@elri/proto",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "2.16.0",
+    "@gopherex/ws-proto-transport": "1.8.0"
+  },
+  "devDependencies": {
+    "@bufbuild/protoc-gen-es": "2.16.0",
+    "@gopherex/protoc-gen-ws-es": "1.8.0"
+  }
+}
