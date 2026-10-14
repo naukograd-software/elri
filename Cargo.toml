@@ -36,6 +36,9 @@ futures-util = { version = "0.3", default-features = false, features = ["std"] }
 # storage / crdt / scripting
 loro = "1.16.2"
 turso = "0.8.3"
+# ORM over Turso; main carries the turso 0.8 driver, releases lag at 0.7
+toasty = { git = "https://github.com/tokio-rs/toasty", rev = "25b4e22ced8f8b18e00d5f48fdfbb592b820b2bd", features = ["turso"] }
+toasty-driver-turso = { git = "https://github.com/tokio-rs/toasty", rev = "25b4e22ced8f8b18e00d5f48fdfbb592b820b2bd" }
 mlua = { version = "0.12.2", features = ["luau", "vendored", "async", "send", "serde"] }
 wasmtime = "49.0.2"
 

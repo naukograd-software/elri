@@ -14,7 +14,8 @@ workspace = true
 elri-proto.workspace = true
 ws-proto.workspace = true
 loro.workspace = true
-turso.workspace = true
+toasty.workspace = true
+toasty-driver-turso.workspace = true
 tokio = { workspace = true, features = ["rt", "net", "sync", "macros", "fs", "io-util"] }
 uuid.workspace = true
 serde.workspace = true
