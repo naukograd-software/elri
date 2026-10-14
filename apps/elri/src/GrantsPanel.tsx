@@ -142,11 +142,11 @@ export function GrantsPanel({ clients, spaceId }: Props) {
                 const g = grantFor(s)
                 const m = s.manifest
                 const needs = [
-                  ...(m?.reads ?? []).map((x) => `reads ${x.slice(0, 8)}`),
-                  ...(m?.writes ?? []).map((x) => `writes ${x.slice(0, 8)}`),
-                  ...(m?.extensions ?? []).map((x) => `extension ${x}`),
-                  ...(m?.http ? ['http'] : []),
-                  ...(m?.ai ? ['ai'] : []),
+                  ...(m?.reads ?? []).map((x) => `reads Space ${x}`),
+                  ...(m?.writes ?? []).map((x) => `writes Space ${x}`),
+                  ...(m?.extensions ?? []).map((x) => `calls extension ${x}`),
+                  ...(m?.http ? ['calls out over HTTP'] : []),
+                  ...(m?.ai ? ['uses an AI provider'] : []),
                 ]
                 return (
                   <tr key={s.id}>
@@ -154,8 +154,21 @@ export function GrantsPanel({ clients, spaceId }: Props) {
                       {s.name}
                       <br />
                       <code>{s.id}</code>
+                      <br />
+                      <span className="muted">version </span>
+                      <code>{s.version}</code>
                     </td>
-                    <td className="muted">{needs.length ? needs.join(', ') : 'its own Space'}</td>
+                    <td className="muted">
+                      {needs.length ? (
+                        <ul style={{ margin: 0, paddingLeft: 16 }}>
+                          {needs.map((n) => (
+                            <li key={n}>{n}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        'only its own Space'
+                      )}
+                    </td>
                     <td>
                       {g ? (
                         <span className="badge">granted{g.benign ? ' (benign)' : ''}</span>
@@ -187,6 +200,7 @@ export function GrantsPanel({ clients, spaceId }: Props) {
                                 create(GrantScriptRequestSchema, {
                                   spaceId: s.spaceId,
                                   scriptId: s.id,
+                                  expectedVersion: s.version,
                                 }),
                               ),
                             )

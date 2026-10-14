@@ -246,6 +246,12 @@ impl GrantServiceHandler for Services {
             .script_object(&req.msg.space_id, &req.msg.script_id)
             .await?;
         let script = script_of(&o)?;
+        if !req.msg.expected_version.is_empty() && req.msg.expected_version != script.version {
+            return Err(Status::new(
+                Code::FailedPrecondition,
+                "the script changed since it was shown; look at it again before granting",
+            ));
+        }
         let grant = self
             .store
             .grant(

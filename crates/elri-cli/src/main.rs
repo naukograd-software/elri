@@ -1819,6 +1819,7 @@ async fn run_grant(endpoint: &Endpoint, conn: Client, cmd: GrantCmd) -> Result<s
                 .grant_script(authed(
                     endpoint,
                     GrantScriptRequest {
+                        expected_version: String::new(),
                         space_id: space,
                         script_id: script,
                     },

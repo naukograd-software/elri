@@ -127,6 +127,7 @@ async fn agents_propose_and_people_review() {
                 .grant_script(authed(
                     &endpoint,
                     GrantScriptRequest {
+                        expected_version: String::new(),
                         space_id: space,
                         script_id: script.id.clone(),
                     },

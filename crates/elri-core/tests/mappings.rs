@@ -236,6 +236,7 @@ async fn mappings_are_proposed_approved_and_used() {
         .grant_script(authed(
             &endpoint,
             GrantScriptRequest {
+                expected_version: String::new(),
                 space_id: work.clone(),
                 script_id: script.id.clone(),
             },

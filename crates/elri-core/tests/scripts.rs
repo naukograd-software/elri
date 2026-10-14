@@ -241,6 +241,7 @@ async fn scripts_run_within_their_manifest_and_grants() {
         .grant_script(authed(
             &c.endpoint,
             GrantScriptRequest {
+                expected_version: String::new(),
                 space_id: home.clone(),
                 script_id: declared.id.clone(),
             },

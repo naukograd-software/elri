@@ -223,6 +223,7 @@ async fn rules_govern_scripts_exports_and_moves() {
         .grant_script(authed(
             &endpoint,
             elri_proto::elri::v1::script::GrantScriptRequest {
+                expected_version: String::new(),
                 space_id: home.clone(),
                 script_id: script.id.clone(),
             },

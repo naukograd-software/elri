@@ -306,6 +306,7 @@ async fn wasm_extensions_run_in_the_sandbox_and_scripts_call_them() {
         .grant_script(authed(
             &endpoint,
             GrantScriptRequest {
+                expected_version: String::new(),
                 space_id: space.clone(),
                 script_id: sighted.id.clone(),
             },

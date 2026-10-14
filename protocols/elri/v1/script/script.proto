@@ -141,6 +141,10 @@ message ListGrantsResponse {
 message GrantScriptRequest {
     string space_id = 1;
     string script_id = 2;
+    /* The version the user looked at; refused when the script has since
+       changed, so consent never lands on code the user did not see.
+       Empty grants whatever is current (for the CLI). */
+    string expected_version = 3;
 }
 
 message GrantScriptResponse {

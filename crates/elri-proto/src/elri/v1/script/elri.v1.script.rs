@@ -367,6 +367,11 @@ pub struct GrantScriptRequest {
     pub space_id: ::prost::alloc::string::String,
     #[prost(string, tag = "2")]
     pub script_id: ::prost::alloc::string::String,
+    /// The version the user looked at; refused when the script has since
+    /// changed, so consent never lands on code the user did not see.
+    /// Empty grants whatever is current (for the CLI). 
+    #[prost(string, tag = "3")]
+    pub expected_version: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GrantScriptResponse {
