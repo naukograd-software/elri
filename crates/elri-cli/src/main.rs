@@ -477,12 +477,12 @@ async fn run_change(
 }
 
 fn read_token() -> Result<String> {
+    use std::io::{BufRead as _, IsTerminal as _};
     if let Ok(t) = std::env::var("ELRI_TOKEN") {
         if !t.trim().is_empty() {
             return Ok(t.trim().to_owned());
         }
     }
-    use std::io::{BufRead as _, IsTerminal as _};
     if std::io::stdin().is_terminal() {
         eprintln!("paste the server token, then press Enter:");
     }
