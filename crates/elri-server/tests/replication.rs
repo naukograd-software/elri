@@ -1,7 +1,7 @@
 //! Two devices and one server: a Change made on one device reaches the other
 //! through the server, in both directions, and a viewer's write is refused.
 
-#![allow(clippy::expect_used, clippy::panic)]
+#![allow(clippy::expect_used, clippy::panic, clippy::too_many_lines)]
 
 use std::collections::HashMap;
 use std::time::Duration;
@@ -208,12 +208,11 @@ async fn changes_flow_between_devices_through_the_server() {
                 id: created.id.clone(),
             }))
             .await
-            .map(|r| {
+            .is_ok_and(|r| {
                 r.msg
                     .object
                     .is_some_and(|o| o.fields.get("title") == Some(&s("from alice")))
             })
-            .unwrap_or(false)
     })
     .await;
 
@@ -225,13 +224,12 @@ async fn changes_flow_between_devices_through_the_server() {
                 limit: 10,
             }))
             .await
-            .map(|r| {
+            .is_ok_and(|r| {
                 r.msg
                     .changes
                     .iter()
                     .all(|c| c.status() == ChangeStatus::Accepted)
             })
-            .unwrap_or(false)
     })
     .await;
 
@@ -254,12 +252,11 @@ async fn changes_flow_between_devices_through_the_server() {
                 id: created.id.clone(),
             }))
             .await
-            .map(|r| {
+            .is_ok_and(|r| {
                 r.msg
                     .object
                     .is_some_and(|o| o.fields.get("title") == Some(&s("edited by bob")))
             })
-            .unwrap_or(false)
     })
     .await;
 
@@ -272,8 +269,7 @@ async fn changes_flow_between_devices_through_the_server() {
                 ..Default::default()
             }))
             .await
-            .map(|r| r.msg.objects.len() == 1)
-            .unwrap_or(false)
+            .is_ok_and(|r| r.msg.objects.len() == 1)
     })
     .await;
     let mut set = HashMap::new();
@@ -294,13 +290,12 @@ async fn changes_flow_between_devices_through_the_server() {
                 limit: 10,
             }))
             .await
-            .map(|r| {
+            .is_ok_and(|r| {
                 r.msg
                     .changes
                     .iter()
                     .any(|c| c.status() == ChangeStatus::Rejected)
             })
-            .unwrap_or(false)
     })
     .await;
     let status = v

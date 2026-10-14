@@ -136,7 +136,27 @@ async fn open_db(path: &Path, models: toasty::ModelSet) -> Result<Db, StoreError
     if fresh {
         db.push_schema().await?;
     }
+    restrict_to_owner(path);
     Ok(db)
+}
+
+/// Database files hold user data and, in the device database, the server
+/// token; keep them readable by the owner only. The write-ahead log is
+/// created lazily, so it is tightened when present.
+fn restrict_to_owner(path: &Path) {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        for p in [path.to_path_buf(), path.with_extension("db-wal")] {
+            if p.exists() {
+                let _ = std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o600));
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = path;
+    }
 }
 
 /// UUIDs are stored as 16-byte blobs; raw SQL binds them in that form.
