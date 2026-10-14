@@ -991,51 +991,8 @@ async fn run_ui(endpoint: &Endpoint, conn: Client, cmd: UiCmd) -> Result<serde_j
                 .map(interface_json)
                 .collect::<Vec<_>>()))
         }
-        UiCmd::Node {
-            space,
-            id,
-            node_type,
-            node_id,
-            parent,
-            index,
-            props,
-            bind,
-            on,
-        } => {
-            let res = client
-                .update_interface(authed(
-                    endpoint,
-                    UpdateInterfaceRequest {
-                        space_id: space,
-                        id,
-                        set_nodes: vec![Node {
-                            id: node_id.unwrap_or_default(),
-                            parent_id: parent,
-                            index,
-                            r#type: node_type,
-                            props_json: props,
-                            bindings_json: bind,
-                            handlers_json: on,
-                        }],
-                        ..Default::default()
-                    },
-                ))
-                .await?;
-            iface(res.msg.interface)
-        }
-        UiCmd::Remove { space, id, nodes } => {
-            let res = client
-                .update_interface(authed(
-                    endpoint,
-                    UpdateInterfaceRequest {
-                        space_id: space,
-                        id,
-                        remove_nodes: nodes,
-                        ..Default::default()
-                    },
-                ))
-                .await?;
-            iface(res.msg.interface)
+        cmd @ (UiCmd::Node { .. } | UiCmd::Remove { .. }) => {
+            run_ui_nodes(&client, endpoint, cmd).await
         }
         UiCmd::Publish { space, id } => {
             let res = client
@@ -1084,6 +1041,66 @@ async fn run_ui(endpoint: &Endpoint, conn: Client, cmd: UiCmd) -> Result<serde_j
                 }))
                 .collect::<Vec<_>>()))
         }
+    }
+}
+
+async fn run_ui_nodes(
+    client: &InterfaceServiceClient,
+    endpoint: &Endpoint,
+    cmd: UiCmd,
+) -> Result<serde_json::Value> {
+    let iface = |o: Option<Interface>| -> Result<serde_json::Value> {
+        o.map(|i| interface_json(&i))
+            .ok_or_else(|| anyhow::anyhow!("core returned no interface"))
+    };
+    match cmd {
+        UiCmd::Node {
+            space,
+            id,
+            node_type,
+            node_id,
+            parent,
+            index,
+            props,
+            bind,
+            on,
+        } => {
+            let res = client
+                .update_interface(authed(
+                    endpoint,
+                    UpdateInterfaceRequest {
+                        space_id: space,
+                        id,
+                        set_nodes: vec![Node {
+                            id: node_id.unwrap_or_default(),
+                            parent_id: parent,
+                            index,
+                            r#type: node_type,
+                            props_json: props,
+                            bindings_json: bind,
+                            handlers_json: on,
+                        }],
+                        ..Default::default()
+                    },
+                ))
+                .await?;
+            iface(res.msg.interface)
+        }
+        UiCmd::Remove { space, id, nodes } => {
+            let res = client
+                .update_interface(authed(
+                    endpoint,
+                    UpdateInterfaceRequest {
+                        space_id: space,
+                        id,
+                        remove_nodes: nodes,
+                        ..Default::default()
+                    },
+                ))
+                .await?;
+            iface(res.msg.interface)
+        }
+        _ => bail!("not a node command"),
     }
 }
 
