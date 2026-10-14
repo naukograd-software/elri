@@ -1,6 +1,7 @@
 // Connection to the local core. The shell hands over the loopback endpoint;
 // outside Tauri (plain browser dev) it comes from Vite env variables.
 
+import { AgentServiceClient, AiServiceClient } from '@elri/proto/elri/v1/ai/ai_ws_pb.ts'
 import { BackupServiceClient } from '@elri/proto/elri/v1/backup/backup_ws_pb.ts'
 import { ChangeServiceClient } from '@elri/proto/elri/v1/change/change_ws_pb.ts'
 import { ContextServiceClient } from '@elri/proto/elri/v1/context/context_ws_pb.ts'
@@ -16,6 +17,7 @@ import {
   ScriptServiceClient,
 } from '@elri/proto/elri/v1/script/script_ws_pb.ts'
 import { SearchServiceClient } from '@elri/proto/elri/v1/search/search_ws_pb.ts'
+import { SettingsServiceClient } from '@elri/proto/elri/v1/settings/settings_ws_pb.ts'
 import { SpaceServiceClient } from '@elri/proto/elri/v1/space/space_ws_pb.ts'
 import { InterfaceServiceClient } from '@elri/proto/elri/v1/ui/ui_ws_pb.ts'
 import { WorkflowServiceClient } from '@elri/proto/elri/v1/workflow/workflow_ws_pb.ts'
@@ -45,6 +47,9 @@ export interface CoreClients {
   backup: BackupServiceClient
   contexts: ContextServiceClient
   documents: DocumentServiceClient
+  settings: SettingsServiceClient
+  ai: AiServiceClient
+  agents: AgentServiceClient
 }
 
 const inTauri = '__TAURI_INTERNALS__' in window
@@ -85,9 +90,21 @@ export async function connect(): Promise<CoreClients> {
     backup: new BackupServiceClient(transport),
     contexts: new ContextServiceClient(transport),
     documents: new DocumentServiceClient(transport),
+    settings: new SettingsServiceClient(transport),
+    ai: new AiServiceClient(transport),
+    agents: new AgentServiceClient(transport),
   }
 }
 
 export function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
+}
+
+/** Opens the provider's sign-in page in the system browser. */
+export async function openSignIn(url: string): Promise<void> {
+  if (inTauri) {
+    await invoke('open_sign_in', { url })
+    return
+  }
+  window.open(url, '_blank', 'noopener')
 }

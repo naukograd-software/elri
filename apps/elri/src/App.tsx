@@ -10,12 +10,14 @@ import { ListSpacesRequestSchema } from '@elri/proto/elri/v1/space/space_pb.ts'
 import { useCallback, useEffect, useState } from 'react'
 import { BackupPanel } from './BackupPanel.tsx'
 import { ChangesPanel, needsAttention } from './ChangesPanel.tsx'
+import { ChatPanel } from './ChatPanel.tsx'
 import { type CoreClients, connect, errorText } from './core.ts'
 import { coalesce, watch } from './events.ts'
 import { GrantsPanel } from './GrantsPanel.tsx'
 import { InterfaceList } from './InterfaceList.tsx'
 import { InterfaceView } from './InterfaceView.tsx'
 import { RemotePanel } from './RemotePanel.tsx'
+import { SettingsPanel } from './SettingsPanel.tsx'
 import { SpaceList } from './SpaceList.tsx'
 import { SpaceView } from './SpaceView.tsx'
 import { WorkflowsPanel } from './WorkflowsPanel.tsx'
@@ -25,14 +27,24 @@ interface Info {
   deviceId: string
 }
 
-type Panel = 'space' | 'changes' | 'grants' | 'workflows' | 'backup' | 'remote'
+type Panel =
+  | 'space'
+  | 'chat'
+  | 'changes'
+  | 'grants'
+  | 'workflows'
+  | 'backup'
+  | 'remote'
+  | 'settings'
 
 const DEVICE_PANELS: { id: Panel; label: string; needsSpace: boolean }[] = [
+  { id: 'chat', label: 'Chat', needsSpace: true },
   { id: 'changes', label: 'Changes & rejections', needsSpace: true },
   { id: 'grants', label: 'Scripts & grants', needsSpace: false },
   { id: 'workflows', label: 'Workflows', needsSpace: true },
   { id: 'remote', label: 'Server & sync', needsSpace: false },
   { id: 'backup', label: 'Backups', needsSpace: false },
+  { id: 'settings', label: 'Settings', needsSpace: false },
 ]
 
 export function App() {
@@ -133,6 +145,17 @@ export function App() {
         ) : null
       case 'backup':
         return <BackupPanel clients={clients} />
+      case 'settings':
+        return <SettingsPanel clients={clients} spaces={spaces} />
+      case 'chat':
+        return current ? (
+          <ChatPanel
+            key={current.id}
+            clients={clients}
+            spaceId={current.id}
+            onOpenSettings={() => setPanel('settings')}
+          />
+        ) : null
       case 'remote':
         return <RemotePanel clients={clients} onChanged={() => refreshSpaces(clients)} />
       default:
