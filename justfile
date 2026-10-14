@@ -24,7 +24,7 @@ test:
 # Frontend validation gate.
 web:
     pnpm -r typecheck
-    pnpm -r lint
+    pnpm exec biome check .
 
 build:
     cargo build --workspace
