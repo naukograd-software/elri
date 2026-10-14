@@ -110,6 +110,8 @@ impl Session {
             })
             .unwrap_or_default();
         crate::mapping::check(&name, &members)?;
+        // A write into the caller's Space carrying what it read elsewhere.
+        self.may_copy_to(self.own).await?;
         // Code proposes; a person approves.
         let doc = crate::mapping::create(self.own, &name, &members, &self.actor, false)
             .map_err(|e| e.to_string())?;

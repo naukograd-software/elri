@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package elri.v1.document;
+
+import "elri/v1/object/domain.proto";
+
+/*
+Documents are Entities placing block Entities. This service addresses
+parts of them: a fragment of a block's text is captured as cursors, the
+version they were taken at, and a quoted excerpt with context, and
+resolved later to an explicit state rather than a guess. Blocks split
+and merge as one Change each, keeping a chosen identity and recording a
+redirect for the other.
+*/
+service DocumentService {
+    /* Captures a fragment of a block's text field as a reference. */
+    rpc CaptureFragment(CaptureFragmentRequest) returns (CaptureFragmentResponse);
+    /* Where a fragment is now. A broken reference says so. */
+    rpc ResolveFragment(ResolveFragmentRequest) returns (ResolveFragmentResponse);
+    /* Cuts a block's text at a position: the block keeps the head, a new
+       block takes the tail and is placed right after it. */
+    rpc SplitBlock(SplitBlockRequest) returns (SplitBlockResponse);
+    /* Appends the next sibling block's text to this one and removes that
+       placement; a block placed nowhere else is deleted with a redirect. */
+    rpc MergeBlocks(MergeBlocksRequest) returns (MergeBlocksResponse);
+}
+
+/* A reference to a stretch of a block's text. */
+message Fragment {
+    string object_id = 1;
+    string field_id = 2;
+    /* Encoded Loro cursors at both ends. */
+    bytes start = 3;
+    bytes end = 4;
+    /* Encoded version vector of the document when captured. */
+    bytes version = 5;
+    /* The text between the cursors when captured. */
+    string quote = 6;
+    /* Up to twenty characters before and after. */
+    string before = 7;
+    string after = 8;
+    int64 captured_at_ms = 9;
+}
+
+enum FragmentState {
+    FRAGMENT_STATE_UNSPECIFIED = 0;
+    /* The cursors still enclose the quoted text. */
+    FRAGMENT_STATE_OK = 1;
+    /* The position survives but the text there is not the quote, and the
+       quote is nowhere in the field: the meaning may be gone. */
+    FRAGMENT_STATE_MOVED = 2;
+    /* The quote is elsewhere in the field, maybe more than once; the
+       candidates need a person's confirmation. */
+    FRAGMENT_STATE_AMBIGUOUS = 3;
+    /* The block is deleted. */
+    FRAGMENT_STATE_DELETED = 4;
+    /* The field is gone, is not text, or the cursors no longer apply. */
+    FRAGMENT_STATE_DETACHED = 5;
+}
+
+/* A stretch of text by unicode positions. */
+message Range {
+    int32 start = 1;
+    int32 end = 2;
+    string text = 3;
+}
+
+message CaptureFragmentRequest {
+    string space_id = 1;
+    string object_id = 2;
+    string field_id = 3;
+    /* Unicode positions, end exclusive. */
+    int32 start = 4;
+    int32 end = 5;
+}
+
+message CaptureFragmentResponse {
+    Fragment fragment = 1;
+}
+
+message ResolveFragmentRequest {
+    string space_id = 1;
+    Fragment fragment = 2;
+}
+
+message ResolveFragmentResponse {
+    FragmentState state = 1;
+    /* Where the cursors point now, when they apply. */
+    Range range = 2;
+    /* Where the quote appears now, when ambiguous. */
+    repeated Range candidates = 3;
+    /* The block the fragment's block was merged into, when followed. */
+    string redirected_to = 4;
+    string reason = 5;
+}
+
+message SplitBlockRequest {
+    string space_id = 1;
+    string document_id = 2;
+    /* The placement of the block to split. */
+    string placement_id = 3;
+    string field_id = 4;
+    /* Unicode position of the cut. */
+    int32 at = 5;
+}
+
+message SplitBlockResponse {
+    elri.v1.object.Object head = 1;
+    elri.v1.object.Object tail = 2;
+    /* The tail's placement, right after the head's. */
+    elri.v1.object.Placement placement = 3;
+}
+
+message MergeBlocksRequest {
+    string space_id = 1;
+    string document_id = 2;
+    /* The placement of the block that keeps its identity. */
+    string placement_id = 3;
+    string field_id = 4;
+}
+
+message MergeBlocksResponse {
+    elri.v1.object.Object merged = 1;
+    /* The block whose text was taken. */
+    string absorbed_id = 2;
+    /* Whether the absorbed block was deleted with a redirect, or kept
+       because it is placed elsewhere. */
+    bool absorbed_deleted = 3;
+}

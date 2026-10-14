@@ -19,6 +19,7 @@ pub mod backup;
 pub mod blobs;
 pub mod change;
 pub mod device;
+pub mod document;
 pub mod extension;
 pub mod hostops;
 pub mod hypothesis;

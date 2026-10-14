@@ -635,8 +635,12 @@ async fn install_with_status(
     let change_id = uuid_arg(&env.id)?;
     let mut tx = db.transaction().await?;
     write_change_flagged(&mut tx, env, status, accepted_seq, "", coordinated).await?;
+    // Several parts may rest on the same earlier Change: one row each.
+    let mut deps: Vec<Uuid> = docs.iter().flat_map(|d| d.deps.iter().copied()).collect();
+    deps.sort_unstable();
+    deps.dedup();
+    write_deps(&mut tx, change_id, &deps).await?;
     for d in docs {
-        write_deps(&mut tx, change_id, &d.deps).await?;
         if d.is_new {
             write_snapshot(&mut tx, &d.doc, &d.rec).await?;
         } else {

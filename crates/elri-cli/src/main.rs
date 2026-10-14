@@ -28,6 +28,11 @@ use elri_proto::elri::v1::definition::{
     Constraint, CreateConstraintRequest, ListConstraintsRequest, ListViolationsRequest,
     UpdateConstraintRequest,
 };
+use elri_proto::elri::v1::document::document_service_ws::DocumentServiceClient;
+use elri_proto::elri::v1::document::{
+    CaptureFragmentRequest, Fragment, MergeBlocksRequest, Range, ResolveFragmentRequest,
+    SplitBlockRequest,
+};
 use elri_proto::elri::v1::events::event_service_ws::EventServiceClient;
 use elri_proto::elri::v1::events::{event, WatchRequest};
 use elri_proto::elri::v1::extension::extension_service_ws::ExtensionServiceClient;
@@ -164,6 +169,11 @@ enum Cmd {
         #[command(subcommand)]
         cmd: TransferCmd,
     },
+    /// Documents: fragments of block text, splitting and merging blocks.
+    Document {
+        #[command(subcommand)]
+        cmd: DocumentCmd,
+    },
     /// Durable workflows: script runs whose steps survive an interruption.
     Workflow {
         #[command(subcommand)]
@@ -260,6 +270,218 @@ enum ScriptCmd {
         #[arg(default_value = "null")]
         args: String,
     },
+}
+
+#[derive(Subcommand, Debug)]
+enum DocumentCmd {
+    /// Capture START..END of a block's text field as a fragment (JSON).
+    Capture {
+        #[arg(long)]
+        space: String,
+        object: String,
+        field: String,
+        start: i32,
+        end: i32,
+    },
+    /// Where a captured fragment (a JSON file) is now.
+    Resolve {
+        #[arg(long)]
+        space: String,
+        file: PathBuf,
+    },
+    /// Cut the block at PLACEMENT at position AT; the tail becomes a new
+    /// block placed right after.
+    Split {
+        #[arg(long)]
+        space: String,
+        document: String,
+        placement: String,
+        field: String,
+        at: i32,
+    },
+    /// Append the next sibling block's text to the block at PLACEMENT and
+    /// remove that placement.
+    Merge {
+        #[arg(long)]
+        space: String,
+        document: String,
+        placement: String,
+        field: String,
+    },
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().fold(String::new(), |mut s, b| {
+        use std::fmt::Write as _;
+        let _ = write!(s, "{b:02x}");
+        s
+    })
+}
+
+fn unhex(s: &str) -> Result<Vec<u8>> {
+    if !s.len().is_multiple_of(2) {
+        bail!("odd hex length");
+    }
+    (0..s.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16).map_err(Into::into))
+        .collect()
+}
+
+fn fragment_json(f: &Fragment) -> serde_json::Value {
+    json!({
+        "object_id": f.object_id, "field_id": f.field_id,
+        "start": hex(&f.start), "end": hex(&f.end), "version": hex(&f.version),
+        "quote": f.quote, "before": f.before, "after": f.after,
+        "captured_at_ms": f.captured_at_ms,
+    })
+}
+
+fn fragment_from_json(v: &serde_json::Value) -> Result<Fragment> {
+    let text = |k: &str| {
+        v.get(k)
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_owned()
+    };
+    Ok(Fragment {
+        object_id: text("object_id"),
+        field_id: text("field_id"),
+        start: unhex(&text("start"))?.into(),
+        end: unhex(&text("end"))?.into(),
+        version: unhex(&text("version"))?.into(),
+        quote: text("quote"),
+        before: text("before"),
+        after: text("after"),
+        captured_at_ms: v
+            .get("captured_at_ms")
+            .and_then(serde_json::Value::as_i64)
+            .unwrap_or(0),
+    })
+}
+
+fn range_json(r: &Range) -> serde_json::Value {
+    json!({ "start": r.start, "end": r.end, "text": r.text })
+}
+
+async fn run_fragment(
+    client: &DocumentServiceClient,
+    endpoint: &Endpoint,
+    cmd: DocumentCmd,
+) -> Result<serde_json::Value> {
+    match cmd {
+        DocumentCmd::Capture {
+            space,
+            object,
+            field,
+            start,
+            end,
+        } => {
+            let res = client
+                .capture_fragment(authed(
+                    endpoint,
+                    CaptureFragmentRequest {
+                        space_id: space,
+                        object_id: object,
+                        field_id: field,
+                        start,
+                        end,
+                    },
+                ))
+                .await?;
+            Ok(res
+                .msg
+                .fragment
+                .as_ref()
+                .map_or(serde_json::Value::Null, fragment_json))
+        }
+        DocumentCmd::Resolve { space, file } => {
+            let v: serde_json::Value = serde_json::from_slice(&std::fs::read(&file)?)?;
+            let res = client
+                .resolve_fragment(authed(
+                    endpoint,
+                    ResolveFragmentRequest {
+                        space_id: space,
+                        fragment: Some(fragment_from_json(&v)?),
+                    },
+                ))
+                .await?
+                .msg;
+            Ok(json!({
+                "state": res.state().as_str_name().trim_start_matches("FRAGMENT_STATE_").to_lowercase(),
+                "range": res.range.as_ref().map(range_json),
+                "candidates": res.candidates.iter().map(range_json).collect::<Vec<_>>(),
+                "redirected_to": res.redirected_to,
+                "reason": res.reason,
+            }))
+        }
+        _ => bail!("not a fragment command"),
+    }
+}
+
+async fn run_document(
+    endpoint: &Endpoint,
+    conn: Client,
+    cmd: DocumentCmd,
+) -> Result<serde_json::Value> {
+    let client = DocumentServiceClient::new(conn);
+    match cmd {
+        cmd @ (DocumentCmd::Capture { .. } | DocumentCmd::Resolve { .. }) => {
+            run_fragment(&client, endpoint, cmd).await
+        }
+        DocumentCmd::Split {
+            space,
+            document,
+            placement,
+            field,
+            at,
+        } => {
+            let res = client
+                .split_block(authed(
+                    endpoint,
+                    SplitBlockRequest {
+                        space_id: space,
+                        document_id: document,
+                        placement_id: placement,
+                        field_id: field,
+                        at,
+                    },
+                ))
+                .await?
+                .msg;
+            Ok(json!({
+                "head": res.head.as_ref().map(object_json),
+                "tail": res.tail.as_ref().map(object_json),
+                "placement": res.placement.as_ref().map(|p| json!({
+                    "id": p.id, "parent_id": p.parent_id, "index": p.index, "block_id": p.block_id,
+                })),
+            }))
+        }
+        DocumentCmd::Merge {
+            space,
+            document,
+            placement,
+            field,
+        } => {
+            let res = client
+                .merge_blocks(authed(
+                    endpoint,
+                    MergeBlocksRequest {
+                        space_id: space,
+                        document_id: document,
+                        placement_id: placement,
+                        field_id: field,
+                    },
+                ))
+                .await?
+                .msg;
+            Ok(json!({
+                "merged": res.merged.as_ref().map(object_json),
+                "absorbed_id": res.absorbed_id,
+                "absorbed_deleted": res.absorbed_deleted,
+            }))
+        }
+    }
 }
 
 #[derive(Subcommand, Debug)]
@@ -2445,6 +2667,7 @@ async fn main() -> Result<()> {
         Cmd::Grant { cmd } => run_grant(&endpoint, conn, cmd).await?,
         Cmd::Constraint { cmd } => run_constraint(&endpoint, conn, cmd).await?,
         Cmd::Workflow { cmd } => run_workflow(&endpoint, conn, cmd).await?,
+        Cmd::Document { cmd } => run_document(&endpoint, conn, cmd).await?,
         Cmd::Mapping { cmd } => run_mapping(&endpoint, conn, cmd).await?,
         Cmd::Rule { cmd } => run_rule(&endpoint, conn, cmd).await?,
         Cmd::Ui { cmd } => run_ui(&endpoint, conn, cmd).await?,

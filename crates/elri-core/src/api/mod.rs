@@ -5,6 +5,7 @@
 mod attachments;
 mod contexts;
 mod definitions;
+mod document;
 mod extensions;
 mod scripts;
 mod transfer;
@@ -121,6 +122,7 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     transfer::register(&server, Arc::clone(&services));
     extensions::register(&server, Arc::clone(&services));
     contexts::register(&server, Arc::clone(&services));
+    document::register(&server, Arc::clone(&services));
     workflows::register(&server, services);
     server
 }

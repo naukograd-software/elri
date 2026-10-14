@@ -826,10 +826,14 @@ impl Host {
                 let store = Arc::clone(&store);
                 let actor = actor_m.clone();
                 async move {
-                    a.lock()
-                        .unwrap_or_else(std::sync::PoisonError::into_inner)
-                        .charge()
-                        .map_err(to_lua)?;
+                    let labels = {
+                        let mut g = a.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+                        g.charge().map_err(to_lua)?;
+                        g.labels.clone()
+                    };
+                    policy::check_labels(&store, &labels, TransferOp::Copy, &own.to_string())
+                        .await
+                        .map_err(|e| to_lua(ScriptError::Policy(e)))?;
                     let name: String = spec.get::<Option<String>>("name")?.unwrap_or_default();
                     let mut members = Vec::new();
                     if let Some(ms) = spec.get::<Option<Table>>("members")? {

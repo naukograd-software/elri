@@ -280,6 +280,10 @@ pub mod reserved {
     pub const PROPOSED_BY: &str = "$proposed_by";
     /// Mappings: when it was approved.
     pub const APPROVED_AT: &str = "$approved_at";
+    /// Blocks: the block this one was split from.
+    pub const SPLIT_FROM: &str = "$split_from";
+    /// Blocks: the block this one was merged into; a redirect.
+    pub const MERGED_INTO: &str = "$merged_into";
 }
 
 /// Field ids the core writes itself: an ordinary write may not use them.
@@ -794,6 +798,70 @@ impl ObjectDoc {
             self.fields().delete(field_id)?;
         }
         Ok(self.fields().ensure_mergeable_map(field_id)?)
+    }
+
+    /// The text container of a field, if the field is collaborative text.
+    fn existing_text(&self, field_id: &str) -> Option<LoroText> {
+        match self.fields().get(field_id) {
+            Some(ValueOrContainer::Container(Container::Text(t))) => Some(t),
+            _ => None,
+        }
+    }
+
+    /// The text of a text field, if it is one.
+    pub fn text_of(&self, field_id: &str) -> Option<String> {
+        self.existing_text(field_id).map(|t| t.to_string())
+    }
+
+    /// Cursors at unicode positions `start` and `end` of a text field,
+    /// encoded; `None` when the field is not text or the range is out of
+    /// bounds.
+    pub fn text_cursors(
+        &self,
+        field_id: &str,
+        start: usize,
+        end: usize,
+    ) -> Option<(Vec<u8>, Vec<u8>)> {
+        let t = self.existing_text(field_id)?;
+        let len = t.len_unicode();
+        if start > end || end > len {
+            return None;
+        }
+        let a = t.get_cursor(start, loro::cursor::Side::Left)?;
+        let b = t.get_cursor(end, loro::cursor::Side::Right)?;
+        Some((a.encode(), b.encode()))
+    }
+
+    /// Where an encoded cursor points now, as a unicode position; `None`
+    /// when it cannot be decoded or no longer applies to this document.
+    pub fn cursor_position(&self, cursor: &[u8]) -> Option<usize> {
+        let c = loro::cursor::Cursor::decode(cursor).ok()?;
+        self.doc.get_cursor_pos(&c).ok().map(|r| r.current.pos)
+    }
+
+    /// Cuts a text field at unicode position `at`, keeping the head and
+    /// returning the tail.
+    pub fn cut_text(&self, field_id: &str, at: usize) -> Result<String, ModelError> {
+        let t = self
+            .existing_text(field_id)
+            .ok_or(ModelError::Malformed("not a text field"))?;
+        let len = t.len_unicode();
+        if at > len {
+            return Err(ModelError::Malformed("cut beyond the text"));
+        }
+        let whole = t.to_string();
+        let tail: String = whole.chars().skip(at).collect();
+        t.delete(at, len - at)?;
+        Ok(tail)
+    }
+
+    /// Appends `text` to a text field.
+    pub fn append_text(&self, field_id: &str, text: &str) -> Result<(), ModelError> {
+        let t = self
+            .existing_text(field_id)
+            .ok_or(ModelError::Malformed("not a text field"))?;
+        t.insert(t.len_unicode(), text)?;
+        Ok(())
     }
 
     /// Removes a field.
