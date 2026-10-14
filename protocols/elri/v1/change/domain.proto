@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package elri.v1.change;
+
+/* Where a Change is on its way from this device to acceptance. */
+enum ChangeStatus {
+    CHANGE_STATUS_UNSPECIFIED = 0;
+    /* Durable on this device; not yet submitted. */
+    CHANGE_STATUS_LOCAL = 1;
+    /* Submitted, awaiting the server's answer. */
+    CHANGE_STATUS_QUEUED = 2;
+    /* Waiting for a dependency to be accepted first. */
+    CHANGE_STATUS_WAITING = 3;
+    CHANGE_STATUS_ACCEPTED = 4;
+    CHANGE_STATUS_REJECTED = 5;
+    /* Depends on a rejected Change; preserved until the user decides. */
+    CHANGE_STATUS_PAUSED = 6;
+}
+
+/* One document touched by a Change. */
+message ChangePart {
+    string object_id = 1;
+    /* Size of the encoded operations. */
+    uint32 bytes_len = 2;
+}
+
+/* A logical write: one or more document updates accepted or rejected as a whole. */
+message Change {
+    /* UUIDv7, canonical string form. */
+    string id = 1;
+    string space_id = 2;
+    string device_id = 3;
+    int64 created_at_ms = 4;
+    ChangeStatus status = 5;
+    repeated ChangePart parts = 6;
+}

@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use elri_core::Endpoint;
+use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
+use elri_proto::elri::v1::change::ListChangesRequest;
 use elri_proto::elri::v1::core::core_service_ws::CoreServiceClient;
 use elri_proto::elri::v1::core::GetInfoRequest;
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
@@ -41,6 +43,22 @@ enum Cmd {
     Object {
         #[command(subcommand)]
         cmd: ObjectCmd,
+    },
+    /// Changes recorded in a Space, newest first.
+    Change {
+        #[command(subcommand)]
+        cmd: ChangeCmd,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum ChangeCmd {
+    /// List Changes.
+    List {
+        #[arg(long)]
+        space: String,
+        #[arg(long, default_value_t = 50)]
+        limit: i32,
     },
 }
 
@@ -206,6 +224,7 @@ async fn main() -> Result<()> {
         Cmd::Info => run_info(&endpoint, conn).await?,
         Cmd::Space { cmd } => run_space(&endpoint, conn, cmd).await?,
         Cmd::Object { cmd } => run_object(&endpoint, conn, cmd).await?,
+        Cmd::Change { cmd } => run_change(&endpoint, conn, cmd).await?,
     };
     print(&out)
 }
@@ -336,6 +355,45 @@ async fn run_object(
                 ))
                 .await?;
             Ok(json!({ "deleted": true }))
+        }
+    }
+}
+
+async fn run_change(
+    endpoint: &Endpoint,
+    conn: Client,
+    cmd: ChangeCmd,
+) -> Result<serde_json::Value> {
+    let client = ChangeServiceClient::new(conn);
+    match cmd {
+        ChangeCmd::List { space, limit } => {
+            let res = client
+                .list_changes(authed(
+                    endpoint,
+                    ListChangesRequest {
+                        space_id: space,
+                        limit,
+                    },
+                ))
+                .await?;
+            let changes: Vec<_> = res
+                .msg
+                .changes
+                .iter()
+                .map(|c| {
+                    json!({
+                        "id": c.id,
+                        "device_id": c.device_id,
+                        "created_at_ms": c.created_at_ms,
+                        "status": c.status().as_str_name(),
+                        "parts": c.parts.iter().map(|p| json!({
+                            "object_id": p.object_id,
+                            "bytes_len": p.bytes_len,
+                        })).collect::<Vec<_>>(),
+                    })
+                })
+                .collect();
+            Ok(json!(changes))
         }
     }
 }

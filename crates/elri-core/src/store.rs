@@ -11,7 +11,12 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use turso::{Builder, Connection, Database, Value};
 
+use crate::change::{Change, ChangeId, ChangePart, ChangeStatus};
+use crate::device::DeviceId;
 use crate::model::{now_ms, ModelError, ObjectDoc, ObjectId, ObjectKind, ObjectRecord, SpaceId};
+
+/// Updates folded into a fresh snapshot once this many accumulate per document.
+const COMPACT_AFTER_UPDATES: i64 = 64;
 
 /// Storage failures.
 #[derive(Debug, thiserror::Error)]
@@ -102,6 +107,28 @@ CREATE TABLE IF NOT EXISTS docs (
     version     BLOB NOT NULL,
     updated_at  INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS doc_updates (
+    seq         INTEGER PRIMARY KEY AUTOINCREMENT,
+    object_id   TEXT NOT NULL,
+    change_id   TEXT NOT NULL,
+    bytes       BLOB NOT NULL
+);
+CREATE INDEX IF NOT EXISTS doc_updates_object ON doc_updates (object_id, seq);
+CREATE TABLE IF NOT EXISTS changes (
+    seq         INTEGER PRIMARY KEY AUTOINCREMENT,
+    id          TEXT NOT NULL UNIQUE,
+    device_id   TEXT NOT NULL,
+    created_at  INTEGER NOT NULL,
+    status      INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS change_parts (
+    change_id   TEXT NOT NULL,
+    object_id   TEXT NOT NULL,
+    from_version BLOB NOT NULL,
+    to_version  BLOB NOT NULL,
+    bytes       BLOB NOT NULL,
+    PRIMARY KEY (change_id, object_id)
+);
 CREATE TABLE IF NOT EXISTS objects (
     object_id   TEXT PRIMARY KEY,
     kind        INTEGER NOT NULL,
@@ -170,17 +197,19 @@ fn blob(v: &Value, table: &'static str, what: &'static str) -> Result<Vec<u8>, S
 /// Device-level storage: the Space registry and the open Space databases.
 pub struct Store {
     root: PathBuf,
+    device_id: DeviceId,
     device: Mutex<Connection>,
     spaces: Mutex<HashMap<SpaceId, Arc<SpaceStore>>>,
 }
 
 impl Store {
     /// Opens `root/device.db` and prepares `root/spaces/` for Space files.
-    pub async fn open(root: impl Into<PathBuf>) -> Result<Self, StoreError> {
+    pub async fn open(root: impl Into<PathBuf>, device_id: DeviceId) -> Result<Self, StoreError> {
         let root = root.into();
         let db = open_db(&root.join("device.db"), DEVICE_SCHEMA).await?;
         Ok(Self {
             root,
+            device_id,
             device: Mutex::new(db.connect()?),
             spaces: Mutex::new(HashMap::new()),
         })
@@ -219,7 +248,7 @@ impl Store {
             authority: Authority::Local,
             created_at_ms: now_ms(),
         };
-        let space = SpaceStore::open(&self.space_path(info.id)).await?;
+        let space = SpaceStore::open(&self.space_path(info.id), self.device_id).await?;
         {
             let conn = self.device.lock().await;
             conn.execute(
@@ -252,7 +281,7 @@ impl Store {
         if !known {
             return Err(StoreError::SpaceNotFound(id));
         }
-        let space = Arc::new(SpaceStore::open(&self.space_path(id)).await?);
+        let space = Arc::new(SpaceStore::open(&self.space_path(id), self.device_id).await?);
         self.spaces
             .lock()
             .await
@@ -279,27 +308,49 @@ pub struct ObjectFilter {
     pub limit: usize,
 }
 
-/// Storage of one Space: documents plus projections, one writer.
+/// Storage of one Space: documents, their update log, Changes, and
+/// projections, with one writer.
 pub struct SpaceStore {
+    device_id: DeviceId,
     conn: Mutex<Connection>,
 }
 
 impl SpaceStore {
-    async fn open(path: &Path) -> Result<Self, StoreError> {
+    async fn open(path: &Path, device_id: DeviceId) -> Result<Self, StoreError> {
         let db = open_db(path, SPACE_SCHEMA).await?;
         Ok(Self {
+            device_id,
             conn: Mutex::new(db.connect()?),
         })
     }
 
-    /// Stores a freshly created document and its projections.
+    /// Stores a freshly created document as one Change with a full snapshot.
     pub async fn insert(&self, doc: &ObjectDoc) -> Result<ObjectRecord, StoreError> {
         let rec = doc.read()?;
+        let part = ChangePart {
+            object_id: rec.id,
+            from_version: loro::VersionVector::default().encode(),
+            to_version: doc.version(),
+            bytes: doc.updates_since(&loro::VersionVector::default())?,
+        };
+        let change = self.new_change(vec![part]);
         let mut conn = self.conn.lock().await;
         let tx = conn.transaction().await?;
-        write_doc(&tx, doc, &rec).await?;
+        write_change(&tx, &change).await?;
+        write_snapshot(&tx, doc, &rec).await?;
+        write_projections(&tx, &rec).await?;
         tx.commit().await?;
         Ok(rec)
+    }
+
+    fn new_change(&self, parts: Vec<ChangePart>) -> Change {
+        Change {
+            id: ChangeId::new(),
+            device_id: self.device_id.as_string(),
+            created_at_ms: now_ms(),
+            status: ChangeStatus::Local,
+            parts,
+        }
     }
 
     /// Loads a document by id.
@@ -313,21 +364,94 @@ impl SpaceStore {
         Ok(self.load(id).await?.read()?)
     }
 
-    /// Loads a document, applies `change`, and stores the result with its
-    /// projections in one transaction.
-    pub async fn update<F>(&self, id: ObjectId, change: F) -> Result<ObjectRecord, StoreError>
+    /// Loads a document, applies `edit`, and records the result as one
+    /// Change: the new operations go to the update log and the outbox, the
+    /// projections are rewritten, all in one transaction. The snapshot is
+    /// refreshed once enough updates have accumulated.
+    pub async fn update<F>(&self, id: ObjectId, edit: F) -> Result<ObjectRecord, StoreError>
     where
         F: FnOnce(&ObjectDoc) -> Result<(), ModelError>,
     {
         let mut conn = self.conn.lock().await;
-        let doc = load_doc(&conn, id).await?;
-        change(&doc)?;
+        let (doc, pending) = load_doc_with_count(&conn, id).await?;
+        let before = doc.version_vector();
+        edit(&doc)?;
         doc.touch(now_ms())?;
         let rec = doc.read()?;
+        let part = ChangePart {
+            object_id: id,
+            from_version: before.encode(),
+            to_version: doc.version(),
+            bytes: doc.updates_since(&before)?,
+        };
+        let change = self.new_change(vec![part.clone()]);
+
         let tx = conn.transaction().await?;
-        write_doc(&tx, &doc, &rec).await?;
+        write_change(&tx, &change).await?;
+        tx.execute(
+            "INSERT INTO doc_updates (object_id, change_id, bytes) VALUES (?, ?, ?)",
+            (id.to_string(), change.id.to_string(), part.bytes),
+        )
+        .await?;
+        if pending + 1 >= COMPACT_AFTER_UPDATES {
+            write_snapshot(&tx, &doc, &rec).await?;
+            tx.execute(
+                "DELETE FROM doc_updates WHERE object_id = ?",
+                (id.to_string(),),
+            )
+            .await?;
+        }
+        write_projections(&tx, &rec).await?;
         tx.commit().await?;
         Ok(rec)
+    }
+
+    /// Changes recorded in this Space, newest first.
+    pub async fn list_changes(&self, limit: usize) -> Result<Vec<Change>, StoreError> {
+        let limit = if limit == 0 { 50 } else { limit };
+        let conn = self.conn.lock().await;
+        let mut rows = conn
+            .query(
+                "SELECT id, device_id, created_at, status FROM changes ORDER BY seq DESC LIMIT ?",
+                (i64::try_from(limit).unwrap_or(i64::MAX),),
+            )
+            .await?;
+        let mut changes = Vec::new();
+        while let Some(row) = rows.next().await? {
+            changes.push(Change {
+                id: ObjectId::parse(&text(&row.get_value(0)?, "changes", "id")?)?,
+                device_id: text(&row.get_value(1)?, "changes", "device_id")?,
+                created_at_ms: int(&row.get_value(2)?, "changes", "created_at")?,
+                status: ChangeStatus::from_code(int(&row.get_value(3)?, "changes", "status")?)
+                    .ok_or(StoreError::Corrupt {
+                        table: "changes",
+                        what: "status",
+                    })?,
+                parts: Vec::new(),
+            });
+        }
+        drop(rows);
+        for change in &mut changes {
+            let mut rows = conn
+                .query(
+                    "SELECT object_id, from_version, to_version, bytes FROM change_parts WHERE change_id = ? ORDER BY object_id",
+                    (change.id.to_string(),),
+                )
+                .await?;
+            while let Some(row) = rows.next().await? {
+                change.parts.push(ChangePart {
+                    object_id: ObjectId::parse(&text(
+                        &row.get_value(0)?,
+                        "change_parts",
+                        "object_id",
+                    )?)?,
+                    from_version: blob(&row.get_value(1)?, "change_parts", "from_version")?,
+                    to_version: blob(&row.get_value(2)?, "change_parts", "to_version")?,
+                    bytes: blob(&row.get_value(3)?, "change_parts", "bytes")?,
+                });
+            }
+        }
+        Ok(changes)
     }
 
     /// Lists Objects matching `filter`, newest first.
@@ -374,6 +498,15 @@ impl SpaceStore {
 }
 
 async fn load_doc(conn: &Connection, id: ObjectId) -> Result<ObjectDoc, StoreError> {
+    Ok(load_doc_with_count(conn, id).await?.0)
+}
+
+/// Loads the snapshot plus every update logged after it; also returns how
+/// many updates were replayed, for compaction decisions.
+async fn load_doc_with_count(
+    conn: &Connection,
+    id: ObjectId,
+) -> Result<(ObjectDoc, i64), StoreError> {
     let mut rows = conn
         .query(
             "SELECT snapshot FROM docs WHERE object_id = ?",
@@ -383,20 +516,61 @@ async fn load_doc(conn: &Connection, id: ObjectId) -> Result<ObjectDoc, StoreErr
     let Some(row) = rows.next().await? else {
         return Err(StoreError::ObjectNotFound(id));
     };
-    let bytes = blob(&row.get_value(0)?, "docs", "snapshot")?;
-    Ok(ObjectDoc::from_snapshot(id, &bytes)?)
+    let snapshot = blob(&row.get_value(0)?, "docs", "snapshot")?;
+    drop(rows);
+    let mut rows = conn
+        .query(
+            "SELECT bytes FROM doc_updates WHERE object_id = ? ORDER BY seq",
+            (id.to_string(),),
+        )
+        .await?;
+    let mut updates = Vec::new();
+    while let Some(row) = rows.next().await? {
+        updates.push(blob(&row.get_value(0)?, "doc_updates", "bytes")?);
+    }
+    let count = i64::try_from(updates.len()).unwrap_or(i64::MAX);
+    Ok((ObjectDoc::from_parts(id, &snapshot, &updates)?, count))
 }
 
-async fn write_doc(
+async fn write_change(
+    tx: &turso::transaction::Transaction<'_>,
+    change: &Change,
+) -> Result<(), StoreError> {
+    tx.execute(
+        "INSERT INTO changes (id, device_id, created_at, status) VALUES (?, ?, ?, ?)",
+        (
+            change.id.to_string(),
+            change.device_id.clone(),
+            change.created_at_ms,
+            change.status.code(),
+        ),
+    )
+    .await?;
+    for part in &change.parts {
+        tx.execute(
+            "INSERT INTO change_parts (change_id, object_id, from_version, to_version, bytes) VALUES (?, ?, ?, ?, ?)",
+            (
+                change.id.to_string(),
+                part.object_id.to_string(),
+                part.from_version.clone(),
+                part.to_version.clone(),
+                part.bytes.clone(),
+            ),
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+async fn write_snapshot(
     tx: &turso::transaction::Transaction<'_>,
     doc: &ObjectDoc,
     rec: &ObjectRecord,
 ) -> Result<(), StoreError> {
-    let id = rec.id.to_string();
     tx.execute(
         "INSERT OR REPLACE INTO docs (object_id, kind, snapshot, version, updated_at) VALUES (?, ?, ?, ?, ?)",
         (
-            id.clone(),
+            rec.id.to_string(),
             rec.kind.code(),
             doc.snapshot()?,
             doc.version(),
@@ -404,6 +578,14 @@ async fn write_doc(
         ),
     )
     .await?;
+    Ok(())
+}
+
+async fn write_projections(
+    tx: &turso::transaction::Transaction<'_>,
+    rec: &ObjectRecord,
+) -> Result<(), StoreError> {
+    let id = rec.id.to_string();
     tx.execute(
         "INSERT OR REPLACE INTO objects (object_id, kind, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?)",
         (

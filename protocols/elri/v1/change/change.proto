@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package elri.v1.change;
+
+import "elri/v1/change/domain.proto";
+
+/* Inspect the Changes a Space has recorded on this device. */
+service ChangeService {
+    /* Newest first. */
+    rpc ListChanges(ListChangesRequest) returns (ListChangesResponse);
+}
+
+message ListChangesRequest {
+    string space_id = 1;
+    /* 0 = server default. */
+    int32 limit = 2;
+}
+
+message ListChangesResponse {
+    repeated Change changes = 1;
+}

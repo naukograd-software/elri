@@ -154,7 +154,7 @@ impl Core {
     pub async fn start(config: Config) -> Result<Self, CoreError> {
         let device_id = DeviceId::load_or_create(&config.data_dir)?;
         let token = LaunchToken::generate();
-        let store = Arc::new(Store::open(&config.data_dir).await?);
+        let store = Arc::new(Store::open(&config.data_dir, device_id).await?);
 
         let listener = TcpListener::bind(config.bind)
             .await

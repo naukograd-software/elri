@@ -6,6 +6,8 @@
 use std::collections::HashMap;
 
 use elri_core::{BuildInfo, Config, Core, Endpoint};
+use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
+use elri_proto::elri::v1::change::{ChangeStatus, ListChangesRequest};
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest,
@@ -32,6 +34,7 @@ struct Session {
     endpoint: Endpoint,
     spaces: SpaceServiceClient,
     objects: ObjectServiceClient,
+    changes: ChangeServiceClient,
 }
 
 impl Session {
@@ -43,7 +46,8 @@ impl Session {
         Self {
             endpoint,
             spaces: SpaceServiceClient::new(conn.clone()),
-            objects: ObjectServiceClient::new(conn),
+            objects: ObjectServiceClient::new(conn.clone()),
+            changes: ChangeServiceClient::new(conn),
         }
     }
 
@@ -333,4 +337,92 @@ async fn invalid_input_is_rejected() {
         .await
         .expect_err("unknown object");
     assert_eq!(err.code, Code::NotFound);
+}
+
+#[tokio::test]
+async fn every_write_is_a_change_and_snapshots_compact() {
+    let dir = tmp_dir("changes");
+    let core = Core::start(Config::new(&dir, build()))
+        .await
+        .expect("start");
+    let sess = Session::open(&dir).await;
+    let space = sess
+        .spaces
+        .create_space(sess.authed(CreateSpaceRequest { name: "s".into() }))
+        .await
+        .expect("create")
+        .msg
+        .space
+        .expect("space");
+
+    let created = sess
+        .objects
+        .create_object(sess.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: ObjectKind::Entity.into(),
+            ..Default::default()
+        }))
+        .await
+        .expect("create object")
+        .msg
+        .object
+        .expect("object");
+
+    // Well past the compaction threshold.
+    let writes: i64 = 70;
+    for n in 0..writes {
+        let mut set = HashMap::new();
+        set.insert("counter".to_owned(), i(n));
+        sess.objects
+            .update_object(sess.authed(UpdateObjectRequest {
+                space_id: space.id.clone(),
+                id: created.id.clone(),
+                set_fields: set,
+                ..Default::default()
+            }))
+            .await
+            .expect("update");
+    }
+
+    let changes = sess
+        .changes
+        .list_changes(sess.authed(ListChangesRequest {
+            space_id: space.id.clone(),
+            limit: 1000,
+        }))
+        .await
+        .expect("list changes")
+        .msg
+        .changes;
+    assert_eq!(
+        i64::try_from(changes.len()).expect("len"),
+        writes + 1,
+        "one Change per write, plus the create"
+    );
+    assert!(changes.iter().all(|c| c.status() == ChangeStatus::Local));
+    assert!(changes
+        .iter()
+        .all(|c| c.parts.len() == 1 && c.parts[0].object_id == created.id));
+    assert!(changes
+        .iter()
+        .all(|c| c.device_id == core.device_id().as_string()));
+
+    // State is intact after compaction and after a restart.
+    core.shutdown();
+    let _core = Core::start(Config::new(&dir, build()))
+        .await
+        .expect("restart");
+    let sess = Session::open(&dir).await;
+    let got = sess
+        .objects
+        .get_object(sess.authed(GetObjectRequest {
+            space_id: space.id.clone(),
+            id: created.id.clone(),
+        }))
+        .await
+        .expect("get")
+        .msg
+        .object
+        .expect("object");
+    assert_eq!(got.fields["counter"], i(writes - 1));
 }

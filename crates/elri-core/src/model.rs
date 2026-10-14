@@ -12,7 +12,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 
-use loro::{ExportMode, LoroDoc, LoroMap, LoroValue};
+use loro::{ExportMode, LoroDoc, LoroMap, LoroValue, VersionVector};
 use uuid::Uuid;
 
 /// Identity of an Object: a `UUIDv7`.
@@ -206,6 +206,32 @@ impl ObjectDoc {
         let doc = LoroDoc::from_snapshot(bytes)?;
         doc.set_record_timestamp(true);
         Ok(Self { id, doc })
+    }
+
+    /// Loads a document from a snapshot plus the updates recorded after it.
+    pub fn from_parts(
+        id: ObjectId,
+        snapshot: &[u8],
+        updates: &[Vec<u8>],
+    ) -> Result<Self, ModelError> {
+        let doc = Self::from_snapshot(id, snapshot)?;
+        if !updates.is_empty() {
+            let status = doc.doc.import_batch(updates)?;
+            if status.pending.is_some() {
+                return Err(ModelError::Malformed("updates with missing predecessors"));
+            }
+        }
+        Ok(doc)
+    }
+
+    /// Version vector of the operation log.
+    pub fn version_vector(&self) -> VersionVector {
+        self.doc.oplog_vv()
+    }
+
+    /// Operations added since `from`.
+    pub fn updates_since(&self, from: &VersionVector) -> Result<Vec<u8>, ModelError> {
+        Ok(self.doc.export(ExportMode::updates(from))?)
     }
 
     /// Identity.

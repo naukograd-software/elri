@@ -4,6 +4,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use elri_proto::elri::v1::change::change_service_ws::{
+    register_change_service_arc, ChangeServiceHandler,
+};
+use elri_proto::elri::v1::change::{self as cpb, ListChangesRequest, ListChangesResponse};
 use elri_proto::elri::v1::core::core_service_ws::{register_core_service_arc, CoreServiceHandler};
 use elri_proto::elri::v1::core::{EndpointKind, GetInfoRequest, GetInfoResponse};
 use elri_proto::elri::v1::object::object_service_ws::{
@@ -23,6 +27,7 @@ use elri_proto::elri::v1::space::{
 use ws_proto::server::{Handler, OriginPolicy};
 use ws_proto::{Code, Request, Response, Server, ServerConfig, Status};
 
+use crate::change::{Change, ChangeStatus};
 use crate::device::{DeviceId, LaunchToken};
 use crate::model::{now_ms, FieldValue, ModelError, ObjectDoc, ObjectId, ObjectKind, ObjectRecord};
 use crate::store::{Authority, ObjectFilter, SpaceInfo, Store, StoreError};
@@ -53,7 +58,8 @@ pub fn build_server(services: Services) -> Server {
     let services = Arc::new(services);
     register_core_service_arc(&server, Arc::clone(&services));
     register_space_service_arc(&server, Arc::clone(&services));
-    register_object_service_arc(&server, services);
+    register_object_service_arc(&server, Arc::clone(&services));
+    register_change_service_arc(&server, services);
     server
 }
 
@@ -192,6 +198,32 @@ fn fields_from_pb(
     }
     out.sort_by(|a, b| a.0.cmp(&b.0));
     Ok(out)
+}
+
+fn change_to_pb(space: &str, c: &Change) -> cpb::Change {
+    cpb::Change {
+        id: c.id.to_string(),
+        space_id: space.to_owned(),
+        device_id: c.device_id.clone(),
+        created_at_ms: c.created_at_ms,
+        status: match c.status {
+            ChangeStatus::Local => cpb::ChangeStatus::Local,
+            ChangeStatus::Queued => cpb::ChangeStatus::Queued,
+            ChangeStatus::Waiting => cpb::ChangeStatus::Waiting,
+            ChangeStatus::Accepted => cpb::ChangeStatus::Accepted,
+            ChangeStatus::Rejected => cpb::ChangeStatus::Rejected,
+            ChangeStatus::Paused => cpb::ChangeStatus::Paused,
+        }
+        .into(),
+        parts: c
+            .parts
+            .iter()
+            .map(|p| cpb::ChangePart {
+                object_id: p.object_id.to_string(),
+                bytes_len: u32::try_from(p.bytes.len()).unwrap_or(u32::MAX),
+            })
+            .collect(),
+    }
 }
 
 // --- handlers ----------------------------------------------------------------
@@ -335,6 +367,28 @@ impl ObjectServiceHandler for Services {
         let objects = self.store.space(space_id).await?.list(&filter).await?;
         Ok(Response::new(ListObjectsResponse {
             objects: objects.iter().map(object_to_pb).collect(),
+        }))
+    }
+}
+
+impl ChangeServiceHandler for Services {
+    async fn list_changes(
+        &self,
+        req: Request<ListChangesRequest>,
+    ) -> Result<Response<ListChangesResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let limit = usize::try_from(req.msg.limit).unwrap_or(0);
+        let changes = self
+            .store
+            .space(space_id)
+            .await?
+            .list_changes(limit)
+            .await?;
+        Ok(Response::new(ListChangesResponse {
+            changes: changes
+                .iter()
+                .map(|c| change_to_pb(&req.msg.space_id, c))
+                .collect(),
         }))
     }
 }

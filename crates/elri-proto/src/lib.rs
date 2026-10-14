@@ -1,6 +1,12 @@
 // @generated
 pub mod elri {
     pub mod v1 {
+        #[cfg(feature = "elri-v1-change")]
+        // @@protoc_insertion_point(attribute:elri.v1.change)
+        pub mod change {
+            include!("elri/v1/change/elri.v1.change.rs");
+            // @@protoc_insertion_point(elri.v1.change)
+        }
         #[cfg(feature = "elri-v1-core")]
         // @@protoc_insertion_point(attribute:elri.v1.core)
         pub mod core {
