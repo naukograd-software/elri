@@ -176,3 +176,29 @@ pub struct ParticipantRow {
     /// Participant-role definition id; empty when none.
     pub role_id: String,
 }
+
+/// Accepted Changes in log order; the server's discovery sequence and the
+/// client's record of what it has installed.
+#[derive(Debug, toasty::Model)]
+#[table = "space_log"]
+pub struct SpaceLogRow {
+    /// Position in the Space log.
+    #[key]
+    pub seq: i64,
+    /// Accepted Change id.
+    #[unique]
+    pub change_id: Uuid,
+    /// Acceptance instant, ms since epoch.
+    pub accepted_at: i64,
+}
+
+/// Small per-Space state: the highest server sequence installed locally.
+#[derive(Debug, toasty::Model)]
+#[table = "sync_state"]
+pub struct SyncStateRow {
+    /// Key, e.g. `cursor`.
+    #[key]
+    pub key: String,
+    /// Value.
+    pub value: i64,
+}

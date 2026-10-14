@@ -26,8 +26,11 @@ use crate::model::{
 };
 use models::{
     ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, ObjectRow, ObjectTypeRow,
-    ParticipantRow, SpaceRow,
+    ParticipantRow, SpaceLogRow, SpaceRow, SyncStateRow,
 };
+use tokio::sync::Notify;
+
+use crate::change::{Admission, RejectReason};
 
 /// Updates folded into a fresh snapshot once this many accumulate per document.
 const COMPACT_AFTER_UPDATES: usize = 64;
@@ -170,10 +173,22 @@ impl Store {
 
     /// Registers a new local-only Space and creates its database.
     pub async fn create_space(&self, name: &str) -> Result<SpaceInfo, StoreError> {
+        self.register_space(SpaceId::new(), name, Authority::Local)
+            .await
+    }
+
+    /// Registers a Space with a known id (a server Space being joined, or a
+    /// Space the server itself hosts) and creates its database.
+    pub async fn register_space(
+        &self,
+        id: SpaceId,
+        name: &str,
+        authority: Authority,
+    ) -> Result<SpaceInfo, StoreError> {
         let info = SpaceInfo {
-            id: SpaceId::new(),
+            id,
             name: name.to_owned(),
-            authority: Authority::Local,
+            authority,
             created_at_ms: now_ms(),
         };
         let space = SpaceStore::open(&self.space_path(info.id), self.device_id).await?;
@@ -256,6 +271,8 @@ pub struct ObjectFilter {
 pub struct SpaceStore {
     device_id: DeviceId,
     db: Mutex<Db>,
+    /// Signalled after every local write, so a sync worker can push.
+    dirty: Notify,
 }
 
 impl SpaceStore {
@@ -270,14 +287,23 @@ impl SpaceStore {
                 ObjectRow,
                 ObjectTypeRow,
                 FieldValueRow,
-                ParticipantRow
+                ParticipantRow,
+                SpaceLogRow,
+                SyncStateRow
             ),
         )
         .await?;
         Ok(Self {
             device_id,
             db: Mutex::new(db),
+            dirty: Notify::new(),
         })
+    }
+
+    /// Resolves after the next local write (or immediately if one happened
+    /// since the last call).
+    pub async fn wait_dirty(&self) {
+        self.dirty.notified().await;
     }
 
     fn new_change(&self, parts: Vec<ChangePart>) -> Change {
@@ -310,6 +336,7 @@ impl SpaceStore {
         write_snapshot(&mut tx, doc, &rec).await?;
         write_projections(&mut tx, &rec).await?;
         tx.commit().await?;
+        self.dirty.notify_one();
         Ok(rec)
     }
 
@@ -365,7 +392,252 @@ impl SpaceStore {
         }
         write_projections(&mut tx, &rec).await?;
         tx.commit().await?;
+        self.dirty.notify_one();
         Ok(rec)
+    }
+
+    // --- synchronization ------------------------------------------------
+
+    /// Local Changes not yet submitted, oldest first.
+    pub async fn outbox(&self, limit: usize) -> Result<Vec<Change>, StoreError> {
+        let limit = if limit == 0 { 50 } else { limit };
+        let mut db = self.db.lock().await;
+        let rows = ChangeRow::filter(ChangeRow::fields().status().eq(ChangeStatus::Local.code()))
+            .order_by(ChangeRow::fields().seq().asc())
+            .limit(limit)
+            .exec(&mut *db)
+            .await?;
+        let mut out = Vec::with_capacity(rows.len());
+        for row in &rows {
+            out.push(read_change(&mut db, row).await?);
+        }
+        Ok(out)
+    }
+
+    /// Records the authority's answer for a submitted Change.
+    pub async fn record_admission(
+        &self,
+        id: ChangeId,
+        admission: &Admission,
+    ) -> Result<(), StoreError> {
+        let mut db = self.db.lock().await;
+        let (status, seq, rejection) = match admission {
+            Admission::Accepted(seq) => (ChangeStatus::Accepted, Some(*seq), None),
+            Admission::Rejected(reason) => (ChangeStatus::Rejected, None, Some(reason.to_string())),
+        };
+        toasty::update!(ChangeRow::filter(ChangeRow::fields().id().eq(id.uuid())) {
+            status: status.code(),
+            accepted_seq: seq,
+            rejection,
+        })
+        .exec(&mut *db)
+        .await?;
+        Ok(())
+    }
+
+    /// Highest Space-log sequence installed locally; 0 before any.
+    pub async fn cursor(&self) -> Result<i64, StoreError> {
+        let mut db = self.db.lock().await;
+        read_cursor(&mut db).await
+    }
+
+    /// Highest sequence in the Space log; 0 when empty.
+    pub async fn last_seq(&self) -> Result<i64, StoreError> {
+        let mut db = self.db.lock().await;
+        last_seq(&mut db).await
+    }
+
+    /// Accepted Changes after `after`, oldest first.
+    pub async fn log_after(
+        &self,
+        after: i64,
+        limit: usize,
+    ) -> Result<Vec<(i64, Change)>, StoreError> {
+        let limit = if limit == 0 { 100 } else { limit };
+        let mut db = self.db.lock().await;
+        let entries = SpaceLogRow::filter(SpaceLogRow::fields().seq().gt(after))
+            .order_by(SpaceLogRow::fields().seq().asc())
+            .limit(limit)
+            .exec(&mut *db)
+            .await?;
+        let mut out = Vec::with_capacity(entries.len());
+        for e in &entries {
+            let Some(row) = ChangeRow::filter(ChangeRow::fields().id().eq(e.change_id))
+                .first()
+                .exec(&mut *db)
+                .await?
+            else {
+                return Err(StoreError::Corrupt {
+                    table: "space_log",
+                    what: "change missing",
+                });
+            };
+            out.push((e.seq, read_change(&mut db, &row).await?));
+        }
+        Ok(out)
+    }
+
+    /// Authority side: validates a submitted Change by applying its
+    /// operations to candidate documents and, if everything applies, installs
+    /// it at the next log position. Resubmitting a known id returns the
+    /// recorded outcome.
+    pub async fn admit(&self, change: &Change) -> Result<Admission, StoreError> {
+        let mut db = self.db.lock().await;
+        if let Some(existing) = ChangeRow::filter(ChangeRow::fields().id().eq(change.id.uuid()))
+            .first()
+            .exec(&mut *db)
+            .await?
+        {
+            return Ok(match (existing.accepted_seq, existing.rejection) {
+                (Some(seq), _) => Admission::Accepted(seq),
+                (None, Some(r)) => Admission::Rejected(RejectReason::Invalid(r)),
+                (None, None) => {
+                    Admission::Rejected(RejectReason::Invalid("change known but undecided".into()))
+                }
+            });
+        }
+        if change.parts.is_empty() {
+            return Ok(Admission::Rejected(RejectReason::Invalid(
+                "no parts".into(),
+            )));
+        }
+
+        // Stage every part on a candidate document before touching storage.
+        let mut staged: Vec<(ObjectDoc, ObjectRecord, usize)> =
+            Vec::with_capacity(change.parts.len());
+        for part in &change.parts {
+            let (doc, pending) = match load_doc(&mut db, part.object_id).await {
+                Ok((doc, pending)) => {
+                    match doc.import(&part.bytes) {
+                        Ok(true) => {}
+                        Ok(false) => {
+                            return Ok(Admission::Rejected(RejectReason::MissingPredecessors))
+                        }
+                        Err(e) => {
+                            return Ok(Admission::Rejected(RejectReason::Invalid(e.to_string())))
+                        }
+                    }
+                    (doc, pending)
+                }
+                Err(StoreError::ObjectNotFound(_)) => {
+                    match ObjectDoc::from_updates(part.object_id, std::slice::from_ref(&part.bytes))
+                    {
+                        Ok(doc) => (doc, 0),
+                        Err(ModelError::Malformed(_)) => {
+                            return Ok(Admission::Rejected(RejectReason::MissingPredecessors));
+                        }
+                        Err(e) => {
+                            return Ok(Admission::Rejected(RejectReason::Invalid(e.to_string())));
+                        }
+                    }
+                }
+                Err(e) => return Err(e),
+            };
+            let rec = match doc.read() {
+                Ok(r) => r,
+                Err(e) => return Ok(Admission::Rejected(RejectReason::Invalid(e.to_string()))),
+            };
+            if rec.kind != part.kind {
+                return Ok(Admission::Rejected(RejectReason::Invalid(
+                    "kind mismatch".into(),
+                )));
+            }
+            staged.push((doc, rec, pending));
+        }
+
+        let seq = last_seq(&mut db).await? + 1;
+        let accepted = Change {
+            status: ChangeStatus::Accepted,
+            accepted_seq: Some(seq),
+            rejection: None,
+            ..change.clone()
+        };
+        let mut tx = db.transaction().await?;
+        write_change(&mut tx, &accepted).await?;
+        toasty::create!(SpaceLogRow {
+            seq,
+            change_id: change.id.uuid(),
+            accepted_at: now_ms(),
+        })
+        .exec(&mut tx)
+        .await?;
+        for ((doc, rec, pending), part) in staged.iter().zip(&change.parts) {
+            install_part(&mut tx, doc, rec, part, &change.id, *pending).await?;
+        }
+        tx.commit().await?;
+        Ok(Admission::Accepted(seq))
+    }
+
+    /// Replica side: installs an accepted Change delivered from the
+    /// authority at log position `seq`. A Change this device produced is
+    /// only marked accepted; a foreign one is applied to the documents.
+    pub async fn apply_accepted(&self, seq: i64, change: &Change) -> Result<(), StoreError> {
+        let mut db = self.db.lock().await;
+        let mine = ChangeRow::filter(ChangeRow::fields().id().eq(change.id.uuid()))
+            .first()
+            .exec(&mut *db)
+            .await?;
+        let mut tx = db.transaction().await?;
+        if let Some(row) = mine {
+            if row.accepted_seq != Some(seq) {
+                toasty::update!(ChangeRow::filter(ChangeRow::fields().id().eq(change.id.uuid())) {
+                    status: ChangeStatus::Accepted.code(),
+                    accepted_seq: Some(seq),
+                })
+                .exec(&mut tx)
+                .await?;
+            }
+        } else {
+            let accepted = Change {
+                status: ChangeStatus::Accepted,
+                accepted_seq: Some(seq),
+                rejection: None,
+                ..change.clone()
+            };
+            write_change(&mut tx, &accepted).await?;
+            for part in &change.parts {
+                let (doc, pending) = match load_doc_tx(&mut tx, part.object_id).await {
+                    Ok((doc, pending)) => {
+                        if !doc.import(&part.bytes)? {
+                            return Err(StoreError::Model(ModelError::Malformed(
+                                "accepted change with missing predecessors",
+                            )));
+                        }
+                        (doc, pending)
+                    }
+                    Err(StoreError::ObjectNotFound(_)) => (
+                        ObjectDoc::from_updates(part.object_id, std::slice::from_ref(&part.bytes))?,
+                        0,
+                    ),
+                    Err(e) => return Err(e),
+                };
+                let rec = doc.read()?;
+                install_part(&mut tx, &doc, &rec, part, &change.id, pending).await?;
+            }
+        }
+        SpaceLogRow::filter_by_seq(seq)
+            .delete()
+            .exec(&mut tx)
+            .await?;
+        toasty::create!(SpaceLogRow {
+            seq,
+            change_id: change.id.uuid(),
+            accepted_at: now_ms(),
+        })
+        .exec(&mut tx)
+        .await?;
+        SyncStateRow::filter_by_key("cursor".to_owned())
+            .delete()
+            .exec(&mut tx)
+            .await?;
+        toasty::create!(SyncStateRow {
+            key: "cursor".to_owned(),
+            value: seq,
+        })
+        .exec(&mut tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     /// Lists Objects matching `filter`, newest first.
@@ -645,4 +917,78 @@ async fn write_projections(
         .await?;
     }
     Ok(())
+}
+
+async fn read_cursor(db: &mut Db) -> Result<i64, StoreError> {
+    Ok(SyncStateRow::filter_by_key("cursor".to_owned())
+        .first()
+        .exec(&mut *db)
+        .await?
+        .map_or(0, |r| r.value))
+}
+
+async fn last_seq(db: &mut Db) -> Result<i64, StoreError> {
+    Ok(SpaceLogRow::all()
+        .order_by(SpaceLogRow::fields().seq().desc())
+        .first()
+        .exec(&mut *db)
+        .await?
+        .map_or(0, |r| r.seq))
+}
+
+async fn load_doc_tx(
+    tx: &mut toasty::Transaction<'_>,
+    id: ObjectId,
+) -> Result<(ObjectDoc, usize), StoreError> {
+    let Some(doc) = DocRow::filter_by_object_id(id.uuid())
+        .first()
+        .exec(&mut *tx)
+        .await?
+    else {
+        return Err(StoreError::ObjectNotFound(id));
+    };
+    let updates = DocUpdateRow::filter(DocUpdateRow::fields().object_id().eq(id.uuid()))
+        .order_by(DocUpdateRow::fields().seq().asc())
+        .exec(&mut *tx)
+        .await?;
+    let bytes: Vec<Vec<u8>> = updates.into_iter().map(|u| u.bytes).collect();
+    let count = bytes.len();
+    Ok((ObjectDoc::from_parts(id, &doc.snapshot, &bytes)?, count))
+}
+
+/// Writes an applied part: either the first snapshot of a new document or
+/// one more entry in its update log (compacting when due), plus the
+/// projections.
+async fn install_part(
+    tx: &mut toasty::Transaction<'_>,
+    doc: &ObjectDoc,
+    rec: &ObjectRecord,
+    part: &ChangePart,
+    change_id: &ChangeId,
+    pending: usize,
+) -> Result<(), StoreError> {
+    let is_new = DocRow::filter_by_object_id(part.object_id.uuid())
+        .first()
+        .exec(&mut *tx)
+        .await?
+        .is_none();
+    if is_new {
+        write_snapshot(tx, doc, rec).await?;
+    } else {
+        toasty::create!(DocUpdateRow {
+            object_id: part.object_id.uuid(),
+            change_id: change_id.uuid(),
+            bytes: part.bytes.clone(),
+        })
+        .exec(&mut *tx)
+        .await?;
+        if pending + 1 >= COMPACT_AFTER_UPDATES {
+            write_snapshot(tx, doc, rec).await?;
+            DocUpdateRow::filter(DocUpdateRow::fields().object_id().eq(part.object_id.uuid()))
+                .delete()
+                .exec(&mut *tx)
+                .await?;
+        }
+    }
+    write_projections(tx, rec).await
 }
