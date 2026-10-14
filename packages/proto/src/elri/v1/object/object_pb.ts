@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Object$, ObjectJson, ObjectKind, ObjectKindJson, Value, ValueJson } from "./domain_pb.ts";
+import type { Object$, ObjectJson, ObjectKind, ObjectKindJson, Participant, ParticipantJson, Value, ValueJson } from "./domain_pb.ts";
 import { file_elri_v1_object_domain } from "./domain_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/object/object.proto.
  */
 export const file_elri_v1_object_object: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9vYmplY3QucHJvdG8SDmVscmkudjEub2JqZWN0IucBChNDcmVhdGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAMgAygJEj8KBmZpZWxkcxgEIAMoCzIvLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QuRmllbGRzRW50cnkaRAoLRmllbGRzRW50cnkSCwoDa2V5GAEgASgJEiQKBXZhbHVlGAIgASgLMhUuZWxyaS52MS5vYmplY3QuVmFsdWU6AjgBIj4KFENyZWF0ZU9iamVjdFJlc3BvbnNlEiYKBm9iamVjdBgBIAEoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdCIwChBHZXRPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJIjsKEUdldE9iamVjdFJlc3BvbnNlEiYKBm9iamVjdBgBIAEoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdCKEAgoTVXBkYXRlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRJGCgpzZXRfZmllbGRzGAMgAygLMjIuZWxyaS52MS5vYmplY3QuVXBkYXRlT2JqZWN0UmVxdWVzdC5TZXRGaWVsZHNFbnRyeRIVCg1yZW1vdmVfZmllbGRzGAQgAygJEhEKCWFkZF90eXBlcxgFIAMoCRIUCgxyZW1vdmVfdHlwZXMYBiADKAkaRwoOU2V0RmllbGRzRW50cnkSCwoDa2V5GAEgASgJEiQKBXZhbHVlGAIgASgLMhUuZWxyaS52MS5vYmplY3QuVmFsdWU6AjgBIj4KFFVwZGF0ZU9iamVjdFJlc3BvbnNlEiYKBm9iamVjdBgBIAEoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdCIzChNEZWxldGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJIhYKFERlbGV0ZU9iamVjdFJlc3BvbnNlIokBChJMaXN0T2JqZWN0c1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSKAoEa2luZBgCIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDwoHdHlwZV9pZBgDIAEoCRIXCg9pbmNsdWRlX2RlbGV0ZWQYBCABKAgSDQoFbGltaXQYBSABKAUiPgoTTGlzdE9iamVjdHNSZXNwb25zZRInCgdvYmplY3RzGAEgAygLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0MsoDCg1PYmplY3RTZXJ2aWNlElkKDENyZWF0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5DcmVhdGVPYmplY3RSZXNwb25zZRJQCglHZXRPYmplY3QSIC5lbHJpLnYxLm9iamVjdC5HZXRPYmplY3RSZXF1ZXN0GiEuZWxyaS52MS5vYmplY3QuR2V0T2JqZWN0UmVzcG9uc2USWQoMVXBkYXRlT2JqZWN0EiMuZWxyaS52MS5vYmplY3QuVXBkYXRlT2JqZWN0UmVxdWVzdBokLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlc3BvbnNlElkKDERlbGV0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LkRlbGV0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXNwb25zZRJWCgtMaXN0T2JqZWN0cxIiLmVscmkudjEub2JqZWN0Lkxpc3RPYmplY3RzUmVxdWVzdBojLmVscmkudjEub2JqZWN0Lkxpc3RPYmplY3RzUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9vYmplY3QucHJvdG8SDmVscmkudjEub2JqZWN0Iq0CChNDcmVhdGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAMgAygJEj8KBmZpZWxkcxgEIAMoCzIvLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QuRmllbGRzRW50cnkSMQoMcGFydGljaXBhbnRzGAUgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSEQoJdGFyZ2V0X2lkGAYgASgJGkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRDcmVhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMAoQR2V0T2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI7ChFHZXRPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3Qi2AIKE1VwZGF0ZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSRgoKc2V0X2ZpZWxkcxgDIAMoCzIyLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QuU2V0RmllbGRzRW50cnkSFQoNcmVtb3ZlX2ZpZWxkcxgEIAMoCRIRCglhZGRfdHlwZXMYBSADKAkSFAoMcmVtb3ZlX3R5cGVzGAYgAygJEjUKEHNldF9wYXJ0aWNpcGFudHMYByADKAsyGy5lbHJpLnYxLm9iamVjdC5QYXJ0aWNpcGFudBIbChNyZW1vdmVfcGFydGljaXBhbnRzGAggAygJGkcKDlNldEZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRVcGRhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMwoTRGVsZXRlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIWChREZWxldGVPYmplY3RSZXNwb25zZSK7AQoSTGlzdE9iamVjdHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg8KB3R5cGVfaWQYAyABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAQgASgIEg0KBWxpbWl0GAUgASgFEh0KFXBhcnRpY2lwYW50X29iamVjdF9pZBgGIAEoCRIRCgl0YXJnZXRfaWQYByABKAkiPgoTTGlzdE9iamVjdHNSZXNwb25zZRInCgdvYmplY3RzGAEgAygLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0MsoDCg1PYmplY3RTZXJ2aWNlElkKDENyZWF0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5DcmVhdGVPYmplY3RSZXNwb25zZRJQCglHZXRPYmplY3QSIC5lbHJpLnYxLm9iamVjdC5HZXRPYmplY3RSZXF1ZXN0GiEuZWxyaS52MS5vYmplY3QuR2V0T2JqZWN0UmVzcG9uc2USWQoMVXBkYXRlT2JqZWN0EiMuZWxyaS52MS5vYmplY3QuVXBkYXRlT2JqZWN0UmVxdWVzdBokLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlc3BvbnNlElkKDERlbGV0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LkRlbGV0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXNwb25zZRJWCgtMaXN0T2JqZWN0cxIiLmVscmkudjEub2JqZWN0Lkxpc3RPYmplY3RzUmVxdWVzdBojLmVscmkudjEub2JqZWN0Lkxpc3RPYmplY3RzUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_object_domain]);
 
 /**
  * @generated from message elri.v1.object.CreateObjectRequest
@@ -37,6 +37,20 @@ export type CreateObjectRequest = Message<"elri.v1.object.CreateObjectRequest"> 
    * @generated from field: map<string, elri.v1.object.Value> fields = 4;
    */
   fields: { [key: string]: Value };
+
+  /**
+   * Relations only. 
+   *
+   * @generated from field: repeated elri.v1.object.Participant participants = 5;
+   */
+  participants: Participant[];
+
+  /**
+   * Layers only; required for them. 
+   *
+   * @generated from field: string target_id = 6;
+   */
+  targetId: string;
 };
 
 /**
@@ -62,6 +76,20 @@ export type CreateObjectRequestJson = {
    * @generated from field: map<string, elri.v1.object.Value> fields = 4;
    */
   fields?: { [key: string]: ValueJson };
+
+  /**
+   * Relations only. 
+   *
+   * @generated from field: repeated elri.v1.object.Participant participants = 5;
+   */
+  participants?: ParticipantJson[];
+
+  /**
+   * Layers only; required for them. 
+   *
+   * @generated from field: string target_id = 6;
+   */
+  targetId?: string;
 };
 
 /**
@@ -195,6 +223,20 @@ export type UpdateObjectRequest = Message<"elri.v1.object.UpdateObjectRequest"> 
    * @generated from field: repeated string remove_types = 6;
    */
   removeTypes: string[];
+
+  /**
+   * Relations only: add or replace participants by slot. 
+   *
+   * @generated from field: repeated elri.v1.object.Participant set_participants = 7;
+   */
+  setParticipants: Participant[];
+
+  /**
+   * Relations only: slots to remove. 
+   *
+   * @generated from field: repeated string remove_participants = 8;
+   */
+  removeParticipants: string[];
 };
 
 /**
@@ -230,6 +272,20 @@ export type UpdateObjectRequestJson = {
    * @generated from field: repeated string remove_types = 6;
    */
   removeTypes?: string[];
+
+  /**
+   * Relations only: add or replace participants by slot. 
+   *
+   * @generated from field: repeated elri.v1.object.Participant set_participants = 7;
+   */
+  setParticipants?: ParticipantJson[];
+
+  /**
+   * Relations only: slots to remove. 
+   *
+   * @generated from field: repeated string remove_participants = 8;
+   */
+  removeParticipants?: string[];
 };
 
 /**
@@ -358,6 +414,20 @@ export type ListObjectsRequest = Message<"elri.v1.object.ListObjectsRequest"> & 
    * @generated from field: int32 limit = 5;
    */
   limit: number;
+
+  /**
+   * Only Relations in which this Object participates, if set. 
+   *
+   * @generated from field: string participant_object_id = 6;
+   */
+  participantObjectId: string;
+
+  /**
+   * Only Layers over this Object, if set. 
+   *
+   * @generated from field: string target_id = 7;
+   */
+  targetId: string;
 };
 
 /**
@@ -396,6 +466,20 @@ export type ListObjectsRequestJson = {
    * @generated from field: int32 limit = 5;
    */
   limit?: number;
+
+  /**
+   * Only Relations in which this Object participates, if set. 
+   *
+   * @generated from field: string participant_object_id = 6;
+   */
+  participantObjectId?: string;
+
+  /**
+   * Only Layers over this Object, if set. 
+   *
+   * @generated from field: string target_id = 7;
+   */
+  targetId?: string;
 };
 
 /**

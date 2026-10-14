@@ -20,6 +20,10 @@ message CreateObjectRequest {
     ObjectKind kind = 2;
     repeated string types = 3;
     map<string, Value> fields = 4;
+    /* Relations only. */
+    repeated Participant participants = 5;
+    /* Layers only; required for them. */
+    string target_id = 6;
 }
 
 message CreateObjectResponse {
@@ -42,6 +46,10 @@ message UpdateObjectRequest {
     repeated string remove_fields = 4;
     repeated string add_types = 5;
     repeated string remove_types = 6;
+    /* Relations only: add or replace participants by slot. */
+    repeated Participant set_participants = 7;
+    /* Relations only: slots to remove. */
+    repeated string remove_participants = 8;
 }
 
 message UpdateObjectResponse {
@@ -65,6 +73,10 @@ message ListObjectsRequest {
     bool include_deleted = 4;
     /* 0 = server default. */
     int32 limit = 5;
+    /* Only Relations in which this Object participates, if set. */
+    string participant_object_id = 6;
+    /* Only Layers over this Object, if set. */
+    string target_id = 7;
 }
 
 message ListObjectsResponse {

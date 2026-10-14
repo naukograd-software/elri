@@ -134,9 +134,19 @@ CREATE TABLE IF NOT EXISTS objects (
     kind        INTEGER NOT NULL,
     created_at  INTEGER NOT NULL,
     updated_at  INTEGER NOT NULL,
-    deleted_at  INTEGER
+    deleted_at  INTEGER,
+    target_id   TEXT
 );
 CREATE INDEX IF NOT EXISTS objects_kind ON objects (kind, deleted_at, created_at);
+CREATE INDEX IF NOT EXISTS objects_target ON objects (target_id) WHERE target_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS participants (
+    relation_id TEXT NOT NULL,
+    slot        TEXT NOT NULL,
+    object_id   TEXT NOT NULL,
+    role_id     TEXT NOT NULL,
+    PRIMARY KEY (relation_id, slot)
+);
+CREATE INDEX IF NOT EXISTS participants_object ON participants (object_id, relation_id);
 CREATE TABLE IF NOT EXISTS object_types (
     object_id   TEXT NOT NULL,
     type_id     TEXT NOT NULL,
@@ -306,6 +316,10 @@ pub struct ObjectFilter {
     pub include_deleted: bool,
     /// Maximum rows.
     pub limit: usize,
+    /// Only Relations in which this Object participates, if set.
+    pub participant: Option<ObjectId>,
+    /// Only Layers over this Object, if set.
+    pub target: Option<ObjectId>,
 }
 
 /// Storage of one Space: documents, their update log, Changes, and
@@ -463,6 +477,14 @@ impl SpaceStore {
             sql.push_str(" JOIN object_types t ON t.object_id = o.object_id AND t.type_id = ?");
             params.push(Value::Text(t.clone()));
         }
+        if let Some(p) = filter.participant {
+            sql.push_str(" JOIN participants p ON p.relation_id = o.object_id AND p.object_id = ?");
+            params.push(Value::Text(p.to_string()));
+        }
+        if let Some(t) = filter.target {
+            conds.push("o.target_id = ?");
+            params.push(Value::Text(t.to_string()));
+        }
         if let Some(k) = filter.kind {
             conds.push("o.kind = ?");
             params.push(Value::Integer(k.code()));
@@ -587,16 +609,34 @@ async fn write_projections(
 ) -> Result<(), StoreError> {
     let id = rec.id.to_string();
     tx.execute(
-        "INSERT OR REPLACE INTO objects (object_id, kind, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT OR REPLACE INTO objects (object_id, kind, created_at, updated_at, deleted_at, target_id) VALUES (?, ?, ?, ?, ?, ?)",
         (
             id.clone(),
             rec.kind.code(),
             rec.created_at_ms,
             rec.updated_at_ms,
             rec.deleted_at_ms.map_or(Value::Null, Value::Integer),
+            rec.target.map_or(Value::Null, |t| Value::Text(t.to_string())),
         ),
     )
     .await?;
+    tx.execute(
+        "DELETE FROM participants WHERE relation_id = ?",
+        (id.clone(),),
+    )
+    .await?;
+    for p in &rec.participants {
+        tx.execute(
+            "INSERT INTO participants (relation_id, slot, object_id, role_id) VALUES (?, ?, ?, ?)",
+            (
+                id.clone(),
+                p.slot.clone(),
+                p.object.to_string(),
+                p.role.clone(),
+            ),
+        )
+        .await?;
+    }
     tx.execute(
         "DELETE FROM object_types WHERE object_id = ?",
         (id.clone(),),

@@ -11,7 +11,7 @@ use elri_proto::elri::v1::change::{ChangeStatus, ListChangesRequest};
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest,
-    ObjectKind, UpdateObjectRequest, Value,
+    ObjectKind, Participant, UpdateObjectRequest, Value,
 };
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::{Authority, CreateSpaceRequest, ListSpacesRequest};
@@ -117,6 +117,7 @@ async fn spaces_and_objects_end_to_end() {
             kind: ObjectKind::Entity.into(),
             types: vec!["task".into()],
             fields,
+            ..Default::default()
         }))
         .await
         .expect("create object")
@@ -154,6 +155,7 @@ async fn spaces_and_objects_end_to_end() {
             remove_fields: vec!["priority".into()],
             add_types: vec!["habit".into()],
             remove_types: vec!["task".into()],
+            ..Default::default()
         }))
         .await
         .expect("update")
@@ -170,8 +172,7 @@ async fn spaces_and_objects_end_to_end() {
         .create_object(sess.authed(CreateObjectRequest {
             space_id: space_id.clone(),
             kind: ObjectKind::Relation.into(),
-            types: vec![],
-            fields: HashMap::new(),
+            ..Default::default()
         }))
         .await
         .expect("create relation");
@@ -425,4 +426,194 @@ async fn every_write_is_a_change_and_snapshots_compact() {
         .object
         .expect("object");
     assert_eq!(got.fields["counter"], i(writes - 1));
+}
+
+#[tokio::test]
+async fn relations_and_layers() {
+    let dir = tmp_dir("relations");
+    let _core = Core::start(Config::new(&dir, build()))
+        .await
+        .expect("start");
+    let sess = Session::open(&dir).await;
+    let space = sess
+        .spaces
+        .create_space(sess.authed(CreateSpaceRequest { name: "s".into() }))
+        .await
+        .expect("create")
+        .msg
+        .space
+        .expect("space");
+    let entity = |sess: &Session| {
+        let space_id = space.id.clone();
+        let req = sess.authed(CreateObjectRequest {
+            space_id,
+            kind: ObjectKind::Entity.into(),
+            ..Default::default()
+        });
+        let objects = sess.objects.clone();
+        async move {
+            objects
+                .create_object(req)
+                .await
+                .expect("entity")
+                .msg
+                .object
+                .expect("object")
+        }
+    };
+    let a = entity(&sess).await;
+    let b = entity(&sess).await;
+
+    // Relation with two participants.
+    let rel = sess
+        .objects
+        .create_object(sess.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: ObjectKind::Relation.into(),
+            participants: vec![
+                Participant {
+                    slot: "from".into(),
+                    object_id: a.id.clone(),
+                    role_id: "parent".into(),
+                },
+                Participant {
+                    slot: "to".into(),
+                    object_id: b.id.clone(),
+                    role_id: String::new(),
+                },
+            ],
+            ..Default::default()
+        }))
+        .await
+        .expect("relation")
+        .msg
+        .object
+        .expect("object");
+    assert_eq!(rel.participants.len(), 2);
+    assert_eq!(rel.participants[0].slot, "from");
+    assert_eq!(rel.participants[0].role_id, "parent");
+
+    // Found through either participant; not through an unrelated id.
+    for who in [&a.id, &b.id] {
+        let found = sess
+            .objects
+            .list_objects(sess.authed(ListObjectsRequest {
+                space_id: space.id.clone(),
+                participant_object_id: who.clone(),
+                ..Default::default()
+            }))
+            .await
+            .expect("list by participant")
+            .msg
+            .objects;
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].id, rel.id);
+    }
+    let none = sess
+        .objects
+        .list_objects(sess.authed(ListObjectsRequest {
+            space_id: space.id.clone(),
+            participant_object_id: uuid::Uuid::now_v7().to_string(),
+            ..Default::default()
+        }))
+        .await
+        .expect("list none")
+        .msg
+        .objects;
+    assert!(none.is_empty());
+
+    // Remove a participant, replace another.
+    let rel = sess
+        .objects
+        .update_object(sess.authed(UpdateObjectRequest {
+            space_id: space.id.clone(),
+            id: rel.id.clone(),
+            set_participants: vec![Participant {
+                slot: "from".into(),
+                object_id: b.id.clone(),
+                role_id: "child".into(),
+            }],
+            remove_participants: vec!["to".into()],
+            ..Default::default()
+        }))
+        .await
+        .expect("update relation")
+        .msg
+        .object
+        .expect("object");
+    assert_eq!(rel.participants.len(), 1);
+    assert_eq!(rel.participants[0].object_id, b.id);
+    assert_eq!(rel.participants[0].role_id, "child");
+    let a_rels = sess
+        .objects
+        .list_objects(sess.authed(ListObjectsRequest {
+            space_id: space.id.clone(),
+            participant_object_id: a.id.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("list a")
+        .msg
+        .objects;
+    assert!(a_rels.is_empty(), "a no longer participates");
+
+    // Participants on an entity are rejected.
+    let err = sess
+        .objects
+        .create_object(sess.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: ObjectKind::Entity.into(),
+            participants: vec![Participant {
+                slot: "x".into(),
+                object_id: a.id.clone(),
+                role_id: String::new(),
+            }],
+            ..Default::default()
+        }))
+        .await
+        .expect_err("entity with participants");
+    assert_eq!(err.code, Code::InvalidArgument);
+
+    // Layers need a target; they are found through it.
+    let err = sess
+        .objects
+        .create_object(sess.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: ObjectKind::Layer.into(),
+            ..Default::default()
+        }))
+        .await
+        .expect_err("layer without target");
+    assert_eq!(err.code, Code::InvalidArgument);
+    let mut fields = HashMap::new();
+    fields.insert("note".to_owned(), s("mine"));
+    let layer = sess
+        .objects
+        .create_object(sess.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: ObjectKind::Layer.into(),
+            target_id: a.id.clone(),
+            fields,
+            ..Default::default()
+        }))
+        .await
+        .expect("layer")
+        .msg
+        .object
+        .expect("object");
+    assert_eq!(layer.target_id.as_deref(), Some(a.id.as_str()));
+    let layers = sess
+        .objects
+        .list_objects(sess.authed(ListObjectsRequest {
+            space_id: space.id.clone(),
+            target_id: a.id.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("layers of a")
+        .msg
+        .objects;
+    assert_eq!(layers.len(), 1);
+    assert_eq!(layers[0].id, layer.id);
+    assert_eq!(layers[0].fields["note"], s("mine"));
 }

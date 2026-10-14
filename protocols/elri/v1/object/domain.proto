@@ -28,6 +28,16 @@ message Value {
     }
 }
 
+/* One participant of a Relation. */
+message Participant {
+    /* Stable slot id chosen by the writer; unique within the Relation. */
+    string slot = 1;
+    /* The participating Object. */
+    string object_id = 2;
+    /* Participant-role definition id; may be empty. */
+    string role_id = 3;
+}
+
 message Object {
     /* UUIDv7, canonical string form. */
     string id = 1;
@@ -41,4 +51,8 @@ message Object {
     int64 updated_at_ms = 7;
     /* Set when the Object is deleted and awaiting purge. */
     optional int64 deleted_at_ms = 8;
+    /* Relations only. */
+    repeated Participant participants = 9;
+    /* Layers only: the Object this Layer enriches. */
+    optional string target_id = 10;
 }

@@ -13,7 +13,7 @@ use elri_proto::elri::v1::core::GetInfoRequest;
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest, Object,
-    ObjectKind, Value,
+    ObjectKind, Participant, Value,
 };
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::{CreateSpaceRequest, ListSpacesRequest};
@@ -107,6 +107,12 @@ enum ObjectCmd {
         /// `time:<ms>`, or text.
         #[arg(long = "field", value_parser = parse_field)]
         fields: Vec<(String, Value)>,
+        /// Relation participants as `slot=object_id[:role_id]`.
+        #[arg(long = "participant", value_parser = parse_participant)]
+        participants: Vec<Participant>,
+        /// Layers only: the Object this Layer enriches.
+        #[arg(long)]
+        target: Option<String>,
     },
     /// Show an Object.
     Get {
@@ -124,6 +130,12 @@ enum ObjectCmd {
         type_id: Option<String>,
         #[arg(long)]
         include_deleted: bool,
+        /// Relations in which this Object participates.
+        #[arg(long)]
+        participant_of: Option<String>,
+        /// Layers over this Object.
+        #[arg(long)]
+        layers_of: Option<String>,
         #[arg(long, default_value_t = 50)]
         limit: i32,
     },
@@ -158,6 +170,21 @@ fn parse_field(s: &str) -> Result<(String, Value), String> {
     Ok((k.to_owned(), Value { value: Some(v) }))
 }
 
+fn parse_participant(s: &str) -> Result<Participant, String> {
+    let (slot, rest) = s
+        .split_once('=')
+        .ok_or_else(|| "expected slot=object_id[:role_id]".to_owned())?;
+    let (object_id, role_id) = rest.split_once(':').unwrap_or((rest, ""));
+    if slot.is_empty() || object_id.is_empty() {
+        return Err("slot and object_id must not be empty".to_owned());
+    }
+    Ok(Participant {
+        slot: slot.to_owned(),
+        object_id: object_id.to_owned(),
+        role_id: role_id.to_owned(),
+    })
+}
+
 fn default_data_dir() -> Result<PathBuf> {
     let base = std::env::var_os("XDG_DATA_HOME")
         .map(PathBuf::from)
@@ -190,12 +217,19 @@ fn object_json(o: &Object) -> serde_json::Value {
         .iter()
         .map(|(k, v)| (k.clone(), value_json(v)))
         .collect();
+    let participants: Vec<_> = o
+        .participants
+        .iter()
+        .map(|p| json!({ "slot": p.slot, "object_id": p.object_id, "role_id": p.role_id }))
+        .collect();
     json!({
         "id": o.id,
         "space_id": o.space_id,
         "kind": o.kind().as_str_name(),
         "types": o.types,
         "fields": fields,
+        "participants": participants,
+        "target_id": o.target_id,
         "created_at_ms": o.created_at_ms,
         "updated_at_ms": o.updated_at_ms,
         "deleted_at_ms": o.deleted_at_ms,
@@ -287,6 +321,8 @@ async fn run_object(
             kind,
             types,
             fields,
+            participants,
+            target,
         } => {
             let fields: HashMap<String, Value> = fields.into_iter().collect();
             let res = client
@@ -297,6 +333,8 @@ async fn run_object(
                         kind: ObjectKind::from(kind).into(),
                         types,
                         fields,
+                        participants,
+                        target_id: target.unwrap_or_default(),
                     },
                 ))
                 .await?;
@@ -325,6 +363,8 @@ async fn run_object(
             kind,
             type_id,
             include_deleted,
+            participant_of,
+            layers_of,
             limit,
         } => {
             let res = client
@@ -338,6 +378,8 @@ async fn run_object(
                         type_id: type_id.unwrap_or_default(),
                         include_deleted,
                         limit,
+                        participant_object_id: participant_of.unwrap_or_default(),
+                        target_id: layers_of.unwrap_or_default(),
                     },
                 ))
                 .await?;

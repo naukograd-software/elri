@@ -2,9 +2,11 @@
 //!
 //! Every Object is one Loro document with three root maps:
 //!
-//! - `meta`: `kind`, `space`, `created_at`, `updated_at`, `deleted_at`
+//! - `meta`: `kind`, `space`, `created_at`, `updated_at`, `deleted_at`, and
+//!   `target` for Layers
 //! - `types`: type-definition id → `true`
 //! - `fields`: field-definition id → value
+//! - `participants` (Relations): slot id → `{object, role}`
 //!
 //! Scalar values live directly in `fields`. References and timestamps are
 //! tagged maps (`{"$ref": id}`, `{"$time": ms}`) so that they survive the
@@ -155,6 +157,17 @@ pub enum ModelError {
     Encode(#[from] loro::LoroEncodeError),
 }
 
+/// One participant of a Relation.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Participant {
+    /// Stable slot id, unique within the Relation.
+    pub slot: String,
+    /// The participating Object.
+    pub object: ObjectId,
+    /// Participant-role definition id; empty when none.
+    pub role: String,
+}
+
 /// A plain, fully materialized view of an Object.
 #[derive(Debug, Clone, PartialEq)]
 pub struct ObjectRecord {
@@ -174,6 +187,10 @@ pub struct ObjectRecord {
     pub updated_at_ms: i64,
     /// Deletion instant, if deleted.
     pub deleted_at_ms: Option<i64>,
+    /// Relations only, sorted by slot.
+    pub participants: Vec<Participant>,
+    /// Layers only: the enriched Object.
+    pub target: Option<ObjectId>,
 }
 
 /// An Object's Loro document with typed accessors.
@@ -199,6 +216,19 @@ impl ObjectDoc {
         meta.insert("updated_at", now_ms)?;
         doc.commit();
         Ok(Self { id, doc })
+    }
+
+    /// Creates the document of a new Layer over `target`.
+    pub fn create_layer(
+        id: ObjectId,
+        space: SpaceId,
+        target: ObjectId,
+        now_ms: i64,
+    ) -> Result<Self, ModelError> {
+        let doc = Self::create(id, space, ObjectKind::Layer, now_ms)?;
+        doc.meta().insert("target", target.to_string())?;
+        doc.doc.commit();
+        Ok(doc)
     }
 
     /// Loads a document from a snapshot.
@@ -261,6 +291,25 @@ impl ObjectDoc {
         self.doc.get_map("fields")
     }
 
+    fn participants(&self) -> LoroMap {
+        self.doc.get_map("participants")
+    }
+
+    /// Adds or replaces a participant by slot.
+    pub fn set_participant(&self, p: &Participant) -> Result<(), ModelError> {
+        let mut m = HashMap::new();
+        m.insert("object".to_owned(), LoroValue::from(p.object.to_string()));
+        m.insert("role".to_owned(), LoroValue::from(p.role.as_str()));
+        self.participants().insert(&p.slot, LoroValue::from(m))?;
+        Ok(())
+    }
+
+    /// Removes a participant slot.
+    pub fn remove_participant(&self, slot: &str) -> Result<(), ModelError> {
+        self.participants().delete(slot)?;
+        Ok(())
+    }
+
     /// Sets a scalar field.
     pub fn set_field(&self, field_id: &str, value: &FieldValue) -> Result<(), ModelError> {
         self.fields().insert(field_id, value.to_loro())?;
@@ -318,6 +367,36 @@ impl ObjectDoc {
         let created_at_ms = int("created_at").ok_or(ModelError::Malformed("meta.created_at"))?;
         let updated_at_ms = int("updated_at").unwrap_or(created_at_ms);
         let deleted_at_ms = int("deleted_at");
+        let target = match meta.get("target") {
+            Some(LoroValue::String(s)) => Some(ObjectId::parse(s)?),
+            _ => None,
+        };
+        if kind == ObjectKind::Layer && target.is_none() {
+            return Err(ModelError::Malformed("layer without target"));
+        }
+
+        let mut participants = Vec::new();
+        if let LoroValue::Map(m) = self.participants().get_value() {
+            for (slot, v) in m.iter() {
+                let LoroValue::Map(p) = v else {
+                    return Err(ModelError::Malformed("participant is not a map"));
+                };
+                let object = match p.get("object") {
+                    Some(LoroValue::String(s)) => ObjectId::parse(s)?,
+                    _ => return Err(ModelError::Malformed("participant.object")),
+                };
+                let role = match p.get("role") {
+                    Some(LoroValue::String(s)) => s.to_string(),
+                    _ => String::new(),
+                };
+                participants.push(Participant {
+                    slot: slot.clone(),
+                    object,
+                    role,
+                });
+            }
+        }
+        participants.sort_by(|a, b| a.slot.cmp(&b.slot));
 
         let mut types: Vec<String> = match self.types().get_value() {
             LoroValue::Map(m) => m.keys().cloned().collect(),
@@ -342,6 +421,8 @@ impl ObjectDoc {
             created_at_ms,
             updated_at_ms,
             deleted_at_ms,
+            participants,
+            target,
         })
     }
 }
@@ -388,5 +469,41 @@ mod tests {
         assert_eq!(rec.created_at_ms, 1_000);
         assert_eq!(rec.updated_at_ms, 2_000);
         assert_eq!(rec.deleted_at_ms, None);
+        assert!(rec.participants.is_empty());
+        assert_eq!(rec.target, None);
+    }
+
+    #[test]
+    fn relations_carry_participants_and_layers_carry_targets() {
+        let space = ObjectId::new();
+        let a = ObjectId::new();
+        let b = ObjectId::new();
+        let rel = ObjectDoc::create(ObjectId::new(), space, ObjectKind::Relation, 1).expect("ok");
+        rel.set_participant(&Participant {
+            slot: "from".into(),
+            object: a,
+            role: "parent".into(),
+        })
+        .expect("ok");
+        rel.set_participant(&Participant {
+            slot: "to".into(),
+            object: b,
+            role: String::new(),
+        })
+        .expect("ok");
+        rel.touch(2).expect("ok");
+        let rec = rel.read().expect("ok");
+        assert_eq!(rec.participants.len(), 2);
+        assert_eq!(rec.participants[0].slot, "from");
+        assert_eq!(rec.participants[0].object, a);
+        assert_eq!(rec.participants[0].role, "parent");
+        assert_eq!(rec.participants[1].object, b);
+        rel.remove_participant("to").expect("ok");
+        assert_eq!(rel.read().expect("ok").participants.len(), 1);
+
+        let layer = ObjectDoc::create_layer(ObjectId::new(), space, a, 1).expect("ok");
+        let rec = layer.read().expect("ok");
+        assert_eq!(rec.kind, ObjectKind::Layer);
+        assert_eq!(rec.target, Some(a));
     }
 }

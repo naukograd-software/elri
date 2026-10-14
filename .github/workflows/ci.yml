@@ -43,9 +43,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - name: GitHub Packages auth for @gopherex
+        # Packages live in the gopherex org, so the repository token cannot
+        # read them; GH_PACKAGES_TOKEN is a PAT with read:packages.
+        run: echo "//npm.pkg.github.com/:_authToken=${TOKEN}" >> ~/.npmrc
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
+      - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
       - run: pnpm exec biome check .
       - run: pnpm --filter @elri/app build

@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/object/domain.proto.
  */
 export const file_elri_v1_object_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0InUKBVZhbHVlEg4KBGJvb2wYASABKAhIABINCgNpbnQYAiABKANIABIQCgZkb3VibGUYAyABKAFIABIQCgZzdHJpbmcYBCABKAlIABIRCgd0aW1lX21zGAUgASgDSAASDQoDcmVmGAYgASgJSABCBwoFdmFsdWUitQIKBk9iamVjdBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIoCgRraW5kGAMgASgOMhouZWxyaS52MS5vYmplY3QuT2JqZWN0S2luZBINCgV0eXBlcxgEIAMoCRIyCgZmaWVsZHMYBSADKAsyIi5lbHJpLnYxLm9iamVjdC5PYmplY3QuRmllbGRzRW50cnkSFQoNY3JlYXRlZF9hdF9tcxgGIAEoAxIVCg11cGRhdGVkX2F0X21zGAcgASgDEhoKDWRlbGV0ZWRfYXRfbXMYCCABKANIAIgBARpECgtGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5lbHJpLnYxLm9iamVjdC5WYWx1ZToCOAFCEAoOX2RlbGV0ZWRfYXRfbXMqcgoKT2JqZWN0S2luZBIbChdPQkpFQ1RfS0lORF9VTlNQRUNJRklFRBAAEhYKEk9CSkVDVF9LSU5EX0VOVElUWRABEhgKFE9CSkVDVF9LSU5EX1JFTEFUSU9OEAISFQoRT0JKRUNUX0tJTkRfTEFZRVIQA2IGcHJvdG8z");
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0InUKBVZhbHVlEg4KBGJvb2wYASABKAhIABINCgNpbnQYAiABKANIABIQCgZkb3VibGUYAyABKAFIABIQCgZzdHJpbmcYBCABKAlIABIRCgd0aW1lX21zGAUgASgDSAASDQoDcmVmGAYgASgJSABCBwoFdmFsdWUiPwoLUGFydGljaXBhbnQSDAoEc2xvdBgBIAEoCRIRCglvYmplY3RfaWQYAiABKAkSDwoHcm9sZV9pZBgDIAEoCSKOAwoGT2JqZWN0EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEigKBGtpbmQYAyABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAQgAygJEjIKBmZpZWxkcxgFIAMoCzIiLmVscmkudjEub2JqZWN0Lk9iamVjdC5GaWVsZHNFbnRyeRIVCg1jcmVhdGVkX2F0X21zGAYgASgDEhUKDXVwZGF0ZWRfYXRfbXMYByABKAMSGgoNZGVsZXRlZF9hdF9tcxgIIAEoA0gAiAEBEjEKDHBhcnRpY2lwYW50cxgJIAMoCzIbLmVscmkudjEub2JqZWN0LlBhcnRpY2lwYW50EhYKCXRhcmdldF9pZBgKIAEoCUgBiAEBGkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4AUIQCg5fZGVsZXRlZF9hdF9tc0IMCgpfdGFyZ2V0X2lkKnIKCk9iamVjdEtpbmQSGwoXT0JKRUNUX0tJTkRfVU5TUEVDSUZJRUQQABIWChJPQkpFQ1RfS0lORF9FTlRJVFkQARIYChRPQkpFQ1RfS0lORF9SRUxBVElPThACEhUKEU9CSkVDVF9LSU5EX0xBWUVSEANiBnByb3RvMw");
 
 /**
  *
@@ -119,6 +119,69 @@ export const ValueSchema: GenMessage<Value, {jsonType: ValueJson}> = /*@__PURE__
   messageDesc(file_elri_v1_object_domain, 0);
 
 /**
+ * One participant of a Relation. 
+ *
+ * @generated from message elri.v1.object.Participant
+ */
+export type Participant = Message<"elri.v1.object.Participant"> & {
+  /**
+   * Stable slot id chosen by the writer; unique within the Relation. 
+   *
+   * @generated from field: string slot = 1;
+   */
+  slot: string;
+
+  /**
+   * The participating Object. 
+   *
+   * @generated from field: string object_id = 2;
+   */
+  objectId: string;
+
+  /**
+   * Participant-role definition id; may be empty. 
+   *
+   * @generated from field: string role_id = 3;
+   */
+  roleId: string;
+};
+
+/**
+ * One participant of a Relation. 
+ *
+ * @generated from message elri.v1.object.Participant
+ */
+export type ParticipantJson = {
+  /**
+   * Stable slot id chosen by the writer; unique within the Relation. 
+   *
+   * @generated from field: string slot = 1;
+   */
+  slot?: string;
+
+  /**
+   * The participating Object. 
+   *
+   * @generated from field: string object_id = 2;
+   */
+  objectId?: string;
+
+  /**
+   * Participant-role definition id; may be empty. 
+   *
+   * @generated from field: string role_id = 3;
+   */
+  roleId?: string;
+};
+
+/**
+ * Describes the message elri.v1.object.Participant.
+ * Use `create(ParticipantSchema)` to create a new message.
+ */
+export const ParticipantSchema: GenMessage<Participant, {jsonType: ParticipantJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_domain, 1);
+
+/**
  * @generated from message elri.v1.object.Object
  */
 export type Object$ = Message<"elri.v1.object.Object"> & {
@@ -169,6 +232,20 @@ export type Object$ = Message<"elri.v1.object.Object"> & {
    * @generated from field: optional int64 deleted_at_ms = 8;
    */
   deletedAtMs?: bigint | undefined;
+
+  /**
+   * Relations only. 
+   *
+   * @generated from field: repeated elri.v1.object.Participant participants = 9;
+   */
+  participants: Participant[];
+
+  /**
+   * Layers only: the Object this Layer enriches. 
+   *
+   * @generated from field: optional string target_id = 10;
+   */
+  targetId?: string | undefined;
 };
 
 /**
@@ -222,6 +299,20 @@ export type ObjectJson = {
    * @generated from field: optional int64 deleted_at_ms = 8;
    */
   deletedAtMs?: string;
+
+  /**
+   * Relations only. 
+   *
+   * @generated from field: repeated elri.v1.object.Participant participants = 9;
+   */
+  participants?: ParticipantJson[];
+
+  /**
+   * Layers only: the Object this Layer enriches. 
+   *
+   * @generated from field: optional string target_id = 10;
+   */
+  targetId?: string;
 };
 
 /**
@@ -229,7 +320,7 @@ export type ObjectJson = {
  * Use `create(ObjectSchema)` to create a new message.
  */
 export const ObjectSchema: GenMessage<Object$, {jsonType: ObjectJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_domain, 1);
+  messageDesc(file_elri_v1_object_domain, 2);
 
 /**
  * What an Object is. Every kind shares the same document shape. 

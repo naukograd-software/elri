@@ -29,6 +29,19 @@ pub mod value {
         Ref(::prost::alloc::string::String),
     }
 }
+/// One participant of a Relation. 
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Participant {
+    /// Stable slot id chosen by the writer; unique within the Relation. 
+    #[prost(string, tag = "1")]
+    pub slot: ::prost::alloc::string::String,
+    /// The participating Object. 
+    #[prost(string, tag = "2")]
+    pub object_id: ::prost::alloc::string::String,
+    /// Participant-role definition id; may be empty. 
+    #[prost(string, tag = "3")]
+    pub role_id: ::prost::alloc::string::String,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Object {
     /// UUIDv7, canonical string form. 
@@ -51,6 +64,12 @@ pub struct Object {
     /// Set when the Object is deleted and awaiting purge. 
     #[prost(int64, optional, tag = "8")]
     pub deleted_at_ms: ::core::option::Option<i64>,
+    /// Relations only. 
+    #[prost(message, repeated, tag = "9")]
+    pub participants: ::prost::alloc::vec::Vec<Participant>,
+    /// Layers only: the Object this Layer enriches. 
+    #[prost(string, optional, tag = "10")]
+    pub target_id: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// What an Object is. Every kind shares the same document shape. 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -95,6 +114,12 @@ pub struct CreateObjectRequest {
     pub types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     #[prost(map = "string, message", tag = "4")]
     pub fields: ::std::collections::HashMap<::prost::alloc::string::String, Value>,
+    /// Relations only. 
+    #[prost(message, repeated, tag = "5")]
+    pub participants: ::prost::alloc::vec::Vec<Participant>,
+    /// Layers only; required for them. 
+    #[prost(string, tag = "6")]
+    pub target_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateObjectResponse {
@@ -127,6 +152,12 @@ pub struct UpdateObjectRequest {
     pub add_types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     #[prost(string, repeated, tag = "6")]
     pub remove_types: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Relations only: add or replace participants by slot. 
+    #[prost(message, repeated, tag = "7")]
+    pub set_participants: ::prost::alloc::vec::Vec<Participant>,
+    /// Relations only: slots to remove. 
+    #[prost(string, repeated, tag = "8")]
+    pub remove_participants: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateObjectResponse {
@@ -159,6 +190,12 @@ pub struct ListObjectsRequest {
     /// 0 = server default. 
     #[prost(int32, tag = "5")]
     pub limit: i32,
+    /// Only Relations in which this Object participates, if set. 
+    #[prost(string, tag = "6")]
+    pub participant_object_id: ::prost::alloc::string::String,
+    /// Only Layers over this Object, if set. 
+    #[prost(string, tag = "7")]
+    pub target_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListObjectsResponse {

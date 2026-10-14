@@ -29,7 +29,9 @@ use ws_proto::{Code, Request, Response, Server, ServerConfig, Status};
 
 use crate::change::{Change, ChangeStatus};
 use crate::device::{DeviceId, LaunchToken};
-use crate::model::{now_ms, FieldValue, ModelError, ObjectDoc, ObjectId, ObjectKind, ObjectRecord};
+use crate::model::{
+    now_ms, FieldValue, ModelError, ObjectDoc, ObjectId, ObjectKind, ObjectRecord, Participant,
+};
 use crate::store::{Authority, ObjectFilter, SpaceInfo, Store, StoreError};
 use crate::BuildInfo;
 
@@ -183,7 +185,41 @@ fn object_to_pb(o: &ObjectRecord) -> pb::Object {
         created_at_ms: o.created_at_ms,
         updated_at_ms: o.updated_at_ms,
         deleted_at_ms: o.deleted_at_ms,
+        participants: o
+            .participants
+            .iter()
+            .map(|p| pb::Participant {
+                slot: p.slot.clone(),
+                object_id: p.object.to_string(),
+                role_id: p.role.clone(),
+            })
+            .collect(),
+        target_id: o.target.map(|t| t.to_string()),
     }
+}
+
+fn participants_from_pb(
+    kind: ObjectKind,
+    ps: &[pb::Participant],
+) -> Result<Vec<Participant>, Status> {
+    if ps.is_empty() {
+        return Ok(Vec::new());
+    }
+    if kind != ObjectKind::Relation {
+        return Err(invalid("participants are only valid on relations"));
+    }
+    let mut out = Vec::with_capacity(ps.len());
+    for p in ps {
+        if p.slot.is_empty() {
+            return Err(invalid("participant slot must not be empty"));
+        }
+        out.push(Participant {
+            slot: p.slot.clone(),
+            object: parse_id(&p.object_id, &format!("participant {}", p.slot))?,
+            role: p.role_id.clone(),
+        });
+    }
+    Ok(out)
 }
 
 fn fields_from_pb(
@@ -277,10 +313,23 @@ impl ObjectServiceHandler for Services {
         let space_id = parse_id(&m.space_id, "space_id")?;
         let kind = kind_from_pb(m.kind)?;
         let fields = fields_from_pb(&m.fields)?;
+        let participants = participants_from_pb(kind, &m.participants)?;
+        let target = match (kind, m.target_id.is_empty()) {
+            (ObjectKind::Layer, true) => return Err(invalid("target_id is required for layers")),
+            (ObjectKind::Layer, false) => Some(parse_id(&m.target_id, "target_id")?),
+            (_, false) => return Err(invalid("target_id is only valid on layers")),
+            (_, true) => None,
+        };
         let space = self.store.space(space_id).await?;
 
-        let doc = ObjectDoc::create(ObjectId::new(), space_id, kind, now_ms())
-            .map_err(StoreError::from)?;
+        let doc = match target {
+            Some(t) => ObjectDoc::create_layer(ObjectId::new(), space_id, t, now_ms()),
+            None => ObjectDoc::create(ObjectId::new(), space_id, kind, now_ms()),
+        }
+        .map_err(StoreError::from)?;
+        for p in &participants {
+            doc.set_participant(p).map_err(StoreError::from)?;
+        }
         for t in &m.types {
             doc.add_type(t).map_err(StoreError::from)?;
         }
@@ -315,10 +364,27 @@ impl ObjectServiceHandler for Services {
         let id = parse_id(&m.id, "id")?;
         let set = fields_from_pb(&m.set_fields)?;
         let space = self.store.space(space_id).await?;
+        let touches_participants =
+            !m.set_participants.is_empty() || !m.remove_participants.is_empty();
+        let kind = if touches_participants {
+            space.get(id).await?.kind
+        } else {
+            ObjectKind::Entity
+        };
+        let set_participants = participants_from_pb(kind, &m.set_participants)?;
+        if !m.remove_participants.is_empty() && kind != ObjectKind::Relation {
+            return Err(invalid("participants are only valid on relations"));
+        }
         let rec = space
             .update(id, |doc| {
                 for (k, v) in &set {
                     doc.set_field(k, v)?;
+                }
+                for p in &set_participants {
+                    doc.set_participant(p)?;
+                }
+                for slot in &m.remove_participants {
+                    doc.remove_participant(slot)?;
                 }
                 for k in &m.remove_fields {
                     doc.remove_field(k)?;
@@ -363,6 +429,16 @@ impl ObjectServiceHandler for Services {
             type_id: (!m.type_id.is_empty()).then(|| m.type_id.clone()),
             include_deleted: m.include_deleted,
             limit: usize::try_from(m.limit).unwrap_or(0),
+            participant: if m.participant_object_id.is_empty() {
+                None
+            } else {
+                Some(parse_id(&m.participant_object_id, "participant_object_id")?)
+            },
+            target: if m.target_id.is_empty() {
+                None
+            } else {
+                Some(parse_id(&m.target_id, "target_id")?)
+            },
         };
         let objects = self.store.space(space_id).await?.list(&filter).await?;
         Ok(Response::new(ListObjectsResponse {
