@@ -787,7 +787,7 @@ impl Host {
         // elri.delete(id [, space])
         let a = Arc::clone(access);
         let store = Arc::clone(&self.store);
-        let actor_d = actor;
+        let actor_d = actor.clone();
         let delete = lua
             .create_async_function(move |_, (id, space): (String, Option<String>)| {
                 let a = Arc::clone(&a);
@@ -814,6 +814,49 @@ impl Host {
             })
             .map_err(|e| lua_err(&e))?;
         elri.set("delete", delete).map_err(|e| lua_err(&e))?;
+
+        // elri.propose_mapping({name=, members={{space=, field=}, ...}}):
+        // a mapping in the script's own Space, waiting for a person.
+        let a = Arc::clone(access);
+        let store = Arc::clone(&self.store);
+        let actor_m = actor.clone();
+        let propose = lua
+            .create_async_function(move |lua, spec: Table| {
+                let a = Arc::clone(&a);
+                let store = Arc::clone(&store);
+                let actor = actor_m.clone();
+                async move {
+                    a.lock()
+                        .unwrap_or_else(std::sync::PoisonError::into_inner)
+                        .charge()
+                        .map_err(to_lua)?;
+                    let name: String = spec.get::<Option<String>>("name")?.unwrap_or_default();
+                    let mut members = Vec::new();
+                    if let Some(ms) = spec.get::<Option<Table>>("members")? {
+                        for m in ms.sequence_values::<Table>() {
+                            let m = m?;
+                            members.push(elri_proto::elri::v1::context::MappingMember {
+                                space_id: m.get::<Option<String>>("space")?.unwrap_or_default(),
+                                field_id: m.get::<Option<String>>("field")?.unwrap_or_default(),
+                            });
+                        }
+                    }
+                    crate::mapping::check(&name, &members).map_err(mlua::Error::runtime)?;
+                    let doc = crate::mapping::create(own, &name, &members, &actor, false)
+                        .map_err(|e| to_lua(ScriptError::from(StoreError::from(e))))?;
+                    let rec = store
+                        .space(own)
+                        .await
+                        .map_err(to_lua)?
+                        .insert_as(&doc, &actor)
+                        .await
+                        .map_err(to_lua)?;
+                    lua.to_value(&serde_json::json!({ "id": rec.id, "approved": false }))
+                }
+            })
+            .map_err(|e| lua_err(&e))?;
+        elri.set("propose_mapping", propose)
+            .map_err(|e| lua_err(&e))?;
 
         // elri.step(name, fn | value): inside a workflow run the step's
         // intent is recorded before `fn` runs and its result after; a
@@ -1331,6 +1374,11 @@ fn edit_from_lua(
     let remove: Vec<String> = spec
         .get::<Option<Vec<String>>>("remove_fields")?
         .unwrap_or_default();
+    if let Some(k) = remove.iter().find(|k| crate::model::is_reserved_field(k)) {
+        return Err(mlua::Error::runtime(format!(
+            "field {k}: reserved ids are written by the core"
+        )));
+    }
     let add_types: Vec<String> = spec
         .get::<Option<Vec<String>>>("add_types")?
         .unwrap_or_default();

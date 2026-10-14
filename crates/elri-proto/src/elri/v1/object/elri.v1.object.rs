@@ -208,6 +208,8 @@ pub enum ObjectKind {
     Component = 14,
     /// The transfer rules of a Space; one per Space, set by its managers. 
     TransferPolicy = 15,
+    /// A semantic mapping: fields of several Spaces that mean the same. 
+    Mapping = 16,
 }
 impl ObjectKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -232,6 +234,7 @@ impl ObjectKind {
             Self::Constraint => "OBJECT_KIND_CONSTRAINT",
             Self::Component => "OBJECT_KIND_COMPONENT",
             Self::TransferPolicy => "OBJECT_KIND_TRANSFER_POLICY",
+            Self::Mapping => "OBJECT_KIND_MAPPING",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -253,6 +256,7 @@ impl ObjectKind {
             "OBJECT_KIND_CONSTRAINT" => Some(Self::Constraint),
             "OBJECT_KIND_COMPONENT" => Some(Self::Component),
             "OBJECT_KIND_TRANSFER_POLICY" => Some(Self::TransferPolicy),
+            "OBJECT_KIND_MAPPING" => Some(Self::Mapping),
             _ => None,
         }
     }

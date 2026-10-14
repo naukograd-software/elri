@@ -13,6 +13,10 @@ pub struct SearchRequest {
     /// 0 = server default. 
     #[prost(int32, tag = "4")]
     pub limit: i32,
+    /// Only hits in the fields an approved mapping of this Space names for
+    /// it, if set. 
+    #[prost(string, tag = "5")]
+    pub mapping_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Hit {

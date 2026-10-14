@@ -101,6 +101,7 @@ pub fn is_managed(kind: ObjectKind) -> bool {
                 | ObjectKind::Constraint
                 | ObjectKind::Component
                 | ObjectKind::TransferPolicy
+                | ObjectKind::Mapping
         )
 }
 
@@ -271,6 +272,14 @@ pub mod reserved {
     pub const REVIEWED_AT: &str = "$reviewed_at";
     /// Hypotheses: the reviewer's note.
     pub const NOTE: &str = "$note";
+    /// Mappings: members as JSON.
+    pub const MEMBERS: &str = "$members";
+    /// Mappings: approved by a person.
+    pub const APPROVED: &str = "$approved";
+    /// Mappings: who proposed it.
+    pub const PROPOSED_BY: &str = "$proposed_by";
+    /// Mappings: when it was approved.
+    pub const APPROVED_AT: &str = "$approved_at";
 }
 
 /// Field ids the core writes itself: an ordinary write may not use them.

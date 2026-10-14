@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CreateContextRequest, CreateContextResponse, HideInContextRequest, HideInContextResponse, ListContextsRequest, ListContextsResponse, ResolveContextRequest, ResolveContextResponse, UpdateContextRequest, UpdateContextResponse } from "./context_pb.ts";
-import { CreateContextRequestSchema, CreateContextResponseSchema, HideInContextRequestSchema, HideInContextResponseSchema, ListContextsRequestSchema, ListContextsResponseSchema, ResolveContextRequestSchema, ResolveContextResponseSchema, UpdateContextRequestSchema, UpdateContextResponseSchema } from "./context_pb.ts";
+import type { ApproveMappingRequest, ApproveMappingResponse, CreateContextRequest, CreateContextResponse, HideInContextRequest, HideInContextResponse, ListContextsRequest, ListContextsResponse, ListMappingsRequest, ListMappingsResponse, ProposeMappingRequest, ProposeMappingResponse, ResolveContextRequest, ResolveContextResponse, UpdateContextRequest, UpdateContextResponse } from "./context_pb.ts";
+import { ApproveMappingRequestSchema, ApproveMappingResponseSchema, CreateContextRequestSchema, CreateContextResponseSchema, HideInContextRequestSchema, HideInContextResponseSchema, ListContextsRequestSchema, ListContextsResponseSchema, ListMappingsRequestSchema, ListMappingsResponseSchema, ProposeMappingRequestSchema, ProposeMappingResponseSchema, ResolveContextRequestSchema, ResolveContextResponseSchema, UpdateContextRequestSchema, UpdateContextResponseSchema } from "./context_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -57,6 +57,30 @@ const ContextService_HideInContext: MethodInfo<HideInContextRequest, HideInConte
   kind: "unary",
   input: HideInContextRequestSchema,
   output: HideInContextResponseSchema,
+};
+
+const ContextService_ProposeMapping: MethodInfo<ProposeMappingRequest, ProposeMappingResponse> = {
+  typeName: "elri.v1.context.ContextService",
+  name: "ProposeMapping",
+  kind: "unary",
+  input: ProposeMappingRequestSchema,
+  output: ProposeMappingResponseSchema,
+};
+
+const ContextService_ApproveMapping: MethodInfo<ApproveMappingRequest, ApproveMappingResponse> = {
+  typeName: "elri.v1.context.ContextService",
+  name: "ApproveMapping",
+  kind: "unary",
+  input: ApproveMappingRequestSchema,
+  output: ApproveMappingResponseSchema,
+};
+
+const ContextService_ListMappings: MethodInfo<ListMappingsRequest, ListMappingsResponse> = {
+  typeName: "elri.v1.context.ContextService",
+  name: "ListMappings",
+  kind: "unary",
+  input: ListMappingsRequestSchema,
+  output: ListMappingsResponseSchema,
 };
 
 /**
@@ -113,6 +137,35 @@ export class ContextServiceClient {
    */
   async hideInContext(req: HideInContextRequest, options?: CallOptions): Promise<HideInContextResponse> {
     const res = await this.transport.unary(ContextService_HideInContext, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Mappings: fields of several Spaces that mean the same thing, so a
+   * search or a View can treat them as one. A mapping proposed by code
+   * waits for a person's approval; one a person makes is approved. A
+   * mapping neither merges the fields nor permits writing across them. 
+   *
+   * @generated from rpc elri.v1.context.ContextService.ProposeMapping
+   */
+  async proposeMapping(req: ProposeMappingRequest, options?: CallOptions): Promise<ProposeMappingResponse> {
+    const res = await this.transport.unary(ContextService_ProposeMapping, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * @generated from rpc elri.v1.context.ContextService.ApproveMapping
+   */
+  async approveMapping(req: ApproveMappingRequest, options?: CallOptions): Promise<ApproveMappingResponse> {
+    const res = await this.transport.unary(ContextService_ApproveMapping, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * @generated from rpc elri.v1.context.ContextService.ListMappings
+   */
+  async listMappings(req: ListMappingsRequest, options?: CallOptions): Promise<ListMappingsResponse> {
+    const res = await this.transport.unary(ContextService_ListMappings, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

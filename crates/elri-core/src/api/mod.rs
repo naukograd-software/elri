@@ -486,6 +486,15 @@ impl Services {
         let space_id = parse_id(&m.space_id, "space_id")?;
         let id = parse_id(&m.id, "id")?;
         check_fields(&m.set_fields)?;
+        if let Some(k) = m
+            .remove_fields
+            .iter()
+            .find(|k| crate::model::is_reserved_field(k))
+        {
+            return Err(invalid(format!(
+                "field {k}: reserved ids are written by the core"
+            )));
+        }
         let space = self.store.space(space_id).await?;
         self.check_field_kinds(&space, &m.set_fields).await?;
         let touches_participants =
@@ -849,13 +858,33 @@ impl SearchServiceHandler for Services {
         // still be a partial initial copy.
         let data_seq = space.cursor().await?;
         let downloading = space.downloading().await?;
+        // A mapping narrows the hits to the fields it names for this Space.
+        let mapped: Option<Vec<String>> = if m.mapping_id.is_empty() {
+            None
+        } else {
+            let mapping = parse_id(&m.mapping_id, "mapping_id")?;
+            Some(crate::mapping::fields_for(&self.store, space_id, mapping, space_id).await?)
+        };
         Ok(Response::new(SearchResponse {
             hits: hits
                 .into_iter()
-                .map(|(object, score, fields)| Hit {
-                    object: Some(object),
-                    score,
-                    fields,
+                .filter_map(|(object, score, fields)| {
+                    let fields = match &mapped {
+                        Some(wanted) => {
+                            let kept: Vec<String> =
+                                fields.into_iter().filter(|f| wanted.contains(f)).collect();
+                            if kept.is_empty() {
+                                return None;
+                            }
+                            kept
+                        }
+                        None => fields,
+                    };
+                    Some(Hit {
+                        object: Some(object),
+                        score,
+                        fields,
+                    })
                 })
                 .collect(),
             watermark: Some(Watermark {

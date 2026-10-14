@@ -8,9 +8,11 @@ use elri_proto::elri::v1::context::context_service_ws::{
     register_context_service_arc, ContextServiceHandler,
 };
 use elri_proto::elri::v1::context::{
-    Context, CreateContextRequest, CreateContextResponse, HideInContextRequest,
-    HideInContextResponse, ListContextsRequest, ListContextsResponse, ResolveContextRequest,
-    ResolveContextResponse, Selection, UpdateContextRequest, UpdateContextResponse,
+    ApproveMappingRequest, ApproveMappingResponse, Context, CreateContextRequest,
+    CreateContextResponse, HideInContextRequest, HideInContextResponse, ListContextsRequest,
+    ListContextsResponse, ListMappingsRequest, ListMappingsResponse, ProposeMappingRequest,
+    ProposeMappingResponse, ResolveContextRequest, ResolveContextResponse, Selection,
+    UpdateContextRequest, UpdateContextResponse,
 };
 use elri_proto::elri::v1::object::{Object, ObjectKind};
 use ws_proto::{Code, Request, Response, Server, Status};
@@ -284,10 +286,59 @@ impl ContextServiceHandler for Services {
         }
         objects.sort_by_key(|o| std::cmp::Reverse(o.created_at_ms));
         objects.truncate(limit);
+        let mappings = crate::mapping::list(&self.store, space_id, true, false).await?;
         Ok(Response::new(ResolveContextResponse {
             objects,
             missing_space_ids: missing,
+            mappings,
         }))
+    }
+
+    async fn propose_mapping(
+        &self,
+        req: Request<ProposeMappingRequest>,
+    ) -> Result<Response<ProposeMappingResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        crate::mapping::check(&m.name, &m.members).map_err(invalid)?;
+        // A person proposing is a person approving.
+        let doc = crate::mapping::create(space_id, &m.name, &m.members, "user", true)
+            .map_err(StoreError::from)?;
+        let rec = self.store.space(space_id).await?.insert(&doc).await?;
+        Ok(Response::new(ProposeMappingResponse {
+            mapping: Some(crate::mapping::mapping_of(&rec)),
+        }))
+    }
+
+    async fn approve_mapping(
+        &self,
+        req: Request<ApproveMappingRequest>,
+    ) -> Result<Response<ApproveMappingResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        let id = parse_id(&m.id, "id")?;
+        let space = self.store.space(space_id).await?;
+        if space.get(id).await?.kind() != ObjectKind::Mapping {
+            return Err(Status::new(Code::NotFound, "not a mapping"));
+        }
+        let approved = m.approved;
+        let rec = space
+            .update(id, move |doc| crate::mapping::approve(doc, approved))
+            .await?;
+        Ok(Response::new(ApproveMappingResponse {
+            mapping: Some(crate::mapping::mapping_of(&rec)),
+        }))
+    }
+
+    async fn list_mappings(
+        &self,
+        req: Request<ListMappingsRequest>,
+    ) -> Result<Response<ListMappingsResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        let mappings =
+            crate::mapping::list(&self.store, space_id, m.approved_only, m.include_deleted).await?;
+        Ok(Response::new(ListMappingsResponse { mappings }))
     }
 
     async fn hide_in_context(

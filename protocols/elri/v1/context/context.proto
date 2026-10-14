@@ -19,6 +19,65 @@ service ContextService {
     /* Hides an Object from the Context (or shows it again) without
        touching the Object. */
     rpc HideInContext(HideInContextRequest) returns (HideInContextResponse);
+    /* Mappings: fields of several Spaces that mean the same thing, so a
+       search or a View can treat them as one. A mapping proposed by code
+       waits for a person's approval; one a person makes is approved. A
+       mapping neither merges the fields nor permits writing across them. */
+    rpc ProposeMapping(ProposeMappingRequest) returns (ProposeMappingResponse);
+    rpc ApproveMapping(ApproveMappingRequest) returns (ApproveMappingResponse);
+    rpc ListMappings(ListMappingsRequest) returns (ListMappingsResponse);
+}
+
+message MappingMember {
+    string space_id = 1;
+    string field_id = 2;
+}
+
+message Mapping {
+    string id = 1;
+    /* The Space that keeps the mapping. */
+    string space_id = 2;
+    /* What the mapped fields mean, e.g. `priority`. */
+    string name = 3;
+    repeated MappingMember members = 4;
+    bool approved = 5;
+    /* `user`, or the actor that proposed it. */
+    string proposed_by = 6;
+    int64 approved_at_ms = 7;
+    int64 created_at_ms = 8;
+    int64 updated_at_ms = 9;
+    optional int64 deleted_at_ms = 10;
+}
+
+message ProposeMappingRequest {
+    string space_id = 1;
+    string name = 2;
+    repeated MappingMember members = 3;
+}
+
+message ProposeMappingResponse {
+    Mapping mapping = 1;
+}
+
+message ApproveMappingRequest {
+    string space_id = 1;
+    string id = 2;
+    /* False withdraws approval. */
+    bool approved = 3;
+}
+
+message ApproveMappingResponse {
+    Mapping mapping = 1;
+}
+
+message ListMappingsRequest {
+    string space_id = 1;
+    bool approved_only = 2;
+    bool include_deleted = 3;
+}
+
+message ListMappingsResponse {
+    repeated Mapping mappings = 1;
 }
 
 /* What a Context selects. */
@@ -89,6 +148,9 @@ message ResolveContextResponse {
     repeated elri.v1.object.Object objects = 1;
     /* Spaces the Context names that this device does not have. */
     repeated string missing_space_ids = 2;
+    /* Approved mappings of the Context's Space, for Views over the
+       selection. */
+    repeated Mapping mappings = 3;
 }
 
 message HideInContextRequest {

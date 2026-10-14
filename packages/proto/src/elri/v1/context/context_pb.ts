@@ -12,7 +12,399 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/context/context.proto.
  */
 export const file_elri_v1_context_context: GenFile = /*@__PURE__*/
-  fileDesc("Ch1lbHJpL3YxL2NvbnRleHQvY29udGV4dC5wcm90bxIPZWxyaS52MS5jb250ZXh0IpQBCglTZWxlY3Rpb24SEQoJc3BhY2VfaWRzGAEgAygJEikKBWtpbmRzGAIgAygOMhouZWxyaS52MS5vYmplY3QuT2JqZWN0S2luZBIQCgh0eXBlX2lkcxgDIAMoCRIRCglsYXllcl9pZHMYBCADKAkSEAoIdmlld19pZHMYBSADKAkSEgoKaGlkZGVuX2lkcxgGIAMoCSLAAQoHQ29udGV4dBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEi0KCXNlbGVjdGlvbhgEIAEoCzIaLmVscmkudjEuY29udGV4dC5TZWxlY3Rpb24SFQoNY3JlYXRlZF9hdF9tcxgFIAEoAxIVCg11cGRhdGVkX2F0X21zGAYgASgDEhoKDWRlbGV0ZWRfYXRfbXMYByABKANIAIgBAUIQCg5fZGVsZXRlZF9hdF9tcyJlChRDcmVhdGVDb250ZXh0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEi0KCXNlbGVjdGlvbhgDIAEoCzIaLmVscmkudjEuY29udGV4dC5TZWxlY3Rpb24iQgoVQ3JlYXRlQ29udGV4dFJlc3BvbnNlEikKB2NvbnRleHQYASABKAsyGC5lbHJpLnYxLmNvbnRleHQuQ29udGV4dCJ/ChRVcGRhdGVDb250ZXh0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIRCgRuYW1lGAMgASgJSACIAQESLQoJc2VsZWN0aW9uGAQgASgLMhouZWxyaS52MS5jb250ZXh0LlNlbGVjdGlvbkIHCgVfbmFtZSJCChVVcGRhdGVDb250ZXh0UmVzcG9uc2USKQoHY29udGV4dBgBIAEoCzIYLmVscmkudjEuY29udGV4dC5Db250ZXh0IkAKE0xpc3RDb250ZXh0c1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAIgASgIIkIKFExpc3RDb250ZXh0c1Jlc3BvbnNlEioKCGNvbnRleHRzGAEgAygLMhguZWxyaS52MS5jb250ZXh0LkNvbnRleHQiRAoVUmVzb2x2ZUNvbnRleHRSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJEg0KBWxpbWl0GAMgASgFIlwKFlJlc29sdmVDb250ZXh0UmVzcG9uc2USJwoHb2JqZWN0cxgBIAMoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdBIZChFtaXNzaW5nX3NwYWNlX2lkcxgCIAMoCSJXChRIaWRlSW5Db250ZXh0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIRCglvYmplY3RfaWQYAyABKAkSDgoGaGlkZGVuGAQgASgIIkIKFUhpZGVJbkNvbnRleHRSZXNwb25zZRIpCgdjb250ZXh0GAEgASgLMhguZWxyaS52MS5jb250ZXh0LkNvbnRleHQy8AMKDkNvbnRleHRTZXJ2aWNlEl4KDUNyZWF0ZUNvbnRleHQSJS5lbHJpLnYxLmNvbnRleHQuQ3JlYXRlQ29udGV4dFJlcXVlc3QaJi5lbHJpLnYxLmNvbnRleHQuQ3JlYXRlQ29udGV4dFJlc3BvbnNlEl4KDVVwZGF0ZUNvbnRleHQSJS5lbHJpLnYxLmNvbnRleHQuVXBkYXRlQ29udGV4dFJlcXVlc3QaJi5lbHJpLnYxLmNvbnRleHQuVXBkYXRlQ29udGV4dFJlc3BvbnNlElsKDExpc3RDb250ZXh0cxIkLmVscmkudjEuY29udGV4dC5MaXN0Q29udGV4dHNSZXF1ZXN0GiUuZWxyaS52MS5jb250ZXh0Lkxpc3RDb250ZXh0c1Jlc3BvbnNlEmEKDlJlc29sdmVDb250ZXh0EiYuZWxyaS52MS5jb250ZXh0LlJlc29sdmVDb250ZXh0UmVxdWVzdBonLmVscmkudjEuY29udGV4dC5SZXNvbHZlQ29udGV4dFJlc3BvbnNlEl4KDUhpZGVJbkNvbnRleHQSJS5lbHJpLnYxLmNvbnRleHQuSGlkZUluQ29udGV4dFJlcXVlc3QaJi5lbHJpLnYxLmNvbnRleHQuSGlkZUluQ29udGV4dFJlc3BvbnNlYgZwcm90bzM", [file_elri_v1_object_domain]);
+  fileDesc("Ch1lbHJpL3YxL2NvbnRleHQvY29udGV4dC5wcm90bxIPZWxyaS52MS5jb250ZXh0IjMKDU1hcHBpbmdNZW1iZXISEAoIc3BhY2VfaWQYASABKAkSEAoIZmllbGRfaWQYAiABKAkigQIKB01hcHBpbmcSCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRIvCgdtZW1iZXJzGAQgAygLMh4uZWxyaS52MS5jb250ZXh0Lk1hcHBpbmdNZW1iZXISEAoIYXBwcm92ZWQYBSABKAgSEwoLcHJvcG9zZWRfYnkYBiABKAkSFgoOYXBwcm92ZWRfYXRfbXMYByABKAMSFQoNY3JlYXRlZF9hdF9tcxgIIAEoAxIVCg11cGRhdGVkX2F0X21zGAkgASgDEhoKDWRlbGV0ZWRfYXRfbXMYCiABKANIAIgBAUIQCg5fZGVsZXRlZF9hdF9tcyJoChVQcm9wb3NlTWFwcGluZ1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDAoEbmFtZRgCIAEoCRIvCgdtZW1iZXJzGAMgAygLMh4uZWxyaS52MS5jb250ZXh0Lk1hcHBpbmdNZW1iZXIiQwoWUHJvcG9zZU1hcHBpbmdSZXNwb25zZRIpCgdtYXBwaW5nGAEgASgLMhguZWxyaS52MS5jb250ZXh0Lk1hcHBpbmciRwoVQXBwcm92ZU1hcHBpbmdSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJEhAKCGFwcHJvdmVkGAMgASgIIkMKFkFwcHJvdmVNYXBwaW5nUmVzcG9uc2USKQoHbWFwcGluZxgBIAEoCzIYLmVscmkudjEuY29udGV4dC5NYXBwaW5nIlcKE0xpc3RNYXBwaW5nc1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSFQoNYXBwcm92ZWRfb25seRgCIAEoCBIXCg9pbmNsdWRlX2RlbGV0ZWQYAyABKAgiQgoUTGlzdE1hcHBpbmdzUmVzcG9uc2USKgoIbWFwcGluZ3MYASADKAsyGC5lbHJpLnYxLmNvbnRleHQuTWFwcGluZyKUAQoJU2VsZWN0aW9uEhEKCXNwYWNlX2lkcxgBIAMoCRIpCgVraW5kcxgCIAMoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSEAoIdHlwZV9pZHMYAyADKAkSEQoJbGF5ZXJfaWRzGAQgAygJEhAKCHZpZXdfaWRzGAUgAygJEhIKCmhpZGRlbl9pZHMYBiADKAkiwAEKB0NvbnRleHQSCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRItCglzZWxlY3Rpb24YBCABKAsyGi5lbHJpLnYxLmNvbnRleHQuU2VsZWN0aW9uEhUKDWNyZWF0ZWRfYXRfbXMYBSABKAMSFQoNdXBkYXRlZF9hdF9tcxgGIAEoAxIaCg1kZWxldGVkX2F0X21zGAcgASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMiZQoUQ3JlYXRlQ29udGV4dFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDAoEbmFtZRgCIAEoCRItCglzZWxlY3Rpb24YAyABKAsyGi5lbHJpLnYxLmNvbnRleHQuU2VsZWN0aW9uIkIKFUNyZWF0ZUNvbnRleHRSZXNwb25zZRIpCgdjb250ZXh0GAEgASgLMhguZWxyaS52MS5jb250ZXh0LkNvbnRleHQifwoUVXBkYXRlQ29udGV4dFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSEQoEbmFtZRgDIAEoCUgAiAEBEi0KCXNlbGVjdGlvbhgEIAEoCzIaLmVscmkudjEuY29udGV4dC5TZWxlY3Rpb25CBwoFX25hbWUiQgoVVXBkYXRlQ29udGV4dFJlc3BvbnNlEikKB2NvbnRleHQYASABKAsyGC5lbHJpLnYxLmNvbnRleHQuQ29udGV4dCJAChNMaXN0Q29udGV4dHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhcKD2luY2x1ZGVfZGVsZXRlZBgCIAEoCCJCChRMaXN0Q29udGV4dHNSZXNwb25zZRIqCghjb250ZXh0cxgBIAMoCzIYLmVscmkudjEuY29udGV4dC5Db250ZXh0IkQKFVJlc29sdmVDb250ZXh0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRINCgVsaW1pdBgDIAEoBSKIAQoWUmVzb2x2ZUNvbnRleHRSZXNwb25zZRInCgdvYmplY3RzGAEgAygLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0EhkKEW1pc3Npbmdfc3BhY2VfaWRzGAIgAygJEioKCG1hcHBpbmdzGAMgAygLMhguZWxyaS52MS5jb250ZXh0Lk1hcHBpbmciVwoUSGlkZUluQ29udGV4dFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSEQoJb2JqZWN0X2lkGAMgASgJEg4KBmhpZGRlbhgEIAEoCCJCChVIaWRlSW5Db250ZXh0UmVzcG9uc2USKQoHY29udGV4dBgBIAEoCzIYLmVscmkudjEuY29udGV4dC5Db250ZXh0MpMGCg5Db250ZXh0U2VydmljZRJeCg1DcmVhdGVDb250ZXh0EiUuZWxyaS52MS5jb250ZXh0LkNyZWF0ZUNvbnRleHRSZXF1ZXN0GiYuZWxyaS52MS5jb250ZXh0LkNyZWF0ZUNvbnRleHRSZXNwb25zZRJeCg1VcGRhdGVDb250ZXh0EiUuZWxyaS52MS5jb250ZXh0LlVwZGF0ZUNvbnRleHRSZXF1ZXN0GiYuZWxyaS52MS5jb250ZXh0LlVwZGF0ZUNvbnRleHRSZXNwb25zZRJbCgxMaXN0Q29udGV4dHMSJC5lbHJpLnYxLmNvbnRleHQuTGlzdENvbnRleHRzUmVxdWVzdBolLmVscmkudjEuY29udGV4dC5MaXN0Q29udGV4dHNSZXNwb25zZRJhCg5SZXNvbHZlQ29udGV4dBImLmVscmkudjEuY29udGV4dC5SZXNvbHZlQ29udGV4dFJlcXVlc3QaJy5lbHJpLnYxLmNvbnRleHQuUmVzb2x2ZUNvbnRleHRSZXNwb25zZRJeCg1IaWRlSW5Db250ZXh0EiUuZWxyaS52MS5jb250ZXh0LkhpZGVJbkNvbnRleHRSZXF1ZXN0GiYuZWxyaS52MS5jb250ZXh0LkhpZGVJbkNvbnRleHRSZXNwb25zZRJhCg5Qcm9wb3NlTWFwcGluZxImLmVscmkudjEuY29udGV4dC5Qcm9wb3NlTWFwcGluZ1JlcXVlc3QaJy5lbHJpLnYxLmNvbnRleHQuUHJvcG9zZU1hcHBpbmdSZXNwb25zZRJhCg5BcHByb3ZlTWFwcGluZxImLmVscmkudjEuY29udGV4dC5BcHByb3ZlTWFwcGluZ1JlcXVlc3QaJy5lbHJpLnYxLmNvbnRleHQuQXBwcm92ZU1hcHBpbmdSZXNwb25zZRJbCgxMaXN0TWFwcGluZ3MSJC5lbHJpLnYxLmNvbnRleHQuTGlzdE1hcHBpbmdzUmVxdWVzdBolLmVscmkudjEuY29udGV4dC5MaXN0TWFwcGluZ3NSZXNwb25zZWIGcHJvdG8z", [file_elri_v1_object_domain]);
+
+/**
+ * @generated from message elri.v1.context.MappingMember
+ */
+export type MappingMember = Message<"elri.v1.context.MappingMember"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string field_id = 2;
+   */
+  fieldId: string;
+};
+
+/**
+ * @generated from message elri.v1.context.MappingMember
+ */
+export type MappingMemberJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string field_id = 2;
+   */
+  fieldId?: string;
+};
+
+/**
+ * Describes the message elri.v1.context.MappingMember.
+ * Use `create(MappingMemberSchema)` to create a new message.
+ */
+export const MappingMemberSchema: GenMessage<MappingMember, {jsonType: MappingMemberJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_context_context, 0);
+
+/**
+ * @generated from message elri.v1.context.Mapping
+ */
+export type Mapping = Message<"elri.v1.context.Mapping"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * The Space that keeps the mapping. 
+   *
+   * @generated from field: string space_id = 2;
+   */
+  spaceId: string;
+
+  /**
+   * What the mapped fields mean, e.g. `priority`. 
+   *
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * @generated from field: repeated elri.v1.context.MappingMember members = 4;
+   */
+  members: MappingMember[];
+
+  /**
+   * @generated from field: bool approved = 5;
+   */
+  approved: boolean;
+
+  /**
+   * `user`, or the actor that proposed it. 
+   *
+   * @generated from field: string proposed_by = 6;
+   */
+  proposedBy: string;
+
+  /**
+   * @generated from field: int64 approved_at_ms = 7;
+   */
+  approvedAtMs: bigint;
+
+  /**
+   * @generated from field: int64 created_at_ms = 8;
+   */
+  createdAtMs: bigint;
+
+  /**
+   * @generated from field: int64 updated_at_ms = 9;
+   */
+  updatedAtMs: bigint;
+
+  /**
+   * @generated from field: optional int64 deleted_at_ms = 10;
+   */
+  deletedAtMs?: bigint | undefined;
+};
+
+/**
+ * @generated from message elri.v1.context.Mapping
+ */
+export type MappingJson = {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * The Space that keeps the mapping. 
+   *
+   * @generated from field: string space_id = 2;
+   */
+  spaceId?: string;
+
+  /**
+   * What the mapped fields mean, e.g. `priority`. 
+   *
+   * @generated from field: string name = 3;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: repeated elri.v1.context.MappingMember members = 4;
+   */
+  members?: MappingMemberJson[];
+
+  /**
+   * @generated from field: bool approved = 5;
+   */
+  approved?: boolean;
+
+  /**
+   * `user`, or the actor that proposed it. 
+   *
+   * @generated from field: string proposed_by = 6;
+   */
+  proposedBy?: string;
+
+  /**
+   * @generated from field: int64 approved_at_ms = 7;
+   */
+  approvedAtMs?: string;
+
+  /**
+   * @generated from field: int64 created_at_ms = 8;
+   */
+  createdAtMs?: string;
+
+  /**
+   * @generated from field: int64 updated_at_ms = 9;
+   */
+  updatedAtMs?: string;
+
+  /**
+   * @generated from field: optional int64 deleted_at_ms = 10;
+   */
+  deletedAtMs?: string;
+};
+
+/**
+ * Describes the message elri.v1.context.Mapping.
+ * Use `create(MappingSchema)` to create a new message.
+ */
+export const MappingSchema: GenMessage<Mapping, {jsonType: MappingJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_context_context, 1);
+
+/**
+ * @generated from message elri.v1.context.ProposeMappingRequest
+ */
+export type ProposeMappingRequest = Message<"elri.v1.context.ProposeMappingRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * @generated from field: repeated elri.v1.context.MappingMember members = 3;
+   */
+  members: MappingMember[];
+};
+
+/**
+ * @generated from message elri.v1.context.ProposeMappingRequest
+ */
+export type ProposeMappingRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name?: string;
+
+  /**
+   * @generated from field: repeated elri.v1.context.MappingMember members = 3;
+   */
+  members?: MappingMemberJson[];
+};
+
+/**
+ * Describes the message elri.v1.context.ProposeMappingRequest.
+ * Use `create(ProposeMappingRequestSchema)` to create a new message.
+ */
+export const ProposeMappingRequestSchema: GenMessage<ProposeMappingRequest, {jsonType: ProposeMappingRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_context_context, 2);
+
+/**
+ * @generated from message elri.v1.context.ProposeMappingResponse
+ */
+export type ProposeMappingResponse = Message<"elri.v1.context.ProposeMappingResponse"> & {
+  /**
+   * @generated from field: elri.v1.context.Mapping mapping = 1;
+   */
+  mapping?: Mapping | undefined;
+};
+
+/**
+ * @generated from message elri.v1.context.ProposeMappingResponse
+ */
+export type ProposeMappingResponseJson = {
+  /**
+   * @generated from field: elri.v1.context.Mapping mapping = 1;
+   */
+  mapping?: MappingJson;
+};
+
+/**
+ * Describes the message elri.v1.context.ProposeMappingResponse.
+ * Use `create(ProposeMappingResponseSchema)` to create a new message.
+ */
+export const ProposeMappingResponseSchema: GenMessage<ProposeMappingResponse, {jsonType: ProposeMappingResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_context_context, 3);
+
+/**
+ * @generated from message elri.v1.context.ApproveMappingRequest
+ */
+export type ApproveMappingRequest = Message<"elri.v1.context.ApproveMappingRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id: string;
+
+  /**
+   * False withdraws approval. 
+   *
+   * @generated from field: bool approved = 3;
+   */
+  approved: boolean;
+};
+
+/**
+ * @generated from message elri.v1.context.ApproveMappingRequest
+ */
+export type ApproveMappingRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id?: string;
+
+  /**
+   * False withdraws approval. 
+   *
+   * @generated from field: bool approved = 3;
+   */
+  approved?: boolean;
+};
+
+/**
+ * Describes the message elri.v1.context.ApproveMappingRequest.
+ * Use `create(ApproveMappingRequestSchema)` to create a new message.
+ */
+export const ApproveMappingRequestSchema: GenMessage<ApproveMappingRequest, {jsonType: ApproveMappingRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_context_context, 4);
+
+/**
+ * @generated from message elri.v1.context.ApproveMappingResponse
+ */
+export type ApproveMappingResponse = Message<"elri.v1.context.ApproveMappingResponse"> & {
+  /**
+   * @generated from field: elri.v1.context.Mapping mapping = 1;
+   */
+  mapping?: Mapping | undefined;
+};
+
+/**
+ * @generated from message elri.v1.context.ApproveMappingResponse
+ */
+export type ApproveMappingResponseJson = {
+  /**
+   * @generated from field: elri.v1.context.Mapping mapping = 1;
+   */
+  mapping?: MappingJson;
+};
+
+/**
+ * Describes the message elri.v1.context.ApproveMappingResponse.
+ * Use `create(ApproveMappingResponseSchema)` to create a new message.
+ */
+export const ApproveMappingResponseSchema: GenMessage<ApproveMappingResponse, {jsonType: ApproveMappingResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_context_context, 5);
+
+/**
+ * @generated from message elri.v1.context.ListMappingsRequest
+ */
+export type ListMappingsRequest = Message<"elri.v1.context.ListMappingsRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: bool approved_only = 2;
+   */
+  approvedOnly: boolean;
+
+  /**
+   * @generated from field: bool include_deleted = 3;
+   */
+  includeDeleted: boolean;
+};
+
+/**
+ * @generated from message elri.v1.context.ListMappingsRequest
+ */
+export type ListMappingsRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: bool approved_only = 2;
+   */
+  approvedOnly?: boolean;
+
+  /**
+   * @generated from field: bool include_deleted = 3;
+   */
+  includeDeleted?: boolean;
+};
+
+/**
+ * Describes the message elri.v1.context.ListMappingsRequest.
+ * Use `create(ListMappingsRequestSchema)` to create a new message.
+ */
+export const ListMappingsRequestSchema: GenMessage<ListMappingsRequest, {jsonType: ListMappingsRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_context_context, 6);
+
+/**
+ * @generated from message elri.v1.context.ListMappingsResponse
+ */
+export type ListMappingsResponse = Message<"elri.v1.context.ListMappingsResponse"> & {
+  /**
+   * @generated from field: repeated elri.v1.context.Mapping mappings = 1;
+   */
+  mappings: Mapping[];
+};
+
+/**
+ * @generated from message elri.v1.context.ListMappingsResponse
+ */
+export type ListMappingsResponseJson = {
+  /**
+   * @generated from field: repeated elri.v1.context.Mapping mappings = 1;
+   */
+  mappings?: MappingJson[];
+};
+
+/**
+ * Describes the message elri.v1.context.ListMappingsResponse.
+ * Use `create(ListMappingsResponseSchema)` to create a new message.
+ */
+export const ListMappingsResponseSchema: GenMessage<ListMappingsResponse, {jsonType: ListMappingsResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_context_context, 7);
 
 /**
  * What a Context selects. 
@@ -117,7 +509,7 @@ export type SelectionJson = {
  * Use `create(SelectionSchema)` to create a new message.
  */
 export const SelectionSchema: GenMessage<Selection, {jsonType: SelectionJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 0);
+  messageDesc(file_elri_v1_context_context, 8);
 
 /**
  * @generated from message elri.v1.context.Context
@@ -204,7 +596,7 @@ export type ContextJson = {
  * Use `create(ContextSchema)` to create a new message.
  */
 export const ContextSchema: GenMessage<Context, {jsonType: ContextJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 1);
+  messageDesc(file_elri_v1_context_context, 9);
 
 /**
  * @generated from message elri.v1.context.CreateContextRequest
@@ -251,7 +643,7 @@ export type CreateContextRequestJson = {
  * Use `create(CreateContextRequestSchema)` to create a new message.
  */
 export const CreateContextRequestSchema: GenMessage<CreateContextRequest, {jsonType: CreateContextRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 2);
+  messageDesc(file_elri_v1_context_context, 10);
 
 /**
  * @generated from message elri.v1.context.CreateContextResponse
@@ -278,7 +670,7 @@ export type CreateContextResponseJson = {
  * Use `create(CreateContextResponseSchema)` to create a new message.
  */
 export const CreateContextResponseSchema: GenMessage<CreateContextResponse, {jsonType: CreateContextResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 3);
+  messageDesc(file_elri_v1_context_context, 11);
 
 /**
  * @generated from message elri.v1.context.UpdateContextRequest
@@ -339,7 +731,7 @@ export type UpdateContextRequestJson = {
  * Use `create(UpdateContextRequestSchema)` to create a new message.
  */
 export const UpdateContextRequestSchema: GenMessage<UpdateContextRequest, {jsonType: UpdateContextRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 4);
+  messageDesc(file_elri_v1_context_context, 12);
 
 /**
  * @generated from message elri.v1.context.UpdateContextResponse
@@ -366,7 +758,7 @@ export type UpdateContextResponseJson = {
  * Use `create(UpdateContextResponseSchema)` to create a new message.
  */
 export const UpdateContextResponseSchema: GenMessage<UpdateContextResponse, {jsonType: UpdateContextResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 5);
+  messageDesc(file_elri_v1_context_context, 13);
 
 /**
  * @generated from message elri.v1.context.ListContextsRequest
@@ -403,7 +795,7 @@ export type ListContextsRequestJson = {
  * Use `create(ListContextsRequestSchema)` to create a new message.
  */
 export const ListContextsRequestSchema: GenMessage<ListContextsRequest, {jsonType: ListContextsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 6);
+  messageDesc(file_elri_v1_context_context, 14);
 
 /**
  * @generated from message elri.v1.context.ListContextsResponse
@@ -430,7 +822,7 @@ export type ListContextsResponseJson = {
  * Use `create(ListContextsResponseSchema)` to create a new message.
  */
 export const ListContextsResponseSchema: GenMessage<ListContextsResponse, {jsonType: ListContextsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 7);
+  messageDesc(file_elri_v1_context_context, 15);
 
 /**
  * @generated from message elri.v1.context.ResolveContextRequest
@@ -481,7 +873,7 @@ export type ResolveContextRequestJson = {
  * Use `create(ResolveContextRequestSchema)` to create a new message.
  */
 export const ResolveContextRequestSchema: GenMessage<ResolveContextRequest, {jsonType: ResolveContextRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 8);
+  messageDesc(file_elri_v1_context_context, 16);
 
 /**
  * @generated from message elri.v1.context.ResolveContextResponse
@@ -498,6 +890,14 @@ export type ResolveContextResponse = Message<"elri.v1.context.ResolveContextResp
    * @generated from field: repeated string missing_space_ids = 2;
    */
   missingSpaceIds: string[];
+
+  /**
+   * Approved mappings of the Context's Space, for Views over the
+   * selection. 
+   *
+   * @generated from field: repeated elri.v1.context.Mapping mappings = 3;
+   */
+  mappings: Mapping[];
 };
 
 /**
@@ -515,6 +915,14 @@ export type ResolveContextResponseJson = {
    * @generated from field: repeated string missing_space_ids = 2;
    */
   missingSpaceIds?: string[];
+
+  /**
+   * Approved mappings of the Context's Space, for Views over the
+   * selection. 
+   *
+   * @generated from field: repeated elri.v1.context.Mapping mappings = 3;
+   */
+  mappings?: MappingJson[];
 };
 
 /**
@@ -522,7 +930,7 @@ export type ResolveContextResponseJson = {
  * Use `create(ResolveContextResponseSchema)` to create a new message.
  */
 export const ResolveContextResponseSchema: GenMessage<ResolveContextResponse, {jsonType: ResolveContextResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 9);
+  messageDesc(file_elri_v1_context_context, 17);
 
 /**
  * @generated from message elri.v1.context.HideInContextRequest
@@ -579,7 +987,7 @@ export type HideInContextRequestJson = {
  * Use `create(HideInContextRequestSchema)` to create a new message.
  */
 export const HideInContextRequestSchema: GenMessage<HideInContextRequest, {jsonType: HideInContextRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 10);
+  messageDesc(file_elri_v1_context_context, 18);
 
 /**
  * @generated from message elri.v1.context.HideInContextResponse
@@ -606,7 +1014,7 @@ export type HideInContextResponseJson = {
  * Use `create(HideInContextResponseSchema)` to create a new message.
  */
 export const HideInContextResponseSchema: GenMessage<HideInContextResponse, {jsonType: HideInContextResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_context_context, 11);
+  messageDesc(file_elri_v1_context_context, 19);
 
 /**
  *
@@ -662,6 +1070,35 @@ export const ContextService: GenService<{
     methodKind: "unary";
     input: typeof HideInContextRequestSchema;
     output: typeof HideInContextResponseSchema;
+  },
+  /**
+   * Mappings: fields of several Spaces that mean the same thing, so a
+   * search or a View can treat them as one. A mapping proposed by code
+   * waits for a person's approval; one a person makes is approved. A
+   * mapping neither merges the fields nor permits writing across them. 
+   *
+   * @generated from rpc elri.v1.context.ContextService.ProposeMapping
+   */
+  proposeMapping: {
+    methodKind: "unary";
+    input: typeof ProposeMappingRequestSchema;
+    output: typeof ProposeMappingResponseSchema;
+  },
+  /**
+   * @generated from rpc elri.v1.context.ContextService.ApproveMapping
+   */
+  approveMapping: {
+    methodKind: "unary";
+    input: typeof ApproveMappingRequestSchema;
+    output: typeof ApproveMappingResponseSchema;
+  },
+  /**
+   * @generated from rpc elri.v1.context.ContextService.ListMappings
+   */
+  listMappings: {
+    methodKind: "unary";
+    input: typeof ListMappingsRequestSchema;
+    output: typeof ListMappingsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_context_context, 0);

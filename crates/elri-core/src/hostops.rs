@@ -81,6 +81,49 @@ impl Session {
         .await
     }
 
+    /// `{"op":"propose_mapping","name":...,"members":[{"space","field"}]}`:
+    /// a mapping in the caller's own Space, waiting for a person.
+    async fn propose_mapping(&mut self, req: &Json) -> Result<Json, String> {
+        let name = req
+            .get("name")
+            .and_then(Json::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let members: Vec<elri_proto::elri::v1::context::MappingMember> = req
+            .get("members")
+            .and_then(Json::as_array)
+            .map(|a| {
+                a.iter()
+                    .map(|m| elri_proto::elri::v1::context::MappingMember {
+                        space_id: m
+                            .get("space")
+                            .and_then(Json::as_str)
+                            .unwrap_or_default()
+                            .to_owned(),
+                        field_id: m
+                            .get("field")
+                            .and_then(Json::as_str)
+                            .unwrap_or_default()
+                            .to_owned(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+        crate::mapping::check(&name, &members)?;
+        // Code proposes; a person approves.
+        let doc = crate::mapping::create(self.own, &name, &members, &self.actor, false)
+            .map_err(|e| e.to_string())?;
+        let rec = self
+            .store
+            .space(self.own)
+            .await
+            .map_err(|e| e.to_string())?
+            .insert_as(&doc, &self.actor)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(serde_json::json!({ "id": rec.id, "approved": false }))
+    }
+
     /// Runs one operation. The request is `{"op": ..., ...}`; the result
     /// is `{"ok": ...}` or `{"error": "..."}`.
     pub async fn call(&mut self, req: &Json) -> Json {
@@ -124,6 +167,7 @@ impl Session {
                 }));
                 Ok(Json::Null)
             }
+            "propose_mapping" => self.propose_mapping(req).await,
             "get" => {
                 let space = self.space_of(req)?;
                 self.may_read(space)?;
@@ -206,6 +250,9 @@ impl Session {
                 self.may_revise(space, id(req)?).await?;
                 let set = fields_from_json(req.get("fields"))?;
                 let remove: Vec<String> = strings(req.get("remove_fields"));
+                if let Some(k) = remove.iter().find(|k| crate::model::is_reserved_field(k)) {
+                    return Err(format!("field {k}: reserved ids are written by the core"));
+                }
                 let add_types: Vec<String> = strings(req.get("add_types"));
                 let remove_types: Vec<String> = strings(req.get("remove_types"));
                 let rec = self

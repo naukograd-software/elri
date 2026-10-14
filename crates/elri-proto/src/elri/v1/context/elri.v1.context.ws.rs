@@ -35,6 +35,18 @@ pub mod context_service_ws {
         route: "/elri.v1.context.ContextService/HideInContext",
         kind: StreamKind::Unary,
     };
+    pub const PROPOSE_MAPPING: MethodSpec = MethodSpec {
+        route: "/elri.v1.context.ContextService/ProposeMapping",
+        kind: StreamKind::Unary,
+    };
+    pub const APPROVE_MAPPING: MethodSpec = MethodSpec {
+        route: "/elri.v1.context.ContextService/ApproveMapping",
+        kind: StreamKind::Unary,
+    };
+    pub const LIST_MAPPINGS: MethodSpec = MethodSpec {
+        route: "/elri.v1.context.ContextService/ListMappings",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `ContextService` service. Implement with `async fn`.
     pub trait ContextServiceHandler: Send + Sync + 'static {
         fn create_context(
@@ -69,6 +81,28 @@ pub mod context_service_ws {
             req: Request<super::HideInContextRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::HideInContextResponse>, Status>,
+        > + Send;
+        ///  Mappings: fields of several Spaces that mean the same thing, so a
+        /// search or a View can treat them as one. A mapping proposed by code
+        /// waits for a person's approval; one a person makes is approved. A
+        /// mapping neither merges the fields nor permits writing across them.
+        fn propose_mapping(
+            &self,
+            req: Request<super::ProposeMappingRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::ProposeMappingResponse>, Status>,
+        > + Send;
+        fn approve_mapping(
+            &self,
+            req: Request<super::ApproveMappingRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::ApproveMappingResponse>, Status>,
+        > + Send;
+        fn list_mappings(
+            &self,
+            req: Request<super::ListMappingsRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::ListMappingsResponse>, Status>,
         > + Send;
     }
     /// Registers `handler` on `server` for every `ContextService` method.
@@ -138,6 +172,39 @@ pub mod context_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    PROPOSE_MAPPING.route,
+                    move |req: Request<super::ProposeMappingRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.propose_mapping(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    APPROVE_MAPPING.route,
+                    move |req: Request<super::ApproveMappingRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.approve_mapping(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    LIST_MAPPINGS.route,
+                    move |req: Request<super::ListMappingsRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.list_mappings(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `ContextService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -184,6 +251,28 @@ pub mod context_service_ws {
             req: impl Into<Request<super::HideInContextRequest>>,
         ) -> Result<Response<super::HideInContextResponse>, Status> {
             self.conn.invoke_unary(HIDE_IN_CONTEXT, req.into()).await
+        }
+        ///  Mappings: fields of several Spaces that mean the same thing, so a
+        /// search or a View can treat them as one. A mapping proposed by code
+        /// waits for a person's approval; one a person makes is approved. A
+        /// mapping neither merges the fields nor permits writing across them.
+        pub async fn propose_mapping(
+            &self,
+            req: impl Into<Request<super::ProposeMappingRequest>>,
+        ) -> Result<Response<super::ProposeMappingResponse>, Status> {
+            self.conn.invoke_unary(PROPOSE_MAPPING, req.into()).await
+        }
+        pub async fn approve_mapping(
+            &self,
+            req: impl Into<Request<super::ApproveMappingRequest>>,
+        ) -> Result<Response<super::ApproveMappingResponse>, Status> {
+            self.conn.invoke_unary(APPROVE_MAPPING, req.into()).await
+        }
+        pub async fn list_mappings(
+            &self,
+            req: impl Into<Request<super::ListMappingsRequest>>,
+        ) -> Result<Response<super::ListMappingsResponse>, Status> {
+            self.conn.invoke_unary(LIST_MAPPINGS, req.into()).await
         }
     }
 }

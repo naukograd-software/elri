@@ -34,6 +34,8 @@ enum ObjectKind {
     OBJECT_KIND_COMPONENT = 14;
     /* The transfer rules of a Space; one per Space, set by its managers. */
     OBJECT_KIND_TRANSFER_POLICY = 15;
+    /* A semantic mapping: fields of several Spaces that mean the same. */
+    OBJECT_KIND_MAPPING = 16;
 }
 
 /* Items of a list value; scalars only. */

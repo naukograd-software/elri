@@ -17,6 +17,10 @@ use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
 use elri_proto::elri::v1::change::{
     Change, DiscardChangeRequest, ListChangesRequest, RetryChangeRequest,
 };
+use elri_proto::elri::v1::context::context_service_ws::ContextServiceClient;
+use elri_proto::elri::v1::context::{
+    ApproveMappingRequest, ListMappingsRequest, Mapping, MappingMember, ProposeMappingRequest,
+};
 use elri_proto::elri::v1::core::core_service_ws::CoreServiceClient;
 use elri_proto::elri::v1::core::GetInfoRequest;
 use elri_proto::elri::v1::definition::definition_service_ws::DefinitionServiceClient;
@@ -121,6 +125,14 @@ enum Cmd {
         kind: Option<ObjectKind>,
         #[arg(long, default_value_t = 20)]
         limit: i32,
+        /// Only hits in the fields this approved mapping names for the Space.
+        #[arg(long)]
+        mapping: Option<String>,
+    },
+    /// Mappings: fields of several Spaces that mean the same thing.
+    Mapping {
+        #[command(subcommand)]
+        cmd: MappingCmd,
     },
     /// Constraints: rules over field values that are reported or enforced.
     Constraint {
@@ -292,6 +304,118 @@ enum WorkflowCmd {
     },
     /// Abandon a paused or failed run.
     Cancel { id: String },
+}
+
+#[derive(Subcommand, Debug)]
+enum MappingCmd {
+    /// Propose (and, as a person, approve) a mapping kept in a Space.
+    Propose {
+        #[arg(long)]
+        space: String,
+        /// What the fields mean, e.g. `priority`.
+        name: String,
+        /// `SPACE:FIELD`, repeatable.
+        #[arg(long = "member", value_parser = parse_member)]
+        members: Vec<MappingMember>,
+    },
+    /// Approve a proposed mapping, or withdraw approval with --off.
+    Approve {
+        #[arg(long)]
+        space: String,
+        id: String,
+        #[arg(long)]
+        off: bool,
+    },
+    /// Mappings a Space keeps.
+    List {
+        #[arg(long)]
+        space: String,
+        #[arg(long)]
+        approved: bool,
+    },
+}
+
+fn parse_member(s: &str) -> Result<MappingMember, String> {
+    let (space, field) = s.split_once(':').ok_or("member is SPACE:FIELD")?;
+    Ok(MappingMember {
+        space_id: space.to_owned(),
+        field_id: field.to_owned(),
+    })
+}
+
+fn mapping_json(m: &Mapping) -> serde_json::Value {
+    json!({
+        "id": m.id, "space_id": m.space_id, "name": m.name,
+        "members": m.members.iter().map(|x| json!({ "space_id": x.space_id, "field_id": x.field_id })).collect::<Vec<_>>(),
+        "approved": m.approved, "proposed_by": m.proposed_by, "approved_at_ms": m.approved_at_ms,
+        "created_at_ms": m.created_at_ms, "updated_at_ms": m.updated_at_ms,
+    })
+}
+
+async fn run_mapping(
+    endpoint: &Endpoint,
+    conn: Client,
+    cmd: MappingCmd,
+) -> Result<serde_json::Value> {
+    let client = ContextServiceClient::new(conn);
+    match cmd {
+        MappingCmd::Propose {
+            space,
+            name,
+            members,
+        } => {
+            let res = client
+                .propose_mapping(authed(
+                    endpoint,
+                    ProposeMappingRequest {
+                        space_id: space,
+                        name,
+                        members,
+                    },
+                ))
+                .await?;
+            Ok(res
+                .msg
+                .mapping
+                .as_ref()
+                .map_or(serde_json::Value::Null, mapping_json))
+        }
+        MappingCmd::Approve { space, id, off } => {
+            let res = client
+                .approve_mapping(authed(
+                    endpoint,
+                    ApproveMappingRequest {
+                        space_id: space,
+                        id,
+                        approved: !off,
+                    },
+                ))
+                .await?;
+            Ok(res
+                .msg
+                .mapping
+                .as_ref()
+                .map_or(serde_json::Value::Null, mapping_json))
+        }
+        MappingCmd::List { space, approved } => {
+            let res = client
+                .list_mappings(authed(
+                    endpoint,
+                    ListMappingsRequest {
+                        space_id: space,
+                        approved_only: approved,
+                        include_deleted: false,
+                    },
+                ))
+                .await?;
+            Ok(json!(res
+                .msg
+                .mappings
+                .iter()
+                .map(mapping_json)
+                .collect::<Vec<_>>()))
+        }
+    }
 }
 
 #[derive(Subcommand, Debug)]
@@ -2287,6 +2411,7 @@ async fn main() -> Result<()> {
             query,
             kind,
             limit,
+            mapping,
         } => {
             let res = SearchServiceClient::new(conn)
                 .search(authed(
@@ -2296,6 +2421,7 @@ async fn main() -> Result<()> {
                         query,
                         kind: kind.unwrap_or(ObjectKind::Unspecified).into(),
                         limit,
+                        mapping_id: mapping.unwrap_or_default(),
                     },
                 ))
                 .await?;
@@ -2319,6 +2445,7 @@ async fn main() -> Result<()> {
         Cmd::Grant { cmd } => run_grant(&endpoint, conn, cmd).await?,
         Cmd::Constraint { cmd } => run_constraint(&endpoint, conn, cmd).await?,
         Cmd::Workflow { cmd } => run_workflow(&endpoint, conn, cmd).await?,
+        Cmd::Mapping { cmd } => run_mapping(&endpoint, conn, cmd).await?,
         Cmd::Rule { cmd } => run_rule(&endpoint, conn, cmd).await?,
         Cmd::Ui { cmd } => run_ui(&endpoint, conn, cmd).await?,
         Cmd::Transfer { cmd } => run_transfer(&endpoint, conn, cmd).await?,

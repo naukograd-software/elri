@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/search/search.proto.
  */
 export const file_elri_v1_search_search: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL3NlYXJjaC9zZWFyY2gucHJvdG8SDmVscmkudjEuc2VhcmNoImkKDVNlYXJjaFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDQoFcXVlcnkYAiABKAkSKAoEa2luZBgDIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDQoFbGltaXQYBCABKAUiTAoDSGl0EiYKBm9iamVjdBgBIAEoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdBINCgVzY29yZRgCIAEoARIOCgZmaWVsZHMYAyADKAkiYQoOU2VhcmNoUmVzcG9uc2USIQoEaGl0cxgBIAMoCzITLmVscmkudjEuc2VhcmNoLkhpdBIsCgl3YXRlcm1hcmsYAiABKAsyGS5lbHJpLnYxLnNlYXJjaC5XYXRlcm1hcmsiVQoJV2F0ZXJtYXJrEhAKCGRhdGFfc2VxGAEgASgDEhEKCWluZGV4X3NlcRgCIAEoAxIPCgdwYXJ0aWFsGAMgASgIEhIKCnRhcmdldF9zZXEYBCABKAMyWAoNU2VhcmNoU2VydmljZRJHCgZTZWFyY2gSHS5lbHJpLnYxLnNlYXJjaC5TZWFyY2hSZXF1ZXN0Gh4uZWxyaS52MS5zZWFyY2guU2VhcmNoUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL3NlYXJjaC9zZWFyY2gucHJvdG8SDmVscmkudjEuc2VhcmNoIn0KDVNlYXJjaFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDQoFcXVlcnkYAiABKAkSKAoEa2luZBgDIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDQoFbGltaXQYBCABKAUSEgoKbWFwcGluZ19pZBgFIAEoCSJMCgNIaXQSJgoGb2JqZWN0GAEgASgLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0Eg0KBXNjb3JlGAIgASgBEg4KBmZpZWxkcxgDIAMoCSJhCg5TZWFyY2hSZXNwb25zZRIhCgRoaXRzGAEgAygLMhMuZWxyaS52MS5zZWFyY2guSGl0EiwKCXdhdGVybWFyaxgCIAEoCzIZLmVscmkudjEuc2VhcmNoLldhdGVybWFyayJVCglXYXRlcm1hcmsSEAoIZGF0YV9zZXEYASABKAMSEQoJaW5kZXhfc2VxGAIgASgDEg8KB3BhcnRpYWwYAyABKAgSEgoKdGFyZ2V0X3NlcRgEIAEoAzJYCg1TZWFyY2hTZXJ2aWNlEkcKBlNlYXJjaBIdLmVscmkudjEuc2VhcmNoLlNlYXJjaFJlcXVlc3QaHi5lbHJpLnYxLnNlYXJjaC5TZWFyY2hSZXNwb25zZWIGcHJvdG8z", [file_elri_v1_object_domain]);
 
 /**
  * @generated from message elri.v1.search.SearchRequest
@@ -43,6 +43,14 @@ export type SearchRequest = Message<"elri.v1.search.SearchRequest"> & {
    * @generated from field: int32 limit = 4;
    */
   limit: number;
+
+  /**
+   * Only hits in the fields an approved mapping of this Space names for
+   * it, if set. 
+   *
+   * @generated from field: string mapping_id = 5;
+   */
+  mappingId: string;
 };
 
 /**
@@ -74,6 +82,14 @@ export type SearchRequestJson = {
    * @generated from field: int32 limit = 4;
    */
   limit?: number;
+
+  /**
+   * Only hits in the fields an approved mapping of this Space names for
+   * it, if set. 
+   *
+   * @generated from field: string mapping_id = 5;
+   */
+  mappingId?: string;
 };
 
 /**

@@ -18,6 +18,9 @@ message SearchRequest {
     elri.v1.object.ObjectKind kind = 3;
     /* 0 = server default. */
     int32 limit = 4;
+    /* Only hits in the fields an approved mapping of this Space names for
+       it, if set. */
+    string mapping_id = 5;
 }
 
 message Hit {
