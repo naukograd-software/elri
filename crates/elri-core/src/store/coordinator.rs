@@ -577,7 +577,10 @@ async fn stage_admit(
         }
         // The document's own Space claim must agree with where the part is
         // routed: authorization was checked against the route.
-        if d.rec.space_id != part.space_id {
+        let route = crate::sync::part_space(env, part)
+            .ok()
+            .map(|s| s.to_string());
+        if route.as_deref() != Some(d.rec.space_id.as_str()) {
             return Ok(Err(rejected(Reason::Invalid, "space mismatch")));
         }
     }
