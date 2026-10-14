@@ -295,6 +295,13 @@ impl Caller {
         let mut named = BTreeSet::new();
         spaces_in(&msg, &mut named);
         let writes = !reads_only(method);
+        // A write must say where it lands; one naming no Space is refused
+        // rather than trusted.
+        if writes && named.is_empty() {
+            return Err(format!(
+                "{method} names no space; a write must name the space it changes"
+            ));
+        }
         for s in &named {
             let ok = if writes {
                 reach.write.contains(s)
@@ -552,5 +559,27 @@ mod tests {
         let mut s = BTreeSet::new();
         spaces_in(&dynm, &mut s);
         assert_eq!(s.into_iter().collect::<Vec<_>>(), vec!["s1".to_owned()]);
+    }
+
+    fn names_space(m: &MessageDescriptor, depth: usize) -> bool {
+        depth < 8
+            && m.fields().any(|f| {
+                SPACE_FIELDS.contains(&f.name())
+                    || matches!(f.kind(), Kind::Message(ref inner) if names_space(inner, depth + 1))
+            })
+    }
+
+    /// Every write an agent may call can name the Space it touches, so
+    /// the gate's refusal of writes naming none never blocks a real one.
+    #[test]
+    fn every_agent_write_names_a_space() {
+        for svc in POOL.services() {
+            for m in svc.methods() {
+                let full = format!("{}/{}", svc.full_name(), m.name());
+                if allowed(&full) && !reads_only(&full) {
+                    assert!(names_space(&m.input(), 0), "{full} names no space");
+                }
+            }
+        }
     }
 }
