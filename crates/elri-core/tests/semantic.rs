@@ -179,6 +179,7 @@ async fn meaning_search_fills_in_and_reports_its_completeness() {
         .update_settings(a.req(UpdateSettingsRequest {
             proxy: None,
             semantic: Some(SemanticSettings { enabled: false }),
+            ai: None,
         }))
         .await
         .expect("off");

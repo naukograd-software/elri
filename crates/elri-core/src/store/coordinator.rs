@@ -79,7 +79,7 @@ impl Store {
         &self,
         edits: Vec<(SpaceId, Edit)>,
     ) -> Result<(String, Vec<Object>), StoreError> {
-        self.commit_as(edits, super::ACTOR_USER).await
+        self.commit_as(edits, &super::current_actor()).await
     }
 
     /// [`Self::commit`] attributed to `actor`.

@@ -42,6 +42,8 @@ pub struct Config {
     pub secrets: SecretsBackend,
     /// Which embedder semantic search uses.
     pub semantic: crate::semantic::Backend,
+    /// Where the AI provider lives.
+    pub openai: crate::ai::Endpoints,
 }
 
 impl Config {
@@ -60,8 +62,47 @@ impl Config {
             ],
             secrets: SecretsBackend::File,
             semantic: crate::semantic::Backend::Model,
+            openai: crate::ai::Endpoints::default(),
         }
     }
+}
+
+/// The AI hub and the in-process token its agents call the API with.
+fn open_ai(
+    store: &Arc<Store>,
+    net: &Arc<crate::net::Net>,
+    secrets: &Secrets,
+    config: &Config,
+    url: &str,
+) -> (LaunchToken, Arc<crate::ai::Ai>) {
+    let agent_token = LaunchToken::generate();
+    let ai = crate::ai::Ai::new(
+        Arc::clone(store),
+        Arc::clone(net),
+        secrets.clone(),
+        config.openai.clone(),
+        url.to_owned(),
+        agent_token.expose().to_owned(),
+    );
+    (agent_token, ai)
+}
+
+/// The script host, running as many scripts at once as the device allows.
+async fn open_scripts(
+    store: &Arc<Store>,
+    device_id: DeviceId,
+    modules: &crate::extension::Modules,
+) -> Result<crate::script::Host, CoreError> {
+    let scripts =
+        crate::script::Host::new(Arc::clone(store), device_id.as_string(), modules.clone());
+    let saved = store
+        .setting(
+            crate::rules::MAX_CONCURRENT_SCRIPTS,
+            i64::try_from(crate::script::DEFAULT_CONCURRENCY).unwrap_or(4),
+        )
+        .await?;
+    scripts.set_concurrency(usize::try_from(saved).unwrap_or(crate::script::DEFAULT_CONCURRENCY));
+    Ok(scripts)
 }
 
 /// The core's HTTP clients from the stored proxy settings, with the
@@ -260,26 +301,20 @@ impl Core {
         );
         let semantic_task = semantic.spawn();
         let modules = crate::extension::Modules::new(&config.data_dir);
-        let scripts =
-            crate::script::Host::new(Arc::clone(&store), device_id.as_string(), modules.clone());
-        let saved = store
-            .setting(
-                crate::rules::MAX_CONCURRENT_SCRIPTS,
-                i64::try_from(crate::script::DEFAULT_CONCURRENCY).unwrap_or(4),
-            )
-            .await?;
-        scripts
-            .set_concurrency(usize::try_from(saved).unwrap_or(crate::script::DEFAULT_CONCURRENCY));
+        let scripts = open_scripts(&store, device_id, &modules).await?;
         let rules_task =
             crate::rules::spawn_runner(Arc::clone(&store), scripts.clone(), device_id.as_string());
         if let Err(e) = crate::workflows::recover(&store, &scripts).await {
             tracing::warn!(error = %e, "workflow recovery failed");
         }
+        let (agent_token, ai) = open_ai(&store, &net, &secrets, &config, &endpoint.url);
         let server = api::build_server(
             api::Services {
                 build: config.build.clone(),
                 device_id,
                 token: token.clone(),
+                agent_token,
+                ai,
                 store: Arc::clone(&store),
                 remote: Arc::clone(&remote),
                 scripts,

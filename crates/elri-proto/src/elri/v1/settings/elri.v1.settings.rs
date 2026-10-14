@@ -17,12 +17,31 @@ pub struct SemanticSettings {
     #[prost(bool, tag = "1")]
     pub enabled: bool,
 }
+/// Model provider defaults on this device. 
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AiSettings {
+    /// The account calls use unless one is named. 
+    #[prost(string, tag = "1")]
+    pub default_account_id: ::prost::alloc::string::String,
+    /// Model slug agents use unless they name one. 
+    #[prost(string, tag = "2")]
+    pub default_model: ::prost::alloc::string::String,
+    /// Reasoning effort agents use unless they name one. 
+    #[prost(string, tag = "3")]
+    pub default_effort: ::prost::alloc::string::String,
+    /// Spaces whose data may be sent to the provider. A Space not listed
+    /// is never sent, whatever an agent asks. 
+    #[prost(string, repeated, tag = "4")]
+    pub authorized_space_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Settings {
     #[prost(message, optional, tag = "1")]
     pub proxy: ::core::option::Option<ProxySettings>,
     #[prost(message, optional, tag = "2")]
     pub semantic: ::core::option::Option<SemanticSettings>,
+    #[prost(message, optional, tag = "3")]
+    pub ai: ::core::option::Option<AiSettings>,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetSettingsRequest {
@@ -38,6 +57,8 @@ pub struct UpdateSettingsRequest {
     pub proxy: ::core::option::Option<ProxySettings>,
     #[prost(message, optional, tag = "2")]
     pub semantic: ::core::option::Option<SemanticSettings>,
+    #[prost(message, optional, tag = "3")]
+    pub ai: ::core::option::Option<AiSettings>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct UpdateSettingsResponse {

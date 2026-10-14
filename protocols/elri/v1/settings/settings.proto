@@ -42,9 +42,23 @@ message SemanticSettings {
     bool enabled = 1;
 }
 
+/* Model provider defaults on this device. */
+message AiSettings {
+    /* The account calls use unless one is named. */
+    string default_account_id = 1;
+    /* Model slug agents use unless they name one. */
+    string default_model = 2;
+    /* Reasoning effort agents use unless they name one. */
+    string default_effort = 3;
+    /* Spaces whose data may be sent to the provider. A Space not listed
+       is never sent, whatever an agent asks. */
+    repeated string authorized_space_ids = 4;
+}
+
 message Settings {
     ProxySettings proxy = 1;
     SemanticSettings semantic = 2;
+    AiSettings ai = 3;
 }
 
 message GetSettingsRequest {}
@@ -56,6 +70,7 @@ message GetSettingsResponse {
 message UpdateSettingsRequest {
     ProxySettings proxy = 1;
     SemanticSettings semantic = 2;
+    AiSettings ai = 3;
 }
 
 message UpdateSettingsResponse {

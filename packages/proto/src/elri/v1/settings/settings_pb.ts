@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/settings/settings.proto.
  */
 export const file_elri_v1_settings_settings: GenFile = /*@__PURE__*/
-  fileDesc("Ch9lbHJpL3YxL3NldHRpbmdzL3NldHRpbmdzLnByb3RvEhBlbHJpLnYxLnNldHRpbmdzIlkKDVByb3h5U2V0dGluZ3MSKQoEbW9kZRgBIAEoDjIbLmVscmkudjEuc2V0dGluZ3MuUHJveHlNb2RlEgsKA3VybBgCIAEoCRIQCghub19wcm94eRgDIAEoCSIjChBTZW1hbnRpY1NldHRpbmdzEg8KB2VuYWJsZWQYASABKAgicAoIU2V0dGluZ3MSLgoFcHJveHkYASABKAsyHy5lbHJpLnYxLnNldHRpbmdzLlByb3h5U2V0dGluZ3MSNAoIc2VtYW50aWMYAiABKAsyIi5lbHJpLnYxLnNldHRpbmdzLlNlbWFudGljU2V0dGluZ3MiFAoSR2V0U2V0dGluZ3NSZXF1ZXN0IkMKE0dldFNldHRpbmdzUmVzcG9uc2USLAoIc2V0dGluZ3MYASABKAsyGi5lbHJpLnYxLnNldHRpbmdzLlNldHRpbmdzIn0KFVVwZGF0ZVNldHRpbmdzUmVxdWVzdBIuCgVwcm94eRgBIAEoCzIfLmVscmkudjEuc2V0dGluZ3MuUHJveHlTZXR0aW5ncxI0CghzZW1hbnRpYxgCIAEoCzIiLmVscmkudjEuc2V0dGluZ3MuU2VtYW50aWNTZXR0aW5ncyJGChZVcGRhdGVTZXR0aW5nc1Jlc3BvbnNlEiwKCHNldHRpbmdzGAEgASgLMhouZWxyaS52MS5zZXR0aW5ncy5TZXR0aW5ncyIiChNSZXNvbHZlUHJveHlSZXF1ZXN0EgsKA3VybBgBIAEoCSI1ChRSZXNvbHZlUHJveHlSZXNwb25zZRINCgVwcm94eRgBIAEoCRIOCgZzb3VyY2UYAiABKAkqhgEKCVByb3h5TW9kZRIaChZQUk9YWV9NT0RFX1VOU1BFQ0lGSUVEEAASFQoRUFJPWFlfTU9ERV9TWVNURU0QARIaChZQUk9YWV9NT0RFX0VOVklST05NRU5UEAISFQoRUFJPWFlfTU9ERV9NQU5VQUwQAxITCg9QUk9YWV9NT0RFX05PTkUQBDKxAgoPU2V0dGluZ3NTZXJ2aWNlEloKC0dldFNldHRpbmdzEiQuZWxyaS52MS5zZXR0aW5ncy5HZXRTZXR0aW5nc1JlcXVlc3QaJS5lbHJpLnYxLnNldHRpbmdzLkdldFNldHRpbmdzUmVzcG9uc2USYwoOVXBkYXRlU2V0dGluZ3MSJy5lbHJpLnYxLnNldHRpbmdzLlVwZGF0ZVNldHRpbmdzUmVxdWVzdBooLmVscmkudjEuc2V0dGluZ3MuVXBkYXRlU2V0dGluZ3NSZXNwb25zZRJdCgxSZXNvbHZlUHJveHkSJS5lbHJpLnYxLnNldHRpbmdzLlJlc29sdmVQcm94eVJlcXVlc3QaJi5lbHJpLnYxLnNldHRpbmdzLlJlc29sdmVQcm94eVJlc3BvbnNlYgZwcm90bzM");
+  fileDesc("Ch9lbHJpL3YxL3NldHRpbmdzL3NldHRpbmdzLnByb3RvEhBlbHJpLnYxLnNldHRpbmdzIlkKDVByb3h5U2V0dGluZ3MSKQoEbW9kZRgBIAEoDjIbLmVscmkudjEuc2V0dGluZ3MuUHJveHlNb2RlEgsKA3VybBgCIAEoCRIQCghub19wcm94eRgDIAEoCSIjChBTZW1hbnRpY1NldHRpbmdzEg8KB2VuYWJsZWQYASABKAgidQoKQWlTZXR0aW5ncxIaChJkZWZhdWx0X2FjY291bnRfaWQYASABKAkSFQoNZGVmYXVsdF9tb2RlbBgCIAEoCRIWCg5kZWZhdWx0X2VmZm9ydBgDIAEoCRIcChRhdXRob3JpemVkX3NwYWNlX2lkcxgEIAMoCSKaAQoIU2V0dGluZ3MSLgoFcHJveHkYASABKAsyHy5lbHJpLnYxLnNldHRpbmdzLlByb3h5U2V0dGluZ3MSNAoIc2VtYW50aWMYAiABKAsyIi5lbHJpLnYxLnNldHRpbmdzLlNlbWFudGljU2V0dGluZ3MSKAoCYWkYAyABKAsyHC5lbHJpLnYxLnNldHRpbmdzLkFpU2V0dGluZ3MiFAoSR2V0U2V0dGluZ3NSZXF1ZXN0IkMKE0dldFNldHRpbmdzUmVzcG9uc2USLAoIc2V0dGluZ3MYASABKAsyGi5lbHJpLnYxLnNldHRpbmdzLlNldHRpbmdzIqcBChVVcGRhdGVTZXR0aW5nc1JlcXVlc3QSLgoFcHJveHkYASABKAsyHy5lbHJpLnYxLnNldHRpbmdzLlByb3h5U2V0dGluZ3MSNAoIc2VtYW50aWMYAiABKAsyIi5lbHJpLnYxLnNldHRpbmdzLlNlbWFudGljU2V0dGluZ3MSKAoCYWkYAyABKAsyHC5lbHJpLnYxLnNldHRpbmdzLkFpU2V0dGluZ3MiRgoWVXBkYXRlU2V0dGluZ3NSZXNwb25zZRIsCghzZXR0aW5ncxgBIAEoCzIaLmVscmkudjEuc2V0dGluZ3MuU2V0dGluZ3MiIgoTUmVzb2x2ZVByb3h5UmVxdWVzdBILCgN1cmwYASABKAkiNQoUUmVzb2x2ZVByb3h5UmVzcG9uc2USDQoFcHJveHkYASABKAkSDgoGc291cmNlGAIgASgJKoYBCglQcm94eU1vZGUSGgoWUFJPWFlfTU9ERV9VTlNQRUNJRklFRBAAEhUKEVBST1hZX01PREVfU1lTVEVNEAESGgoWUFJPWFlfTU9ERV9FTlZJUk9OTUVOVBACEhUKEVBST1hZX01PREVfTUFOVUFMEAMSEwoPUFJPWFlfTU9ERV9OT05FEAQysQIKD1NldHRpbmdzU2VydmljZRJaCgtHZXRTZXR0aW5ncxIkLmVscmkudjEuc2V0dGluZ3MuR2V0U2V0dGluZ3NSZXF1ZXN0GiUuZWxyaS52MS5zZXR0aW5ncy5HZXRTZXR0aW5nc1Jlc3BvbnNlEmMKDlVwZGF0ZVNldHRpbmdzEicuZWxyaS52MS5zZXR0aW5ncy5VcGRhdGVTZXR0aW5nc1JlcXVlc3QaKC5lbHJpLnYxLnNldHRpbmdzLlVwZGF0ZVNldHRpbmdzUmVzcG9uc2USXQoMUmVzb2x2ZVByb3h5EiUuZWxyaS52MS5zZXR0aW5ncy5SZXNvbHZlUHJveHlSZXF1ZXN0GiYuZWxyaS52MS5zZXR0aW5ncy5SZXNvbHZlUHJveHlSZXNwb25zZWIGcHJvdG8z");
 
 /**
  * @generated from message elri.v1.settings.ProxySettings
@@ -99,6 +99,85 @@ export const SemanticSettingsSchema: GenMessage<SemanticSettings, {jsonType: Sem
   messageDesc(file_elri_v1_settings_settings, 1);
 
 /**
+ * Model provider defaults on this device. 
+ *
+ * @generated from message elri.v1.settings.AiSettings
+ */
+export type AiSettings = Message<"elri.v1.settings.AiSettings"> & {
+  /**
+   * The account calls use unless one is named. 
+   *
+   * @generated from field: string default_account_id = 1;
+   */
+  defaultAccountId: string;
+
+  /**
+   * Model slug agents use unless they name one. 
+   *
+   * @generated from field: string default_model = 2;
+   */
+  defaultModel: string;
+
+  /**
+   * Reasoning effort agents use unless they name one. 
+   *
+   * @generated from field: string default_effort = 3;
+   */
+  defaultEffort: string;
+
+  /**
+   * Spaces whose data may be sent to the provider. A Space not listed
+   * is never sent, whatever an agent asks. 
+   *
+   * @generated from field: repeated string authorized_space_ids = 4;
+   */
+  authorizedSpaceIds: string[];
+};
+
+/**
+ * Model provider defaults on this device. 
+ *
+ * @generated from message elri.v1.settings.AiSettings
+ */
+export type AiSettingsJson = {
+  /**
+   * The account calls use unless one is named. 
+   *
+   * @generated from field: string default_account_id = 1;
+   */
+  defaultAccountId?: string;
+
+  /**
+   * Model slug agents use unless they name one. 
+   *
+   * @generated from field: string default_model = 2;
+   */
+  defaultModel?: string;
+
+  /**
+   * Reasoning effort agents use unless they name one. 
+   *
+   * @generated from field: string default_effort = 3;
+   */
+  defaultEffort?: string;
+
+  /**
+   * Spaces whose data may be sent to the provider. A Space not listed
+   * is never sent, whatever an agent asks. 
+   *
+   * @generated from field: repeated string authorized_space_ids = 4;
+   */
+  authorizedSpaceIds?: string[];
+};
+
+/**
+ * Describes the message elri.v1.settings.AiSettings.
+ * Use `create(AiSettingsSchema)` to create a new message.
+ */
+export const AiSettingsSchema: GenMessage<AiSettings, {jsonType: AiSettingsJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_settings_settings, 2);
+
+/**
  * @generated from message elri.v1.settings.Settings
  */
 export type Settings = Message<"elri.v1.settings.Settings"> & {
@@ -111,6 +190,11 @@ export type Settings = Message<"elri.v1.settings.Settings"> & {
    * @generated from field: elri.v1.settings.SemanticSettings semantic = 2;
    */
   semantic?: SemanticSettings | undefined;
+
+  /**
+   * @generated from field: elri.v1.settings.AiSettings ai = 3;
+   */
+  ai?: AiSettings | undefined;
 };
 
 /**
@@ -126,6 +210,11 @@ export type SettingsJson = {
    * @generated from field: elri.v1.settings.SemanticSettings semantic = 2;
    */
   semantic?: SemanticSettingsJson;
+
+  /**
+   * @generated from field: elri.v1.settings.AiSettings ai = 3;
+   */
+  ai?: AiSettingsJson;
 };
 
 /**
@@ -133,7 +222,7 @@ export type SettingsJson = {
  * Use `create(SettingsSchema)` to create a new message.
  */
 export const SettingsSchema: GenMessage<Settings, {jsonType: SettingsJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_settings_settings, 2);
+  messageDesc(file_elri_v1_settings_settings, 3);
 
 /**
  * @generated from message elri.v1.settings.GetSettingsRequest
@@ -152,7 +241,7 @@ export type GetSettingsRequestJson = {
  * Use `create(GetSettingsRequestSchema)` to create a new message.
  */
 export const GetSettingsRequestSchema: GenMessage<GetSettingsRequest, {jsonType: GetSettingsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_settings_settings, 3);
+  messageDesc(file_elri_v1_settings_settings, 4);
 
 /**
  * @generated from message elri.v1.settings.GetSettingsResponse
@@ -179,7 +268,7 @@ export type GetSettingsResponseJson = {
  * Use `create(GetSettingsResponseSchema)` to create a new message.
  */
 export const GetSettingsResponseSchema: GenMessage<GetSettingsResponse, {jsonType: GetSettingsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_settings_settings, 4);
+  messageDesc(file_elri_v1_settings_settings, 5);
 
 /**
  * @generated from message elri.v1.settings.UpdateSettingsRequest
@@ -194,6 +283,11 @@ export type UpdateSettingsRequest = Message<"elri.v1.settings.UpdateSettingsRequ
    * @generated from field: elri.v1.settings.SemanticSettings semantic = 2;
    */
   semantic?: SemanticSettings | undefined;
+
+  /**
+   * @generated from field: elri.v1.settings.AiSettings ai = 3;
+   */
+  ai?: AiSettings | undefined;
 };
 
 /**
@@ -209,6 +303,11 @@ export type UpdateSettingsRequestJson = {
    * @generated from field: elri.v1.settings.SemanticSettings semantic = 2;
    */
   semantic?: SemanticSettingsJson;
+
+  /**
+   * @generated from field: elri.v1.settings.AiSettings ai = 3;
+   */
+  ai?: AiSettingsJson;
 };
 
 /**
@@ -216,7 +315,7 @@ export type UpdateSettingsRequestJson = {
  * Use `create(UpdateSettingsRequestSchema)` to create a new message.
  */
 export const UpdateSettingsRequestSchema: GenMessage<UpdateSettingsRequest, {jsonType: UpdateSettingsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_settings_settings, 5);
+  messageDesc(file_elri_v1_settings_settings, 6);
 
 /**
  * @generated from message elri.v1.settings.UpdateSettingsResponse
@@ -243,7 +342,7 @@ export type UpdateSettingsResponseJson = {
  * Use `create(UpdateSettingsResponseSchema)` to create a new message.
  */
 export const UpdateSettingsResponseSchema: GenMessage<UpdateSettingsResponse, {jsonType: UpdateSettingsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_settings_settings, 6);
+  messageDesc(file_elri_v1_settings_settings, 7);
 
 /**
  * @generated from message elri.v1.settings.ResolveProxyRequest
@@ -274,7 +373,7 @@ export type ResolveProxyRequestJson = {
  * Use `create(ResolveProxyRequestSchema)` to create a new message.
  */
 export const ResolveProxyRequestSchema: GenMessage<ResolveProxyRequest, {jsonType: ResolveProxyRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_settings_settings, 7);
+  messageDesc(file_elri_v1_settings_settings, 8);
 
 /**
  * @generated from message elri.v1.settings.ResolveProxyResponse
@@ -321,7 +420,7 @@ export type ResolveProxyResponseJson = {
  * Use `create(ResolveProxyResponseSchema)` to create a new message.
  */
 export const ResolveProxyResponseSchema: GenMessage<ResolveProxyResponse, {jsonType: ResolveProxyResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_settings_settings, 8);
+  messageDesc(file_elri_v1_settings_settings, 9);
 
 /**
  * Where the proxy comes from. Unspecified = SYSTEM. 

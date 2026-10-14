@@ -38,12 +38,14 @@ use crate::model::{
     constraint_of, field_def_kind, now_ms, publication_of, ModelError, ObjectDoc, ObjectId, SpaceId,
 };
 use models::{
-    BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, EmbedQueueRow,
-    EmbeddingRow, ExtensionRow, FieldValueRow, GrantRow, GraveyardRow, JournalRow, ObjectRow,
-    ObjectTypeRow, ParticipantRow, PeerRow, PinRow, PlacementRow, PrefRow, RemoteRow, RuleRunRow,
-    SettingRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow, WorkflowRunRow, WorkflowStepRow,
+    AiAccountRow, BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow,
+    EmbedQueueRow, EmbeddingRow, ExtensionRow, FieldValueRow, GrantRow, GraveyardRow, JournalRow,
+    ObjectRow, ObjectTypeRow, ParticipantRow, PeerRow, PinRow, PlacementRow, PrefRow, RemoteRow,
+    RuleRunRow, SettingRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow, WorkflowRunRow,
+    WorkflowStepRow,
 };
 
+pub mod ai;
 mod coordinator;
 pub mod semantic;
 pub mod workflows;
@@ -53,6 +55,23 @@ pub use coordinator::{Edit, Journaled};
 pub const ACTOR_USER: &str = "user";
 /// Actor of state installed from the authority.
 pub const ACTOR_REMOTE: &str = "remote";
+
+tokio::task_local! {
+    static ACTOR_SCOPE: String;
+}
+
+/// The actor writes in the current task are attributed to: the one set by
+/// [`with_actor`], or the user.
+pub fn current_actor() -> String {
+    ACTOR_SCOPE
+        .try_with(Clone::clone)
+        .unwrap_or_else(|_| ACTOR_USER.to_owned())
+}
+
+/// Runs `fut` with every write it makes attributed to `actor`.
+pub async fn with_actor<F: std::future::Future>(actor: String, fut: F) -> F::Output {
+    ACTOR_SCOPE.scope(actor, fut).await
+}
 
 /// Updates folded into a fresh snapshot once this many accumulate per document.
 const COMPACT_AFTER_UPDATES: usize = 64;
@@ -276,7 +295,8 @@ impl Store {
                 RuleRunRow,
                 WorkflowRunRow,
                 WorkflowStepRow,
-                PrefRow
+                PrefRow,
+                AiAccountRow
             ),
         )
         .await?;
@@ -556,8 +576,12 @@ impl Store {
             None => Settings {
                 proxy: None,
                 semantic: Some(SemanticSettings { enabled: true }),
+                ai: None,
             },
         };
+        if s.ai.is_none() {
+            s.ai = Some(elri_proto::elri::v1::settings::AiSettings::default());
+        }
         if s.proxy.is_none() {
             s.proxy = Some(ProxySettings {
                 mode: ProxyMode::System.into(),
@@ -1212,7 +1236,7 @@ impl SpaceStore {
     /// Stores a freshly created document as one Change with a full snapshot,
     /// attributed to the user.
     pub async fn insert(&self, doc: &ObjectDoc) -> Result<Object, StoreError> {
-        self.insert_as(doc, ACTOR_USER).await
+        self.insert_as(doc, &current_actor()).await
     }
 
     /// [`Self::insert`] attributed to `actor`.
@@ -1266,7 +1290,7 @@ impl SpaceStore {
     where
         F: FnOnce(&ObjectDoc) -> Result<(), ModelError>,
     {
-        self.update_as(id, edit, ACTOR_USER).await
+        self.update_as(id, edit, &current_actor()).await
     }
 
     /// [`Self::update`] attributed to `actor`.

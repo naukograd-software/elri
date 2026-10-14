@@ -2,6 +2,7 @@
 //! a token middleware first, then the typed service handlers. Protocol
 //! messages are the model, so handlers mostly validate and delegate.
 
+mod ai;
 mod attachments;
 mod contexts;
 mod definitions;
@@ -83,6 +84,8 @@ pub struct Services {
     pub device_id: DeviceId,
     /// Token every request must carry.
     pub token: LaunchToken,
+    /// In-process token of the agent harness; never written anywhere.
+    pub agent_token: LaunchToken,
     /// Storage.
     pub store: Arc<Store>,
     /// Server link.
@@ -97,6 +100,8 @@ pub struct Services {
     pub secrets: crate::secrets::Secrets,
     /// Semantic search on this device.
     pub semantic: Arc<crate::semantic::Semantic>,
+    /// Model providers and agents.
+    pub ai: Arc<crate::ai::Ai>,
 }
 
 /// Builds the loopback server: origin policy, bearer-token middleware, all
@@ -108,7 +113,10 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
         ..ServerConfig::default()
     });
     let token = services.token.clone();
-    server.add_middleware(move |next: Handler| require_token(token.clone(), next));
+    let agent_token = services.agent_token.clone();
+    server.add_middleware(move |next: Handler| {
+        require_token(token.clone(), agent_token.clone(), next)
+    });
 
     let services = Arc::new(services);
     register_core_service_arc(&server, Arc::clone(&services));
@@ -128,19 +136,34 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     contexts::register(&server, Arc::clone(&services));
     document::register(&server, Arc::clone(&services));
     settings::register(&server, Arc::clone(&services));
+    ai::register(&server, Arc::clone(&services));
     workflows::register(&server, services);
     server
 }
 
-fn require_token(token: LaunchToken, next: Handler) -> Handler {
+/// Header naming the agent an in-process call acts for.
+pub const ACTOR_HEADER: &str = "x-elri-actor";
+
+fn require_token(token: LaunchToken, agent_token: LaunchToken, next: Handler) -> Handler {
     Arc::new(move |stream| {
         let next = Arc::clone(&next);
         let presented = stream.header().get("authorization").cloned();
         let ok = presented
             .as_deref()
             .is_some_and(|h| token.matches_header(h));
+        // The agent token never leaves this process: calls carrying it come
+        // from the agent harness after its own checks, and their writes are
+        // attributed to the agent named in the actor header.
+        let agent = presented
+            .as_deref()
+            .is_some_and(|h| agent_token.matches_header(h))
+            .then(|| stream.header().get(ACTOR_HEADER).cloned())
+            .flatten()
+            .filter(|a| a.starts_with("agent:"));
         Box::pin(async move {
-            if ok {
+            if let Some(actor) = agent {
+                crate::store::with_actor(actor, next(stream)).await
+            } else if ok {
                 next(stream).await
             } else {
                 Err(Status::new(

@@ -139,6 +139,7 @@ async fn a_device_reaches_its_server_through_a_manual_proxy() {
                 no_proxy: String::new(),
             }),
             semantic: None,
+            ai: None,
         }))
         .await
         .expect_err("no url");
@@ -151,6 +152,7 @@ async fn a_device_reaches_its_server_through_a_manual_proxy() {
                 no_proxy: String::new(),
             }),
             semantic: None,
+            ai: None,
         }))
         .await
         .expect_err("garbage");
@@ -167,6 +169,7 @@ async fn a_device_reaches_its_server_through_a_manual_proxy() {
                 no_proxy: "intranet.example".into(),
             }),
             semantic: None,
+            ai: None,
         }))
         .await
         .expect("manual proxy with password")
@@ -190,6 +193,7 @@ async fn a_device_reaches_its_server_through_a_manual_proxy() {
                 no_proxy: "intranet.example".into(),
             }),
             semantic: None,
+            ai: None,
         }))
         .await
         .expect("manual proxy");

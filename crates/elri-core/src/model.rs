@@ -102,6 +102,10 @@ pub fn is_managed(kind: ObjectKind) -> bool {
                 | ObjectKind::Component
                 | ObjectKind::TransferPolicy
                 | ObjectKind::Mapping
+                | ObjectKind::Agent
+                | ObjectKind::Skill
+                | ObjectKind::Prompt
+                | ObjectKind::Conversation
         )
 }
 

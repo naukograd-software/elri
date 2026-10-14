@@ -520,3 +520,31 @@ pub struct EmbeddingRow {
     /// Unit-length vector, little-endian f32.
     pub vector: Vec<u8>,
 }
+
+/// A model provider account on this device. Credentials live in the
+/// credential store, not here.
+#[derive(Debug, toasty::Model)]
+#[table = "ai_accounts"]
+pub struct AiAccountRow {
+    /// Account id.
+    #[key]
+    pub id: Uuid,
+    /// `AccountKind` code.
+    pub kind: i64,
+    /// User-chosen label.
+    pub label: String,
+    /// Verified email.
+    pub email: String,
+    /// Verified subject.
+    pub subject: String,
+    /// Client id issued at registration.
+    pub client_id: String,
+    /// Granted scopes, space separated.
+    pub scopes: String,
+    /// Access token expiry, ms since epoch.
+    pub expires_at: i64,
+    /// The credentials are gone or refused.
+    pub needs_sign_in: bool,
+    /// Creation instant.
+    pub created_at: i64,
+}

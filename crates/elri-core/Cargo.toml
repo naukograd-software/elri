@@ -31,7 +31,10 @@ candle-core.workspace = true
 candle-nn.workspace = true
 candle-transformers.workspace = true
 tokenizers.workspace = true
+prost-reflect.workspace = true
+jsonwebtoken.workspace = true
 futures-util = "0.3"
+bytes.workspace = true
 mlua.workspace = true
 wasmtime.workspace = true
 keyring = { workspace = true, optional = true }
@@ -45,7 +48,11 @@ default = ["keyring"]
 # Android and iOS, where the file backend is used.
 keyring = ["dep:keyring"]
 
+[build-dependencies]
+protox.workspace = true
+
 [dev-dependencies]
+rcgen = "0.14.10"
 tokio = { workspace = true, features = ["rt-multi-thread", "test-util"] }
 sha2.workspace = true
 wat = "1"

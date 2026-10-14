@@ -90,6 +90,13 @@ impl SettingsServiceHandler for Services {
         if let Some(semantic) = m.semantic {
             settings.semantic = Some(semantic);
         }
+        if let Some(ai) = m.ai {
+            for id in &ai.authorized_space_ids {
+                crate::model::ObjectId::parse(id)
+                    .map_err(|_| invalid("ai: authorized spaces are space ids"))?;
+            }
+            settings.ai = Some(ai);
+        }
         self.store.set_settings(&settings).await?;
         if let Some(proxy) = settings.proxy.as_mut() {
             if self

@@ -14,6 +14,7 @@
 //! | `search` | lexical and semantic indexes |
 //! | `script` | Luau runtime, WASM host, native extensions |
 
+pub mod ai;
 pub mod api;
 pub mod backup;
 pub mod blobs;

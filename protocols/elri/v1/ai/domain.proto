@@ -1,0 +1,126 @@
+syntax = "proto3";
+
+package elri.v1.ai;
+
+import "elri/v1/script/domain.proto";
+
+/* How an account pays for model calls. */
+enum AccountKind {
+    ACCOUNT_KIND_UNSPECIFIED = 0;
+    /* Signed in with ChatGPT: calls draw on the user's plan. */
+    ACCOUNT_KIND_CHATGPT = 1;
+    /* An OpenAI API key: calls are billed to its organization. */
+    ACCOUNT_KIND_API_KEY = 2;
+}
+
+/* A model provider account on this device. Credentials stay in the
+   device's credential store; this record never leaves the device. */
+message Account {
+    string id = 1;
+    AccountKind kind = 2;
+    /* Distinct, stable label chosen by the user. */
+    string label = 3;
+    /* ChatGPT: the verified email and subject. */
+    string email = 4;
+    string subject = 5;
+    /* ChatGPT: the client id issued at registration. */
+    string client_id = 6;
+    /* ChatGPT: granted scopes. */
+    repeated string scopes = 7;
+    /* The credentials are gone or refused: sign in again. */
+    bool needs_sign_in = 8;
+    int64 created_at_ms = 9;
+}
+
+message Model {
+    string slug = 1;
+    string display_name = 2;
+}
+
+/* An agent: a configuration kept as an Object of its Space, so every
+   device sees the same one. Which account pays is a device setting. */
+message Agent {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    /* Model slug; empty = the device default. */
+    string model = 4;
+    /* Reasoning effort: none, minimal, low, medium, high, xhigh; empty =
+       the model's default. */
+    string effort = 5;
+    /* The agent's own instructions, after the built-in ones. */
+    string instructions = 6;
+    /* Prompt Objects appended to the instructions, in order. */
+    repeated string prompt_ids = 7;
+    /* Skills it may load: `builtin:<name>` or Skill Object ids. */
+    repeated string skills = 8;
+    /* Spaces it reads and writes besides its own; consent per version. */
+    elri.v1.script.Manifest manifest = 9;
+    /* Hex SHA-256 over instructions, prompts, skills and manifest: what a
+       device grant is bound to. */
+    string version = 10;
+    /* Everything stays in its own Space: granted without asking. */
+    bool benign = 11;
+    int64 created_at_ms = 12;
+    int64 updated_at_ms = 13;
+    optional int64 deleted_at_ms = 14;
+}
+
+/* Instructions an agent loads when it needs them. */
+message Skill {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    /* When to use it: shown to the model before it loads the body. */
+    string description = 4;
+    string body = 5;
+    /* Shipped with the application; not an Object. */
+    bool builtin = 6;
+    int64 created_at_ms = 7;
+    int64 updated_at_ms = 8;
+    optional int64 deleted_at_ms = 9;
+}
+
+/* A reusable piece of instructions. */
+message Prompt {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    string body = 4;
+    int64 created_at_ms = 5;
+    int64 updated_at_ms = 6;
+    optional int64 deleted_at_ms = 7;
+}
+
+enum MessageRole {
+    MESSAGE_ROLE_UNSPECIFIED = 0;
+    MESSAGE_ROLE_USER = 1;
+    MESSAGE_ROLE_ASSISTANT = 2;
+    /* A tool the assistant called, with its result. */
+    MESSAGE_ROLE_TOOL = 3;
+}
+
+message Message {
+    MessageRole role = 1;
+    string text = 2;
+    /* Tool messages: what was called with which arguments, and the result. */
+    string tool = 3;
+    string arguments_json = 4;
+    string result = 5;
+    bool failed = 6;
+    /* Assistant messages: the model that wrote it. */
+    string model = 7;
+    int64 at_ms = 8;
+}
+
+/* A conversation with an agent, kept as an Object of its Space. */
+message Conversation {
+    string id = 1;
+    string space_id = 2;
+    string agent_id = 3;
+    string title = 4;
+    repeated Message messages = 5;
+    int64 created_at_ms = 6;
+    int64 updated_at_ms = 7;
+    optional int64 deleted_at_ms = 8;
+}

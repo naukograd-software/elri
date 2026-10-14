@@ -210,6 +210,14 @@ pub enum ObjectKind {
     TransferPolicy = 15,
     /// A semantic mapping: fields of several Spaces that mean the same. 
     Mapping = 16,
+    /// An agent configuration. 
+    Agent = 17,
+    /// Instructions an agent loads on demand. 
+    Skill = 18,
+    /// A reusable piece of instructions. 
+    Prompt = 19,
+    /// A conversation with an agent. 
+    Conversation = 20,
 }
 impl ObjectKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -235,6 +243,10 @@ impl ObjectKind {
             Self::Component => "OBJECT_KIND_COMPONENT",
             Self::TransferPolicy => "OBJECT_KIND_TRANSFER_POLICY",
             Self::Mapping => "OBJECT_KIND_MAPPING",
+            Self::Agent => "OBJECT_KIND_AGENT",
+            Self::Skill => "OBJECT_KIND_SKILL",
+            Self::Prompt => "OBJECT_KIND_PROMPT",
+            Self::Conversation => "OBJECT_KIND_CONVERSATION",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -257,6 +269,10 @@ impl ObjectKind {
             "OBJECT_KIND_COMPONENT" => Some(Self::Component),
             "OBJECT_KIND_TRANSFER_POLICY" => Some(Self::TransferPolicy),
             "OBJECT_KIND_MAPPING" => Some(Self::Mapping),
+            "OBJECT_KIND_AGENT" => Some(Self::Agent),
+            "OBJECT_KIND_SKILL" => Some(Self::Skill),
+            "OBJECT_KIND_PROMPT" => Some(Self::Prompt),
+            "OBJECT_KIND_CONVERSATION" => Some(Self::Conversation),
             _ => None,
         }
     }

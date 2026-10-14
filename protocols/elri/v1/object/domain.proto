@@ -36,6 +36,14 @@ enum ObjectKind {
     OBJECT_KIND_TRANSFER_POLICY = 15;
     /* A semantic mapping: fields of several Spaces that mean the same. */
     OBJECT_KIND_MAPPING = 16;
+    /* An agent configuration. */
+    OBJECT_KIND_AGENT = 17;
+    /* Instructions an agent loads on demand. */
+    OBJECT_KIND_SKILL = 18;
+    /* A reusable piece of instructions. */
+    OBJECT_KIND_PROMPT = 19;
+    /* A conversation with an agent. */
+    OBJECT_KIND_CONVERSATION = 20;
 }
 
 /* Items of a list value; scalars only. */

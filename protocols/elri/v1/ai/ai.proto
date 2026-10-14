@@ -1,0 +1,281 @@
+syntax = "proto3";
+
+package elri.v1.ai;
+
+import "elri/v1/ai/domain.proto";
+
+/*
+Model provider accounts and models on this device. Signing in with
+ChatGPT opens the system browser at the URL StartSignIn returns; the core
+listens on 127.0.0.1 for the answer and keeps the tokens in the
+credential store.
+*/
+service AiService {
+    rpc StartSignIn(StartSignInRequest) returns (StartSignInResponse);
+    /* The outcome of a sign-in started earlier; poll until not pending. */
+    rpc GetSignIn(GetSignInRequest) returns (GetSignInResponse);
+    rpc AddApiKey(AddApiKeyRequest) returns (AddApiKeyResponse);
+    rpc ListAccounts(ListAccountsRequest) returns (ListAccountsResponse);
+    /* Revokes the session at the provider when it can and clears the
+       credentials. A ChatGPT account keeps its registration for the next
+       sign-in; an API key account is removed. */
+    rpc SignOut(SignOutRequest) returns (SignOutResponse);
+    /* Models the account may use, in the provider's order. */
+    rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+}
+
+/*
+Agents, their skills and prompts, and conversations with them. Sending a
+message runs a turn: the model answers and calls tools against the Space
+under the agent's grant, and the stream reports each step.
+*/
+service AgentService {
+    rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse);
+    rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse);
+    rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+    /* Consent on this device to run this version of the agent. */
+    rpc GrantAgent(GrantAgentRequest) returns (GrantAgentResponse);
+    rpc CreateSkill(CreateSkillRequest) returns (CreateSkillResponse);
+    rpc UpdateSkill(UpdateSkillRequest) returns (UpdateSkillResponse);
+    /* The Space's skills and the built-in ones. */
+    rpc ListSkills(ListSkillsRequest) returns (ListSkillsResponse);
+    rpc CreatePrompt(CreatePromptRequest) returns (CreatePromptResponse);
+    rpc UpdatePrompt(UpdatePromptRequest) returns (UpdatePromptResponse);
+    rpc ListPrompts(ListPromptsRequest) returns (ListPromptsResponse);
+    rpc StartConversation(StartConversationRequest) returns (StartConversationResponse);
+    rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
+    rpc GetConversation(GetConversationRequest) returns (GetConversationResponse);
+    /* Adds the user's message and runs the agent until it answers. */
+    rpc Send(SendRequest) returns (stream TurnEvent);
+}
+
+message StartSignInRequest {
+    /* Sign in again to this account; empty registers a new one. */
+    string account_id = 1;
+    /* New accounts: a distinct label, e.g. `personal`. */
+    string label = 2;
+}
+
+message StartSignInResponse {
+    string attempt_id = 1;
+    /* Open this in the system browser. */
+    string authorize_url = 2;
+}
+
+enum SignInState {
+    SIGN_IN_STATE_UNSPECIFIED = 0;
+    SIGN_IN_STATE_PENDING = 1;
+    SIGN_IN_STATE_DONE = 2;
+    SIGN_IN_STATE_FAILED = 3;
+}
+
+message GetSignInRequest {
+    string attempt_id = 1;
+}
+
+message GetSignInResponse {
+    SignInState state = 1;
+    Account account = 2;
+    string error = 3;
+}
+
+message AddApiKeyRequest {
+    string label = 1;
+    string api_key = 2;
+}
+
+message AddApiKeyResponse {
+    Account account = 1;
+}
+
+message ListAccountsRequest {}
+
+message ListAccountsResponse {
+    repeated Account accounts = 1;
+}
+
+message SignOutRequest {
+    string account_id = 1;
+}
+
+message SignOutResponse {
+    /* False when the provider could not confirm the revocation: the user
+       can still disconnect the application in ChatGPT's settings. */
+    bool revoked = 1;
+}
+
+message ListModelsRequest {
+    /* Empty = the device's default account. */
+    string account_id = 1;
+}
+
+message ListModelsResponse {
+    repeated Model models = 1;
+}
+
+message CreateAgentRequest {
+    string space_id = 1;
+    Agent agent = 2;
+}
+
+message CreateAgentResponse {
+    Agent agent = 1;
+}
+
+message UpdateAgentRequest {
+    string space_id = 1;
+    /* Replaces every editable field; `id` names the agent. */
+    Agent agent = 2;
+}
+
+message UpdateAgentResponse {
+    Agent agent = 1;
+}
+
+message ListAgentsRequest {
+    string space_id = 1;
+    bool include_deleted = 2;
+}
+
+message ListAgentsResponse {
+    repeated Agent agents = 1;
+}
+
+message GrantAgentRequest {
+    string space_id = 1;
+    string agent_id = 2;
+    /* The version the user looked at; refused when it changed since. */
+    string expected_version = 3;
+}
+
+message GrantAgentResponse {
+    string grant_id = 1;
+}
+
+message CreateSkillRequest {
+    string space_id = 1;
+    string name = 2;
+    string description = 3;
+    string body = 4;
+}
+
+message CreateSkillResponse {
+    Skill skill = 1;
+}
+
+message UpdateSkillRequest {
+    string space_id = 1;
+    string id = 2;
+    optional string name = 3;
+    optional string description = 4;
+    optional string body = 5;
+}
+
+message UpdateSkillResponse {
+    Skill skill = 1;
+}
+
+message ListSkillsRequest {
+    string space_id = 1;
+}
+
+message ListSkillsResponse {
+    repeated Skill skills = 1;
+}
+
+message CreatePromptRequest {
+    string space_id = 1;
+    string name = 2;
+    string body = 3;
+}
+
+message CreatePromptResponse {
+    Prompt prompt = 1;
+}
+
+message UpdatePromptRequest {
+    string space_id = 1;
+    string id = 2;
+    optional string name = 3;
+    optional string body = 4;
+}
+
+message UpdatePromptResponse {
+    Prompt prompt = 1;
+}
+
+message ListPromptsRequest {
+    string space_id = 1;
+}
+
+message ListPromptsResponse {
+    repeated Prompt prompts = 1;
+}
+
+message StartConversationRequest {
+    string space_id = 1;
+    string agent_id = 2;
+    string title = 3;
+}
+
+message StartConversationResponse {
+    Conversation conversation = 1;
+}
+
+message ListConversationsRequest {
+    string space_id = 1;
+    /* Only with this agent, if set. */
+    string agent_id = 2;
+}
+
+message ListConversationsResponse {
+    /* Without messages. */
+    repeated Conversation conversations = 1;
+}
+
+message GetConversationRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message GetConversationResponse {
+    Conversation conversation = 1;
+}
+
+message SendRequest {
+    string space_id = 1;
+    string conversation_id = 2;
+    string text = 3;
+}
+
+message ToolCall {
+    string tool = 1;
+    string arguments_json = 2;
+}
+
+message ToolResult {
+    string tool = 1;
+    string result = 2;
+    bool failed = 3;
+}
+
+message TurnError {
+    /* Provider error code when there is one, e.g.
+       `subscription_sharing_usage_limit_exceeded`, or `consent`,
+       `policy`, `sign_in`, `transport`. */
+    string code = 1;
+    string message = 2;
+}
+
+message TurnEvent {
+    oneof event {
+        /* A piece of the answer as it is written. */
+        string text_delta = 1;
+        ToolCall tool_call = 2;
+        ToolResult tool_result = 3;
+        /* A finished message, saved to the conversation. */
+        Message message = 4;
+        /* The turn stopped; what was saved stays. */
+        TurnError error = 5;
+    }
+}

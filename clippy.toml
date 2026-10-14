@@ -1,0 +1,2 @@
+# Product and protocol names written as prose in doc comments.
+doc-valid-idents = ["ChatGPT", "OpenAI", "OAuth", "PKCE", "JWKS", "..",]
