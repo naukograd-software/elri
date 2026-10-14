@@ -30,6 +30,8 @@ enum ObjectKind {
     OBJECT_KIND_CONTEXT = 12;
     /* A declarative constraint over a field; see elri.v1.definition. */
     OBJECT_KIND_CONSTRAINT = 13;
+    /* A reusable interface subtree with parameters. */
+    OBJECT_KIND_COMPONENT = 14;
 }
 
 /* Items of a list value; scalars only. */

@@ -10,7 +10,7 @@ use elri_proto::elri::v1::ui::interface_service_ws::{
 use elri_proto::elri::v1::ui::{
     CreateInterfaceRequest, CreateInterfaceResponse, DispatchRequest, DispatchResponse,
     EvaluateRequest, EvaluateResponse, GetInterfaceRequest, GetInterfaceResponse, Interface,
-    ListInterfacesRequest, ListInterfacesResponse, PublishInterfaceRequest,
+    ListInterfacesRequest, ListInterfacesResponse, Node, NodeValues, PublishInterfaceRequest,
     PublishInterfaceResponse, SelectVersionRequest, SelectVersionResponse, UpdateInterfaceRequest,
     UpdateInterfaceResponse,
 };
@@ -19,8 +19,26 @@ use ws_proto::{Code, Request, Response, Server, Status};
 use super::{invalid, parse_id, Services};
 use crate::model::{int_value, now_ms, reserved, string_value, ObjectDoc, ObjectId, SpaceId};
 use crate::rules::grant_or_auto;
+use crate::script::Host;
 use crate::store::{ObjectFilter, SpaceStore, StoreError};
 use crate::ui::{self, interface_of};
+
+/// The tree of an interface with its components expanded, the values of
+/// every node, and which interface or component each node belongs to.
+struct Expanded {
+    tree: Vec<Node>,
+    values: Vec<NodeValues>,
+    /// Node id → (owning interface or component, params in scope).
+    owners: std::collections::HashMap<String, (Interface, serde_json::Value)>,
+}
+
+/// One expansion in progress.
+struct Walk<'a> {
+    host: &'a Host,
+    space_id: SpaceId,
+    state: &'a serde_json::Value,
+    out: Expanded,
+}
 
 pub(super) fn register(server: &Server, services: Arc<Services>) {
     register_interface_service_arc(server, services);
@@ -79,14 +97,94 @@ impl Services {
         }
     }
 
+    /// Evaluates `nodes` with `params` in scope and expands every
+    /// component node among them, to `depth`.
+    async fn expand_into(
+        &self,
+        walk: &mut Walk<'_>,
+        owner: &Interface,
+        nodes: &[Node],
+        params: &serde_json::Value,
+        depth: usize,
+    ) -> Result<(), Status> {
+        let values = ui::evaluate_nodes(walk.host, walk.space_id, nodes, walk.state, params).await;
+        for n in nodes {
+            walk.out
+                .owners
+                .insert(n.id.clone(), (owner.clone(), params.clone()));
+        }
+        walk.out.tree.extend(nodes.iter().cloned());
+        for (n, v) in nodes.iter().zip(values) {
+            let Some((component_id, literal)) = ui::component_ref(n) else {
+                walk.out.values.push(v);
+                continue;
+            };
+            let mut v = v;
+            if depth >= ui::MAX_COMPONENT_DEPTH {
+                v.errors
+                    .insert("ref".to_owned(), "components nest too deep".to_owned());
+                walk.out.values.push(v);
+                continue;
+            }
+            let component = match self.resolved(walk.space_id, component_id).await {
+                Ok((_, c, _)) if c.component => c,
+                _ => {
+                    v.errors
+                        .insert("ref".to_owned(), "no such component".to_owned());
+                    walk.out.values.push(v);
+                    continue;
+                }
+            };
+            let evaluated: serde_json::Value =
+                serde_json::from_str(&v.values_json).unwrap_or_default();
+            walk.out.values.push(v);
+            let inner_params =
+                ui::merged_params(&component.params_json, &literal, evaluated.get("params"));
+            let placed = ui::placed(&n.id, &component.nodes);
+            Box::pin(self.expand_into(walk, &component, &placed, &inner_params, depth + 1)).await?;
+        }
+        Ok(())
+    }
+
+    async fn expand(
+        &self,
+        host: &Host,
+        space_id: SpaceId,
+        iface: &Interface,
+        state: &serde_json::Value,
+    ) -> Result<Expanded, Status> {
+        let mut walk = Walk {
+            host,
+            space_id,
+            state,
+            out: Expanded {
+                tree: Vec::new(),
+                values: Vec::new(),
+                owners: std::collections::HashMap::new(),
+            },
+        };
+        self.expand_into(&mut walk, iface, &iface.nodes, &serde_json::Value::Null, 0)
+            .await?;
+        Ok(walk.out)
+    }
+
     async fn versions_of(&self, space: &SpaceStore, draft: &str) -> Result<Vec<Interface>, Status> {
-        let objects = space
+        let mut objects = space
             .list(&ObjectFilter {
                 kind: Some(ObjectKind::Interface),
                 limit: 1000,
                 ..ObjectFilter::default()
             })
             .await?;
+        objects.extend(
+            space
+                .list(&ObjectFilter {
+                    kind: Some(ObjectKind::Component),
+                    limit: 1000,
+                    ..ObjectFilter::default()
+                })
+                .await?,
+        );
         let mut out = Vec::new();
         for o in objects {
             if crate::model::string_field(&o, ui::DRAFT) != Some(draft) {
@@ -114,12 +212,22 @@ impl InterfaceServiceHandler for Services {
             return Err(invalid("name is required"));
         }
         let state = check_state(&m.state_json)?;
-        let doc = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Interface, now_ms())
+        let kind = if m.component {
+            ObjectKind::Component
+        } else {
+            ObjectKind::Interface
+        };
+        let doc = ObjectDoc::create(ObjectId::new(), space_id, kind, now_ms())
             .map_err(StoreError::from)?;
         doc.set_field(reserved::NAME, &string_value(name))
             .map_err(StoreError::from)?;
         doc.set_field(ui::STATE, &string_value(state))
             .map_err(StoreError::from)?;
+        if m.component {
+            let params = check_state(&m.params_json)?;
+            doc.set_field(ui::PARAMS, &string_value(params))
+                .map_err(StoreError::from)?;
+        }
         doc.touch(now_ms()).map_err(StoreError::from)?;
         let space = self.store.space(space_id).await?;
         let rec = space.insert(&doc).await?;
@@ -143,6 +251,7 @@ impl InterfaceServiceHandler for Services {
             (space, iface, selected)
         };
         Ok(Response::new(GetInterfaceResponse {
+            compatible: ui::compatible(&iface),
             interface: Some(iface),
             selected_version: selected,
         }))
@@ -162,7 +271,11 @@ impl InterfaceServiceHandler for Services {
         }
         let objects = space
             .list(&ObjectFilter {
-                kind: Some(ObjectKind::Interface),
+                kind: Some(if req.msg.components {
+                    ObjectKind::Component
+                } else {
+                    ObjectKind::Interface
+                }),
                 include_deleted: req.msg.include_deleted,
                 limit: 1000,
                 ..ObjectFilter::default()
@@ -203,6 +316,15 @@ impl InterfaceServiceHandler for Services {
             return Err(invalid("name must not be empty"));
         }
         let state = m.state_json.as_deref().map(check_state).transpose()?;
+        if m.params_json.is_some() && !iface.component {
+            return Err(invalid("params_json: only a component has parameters"));
+        }
+        let params = m.params_json.as_deref().map(check_state).transpose()?;
+        for n in &m.set_nodes {
+            if ui::component_ref(n).is_some_and(|(r, _)| r == id) {
+                return Err(invalid("a component cannot place itself"));
+            }
+        }
         let set = m.set_nodes.clone();
         let remove = m.remove_nodes.clone();
         let rec = space
@@ -212,6 +334,9 @@ impl InterfaceServiceHandler for Services {
                 }
                 if let Some(s) = state {
                     doc.set_field(ui::STATE, &string_value(s))?;
+                }
+                if let Some(p) = params {
+                    doc.set_field(ui::PARAMS, &string_value(p))?;
                 }
                 for n in &set {
                     let index = usize::try_from(n.index).unwrap_or(0);
@@ -252,14 +377,28 @@ impl InterfaceServiceHandler for Services {
             .first()
             .map_or(1, |v| v.version + 1);
         // A copy with the same tree: node ids are fresh, parents are mapped.
-        let doc = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Interface, now_ms())
+        let kind = if draft.component {
+            ObjectKind::Component
+        } else {
+            ObjectKind::Interface
+        };
+        let doc = ObjectDoc::create(ObjectId::new(), space_id, kind, now_ms())
             .map_err(StoreError::from)?;
         doc.set_field(reserved::NAME, &string_value(&draft.name))
             .map_err(StoreError::from)?;
         doc.set_field(ui::STATE, &string_value(&draft.state_json))
             .map_err(StoreError::from)?;
+        if draft.component {
+            doc.set_field(ui::PARAMS, &string_value(&draft.params_json))
+                .map_err(StoreError::from)?;
+        }
         doc.set_field(ui::VERSION, &int_value(i64::from(next)))
             .map_err(StoreError::from)?;
+        doc.set_field(
+            ui::CATALOG_FIELD,
+            &int_value(i64::from(ui::CATALOG_VERSION)),
+        )
+        .map_err(StoreError::from)?;
         doc.set_field(ui::DRAFT, &string_value(&draft.id))
             .map_err(StoreError::from)?;
         let mut mapped: std::collections::HashMap<String, String> =
@@ -317,8 +456,11 @@ impl InterfaceServiceHandler for Services {
         let id = parse_id(&req.msg.id, "id")?;
         let (_, iface, _) = self.resolved(space_id, id).await?;
         let state = json_or_null(&req.msg.state_json, "state_json")?;
-        let nodes = ui::evaluate(&self.scripts, space_id, &iface, &state).await;
-        Ok(Response::new(EvaluateResponse { nodes }))
+        let expanded = self.expand(&self.scripts, space_id, &iface, &state).await?;
+        Ok(Response::new(EvaluateResponse {
+            nodes: expanded.values,
+            tree: expanded.tree,
+        }))
     }
 
     async fn dispatch(
@@ -331,25 +473,57 @@ impl InterfaceServiceHandler for Services {
         let (_, iface, _) = self.resolved(space_id, id).await?;
         let state = json_or_null(&m.state_json, "state_json")?;
         let payload = json_or_null(&m.payload_json, "payload_json")?;
+        // A preview runs against a throwaway copy of the Space: whatever
+        // the handler writes stays there.
+        let fork;
+        let host = if m.preview {
+            fork = self.store.fork_space(space_id).await?;
+            self.scripts.preview_over(fork.store())
+        } else {
+            self.scripts.clone()
+        };
+        // The node may live in a component placed by the interface: find
+        // it in the expanded tree, with the parameters in scope.
+        let expanded = self.expand(&host, space_id, &iface, &state).await?;
+        let Some(node) = expanded.tree.iter().find(|n| n.id == m.node_id) else {
+            return Err(Status::new(
+                Code::NotFound,
+                format!("no node {}", m.node_id),
+            ));
+        };
+        let Some((owner, params)) = expanded.owners.get(&m.node_id) else {
+            return Err(Status::new(
+                Code::NotFound,
+                format!("no node {}", m.node_id),
+            ));
+        };
+        if !ui::compatible(owner) {
+            return Err(Status::new(
+                Code::FailedPrecondition,
+                "this version was published for a newer catalog; it is read-only here",
+            ));
+        }
         // Handlers are executable code: a grant for this version of the
-        // interface, benign by construction, so auto-granted under policy.
-        let Some(grant) = grant_or_auto(&self.store, space_id, &ui::as_script(&iface)).await?
-        else {
+        // interface or component that holds them, benign by construction,
+        // so auto-granted under policy.
+        let Some(grant) = grant_or_auto(&self.store, space_id, &ui::as_script(owner)).await? else {
             return Err(Status::new(
                 Code::PermissionDenied,
                 "this version of the interface has no grant on this device",
             ));
         };
         let (state_after, logs, error) = ui::dispatch(
-            &self.scripts,
+            &host,
             space_id,
-            &iface,
+            owner,
+            node,
             grant.id,
             ui::UiEvent {
                 node_id: &m.node_id,
                 event: &m.event,
                 state,
                 payload,
+                params: params.clone(),
             },
         )
         .await;

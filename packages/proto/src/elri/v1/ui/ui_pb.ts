@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/ui/ui.proto.
  */
 export const file_elri_v1_ui_ui: GenFile = /*@__PURE__*/
-  fileDesc("ChNlbHJpL3YxL3VpL3VpLnByb3RvEgplbHJpLnYxLnVpIkwKFkNyZWF0ZUludGVyZmFjZVJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDAoEbmFtZRgCIAEoCRISCgpzdGF0ZV9qc29uGAMgASgJIkMKF0NyZWF0ZUludGVyZmFjZVJlc3BvbnNlEigKCWludGVyZmFjZRgBIAEoCzIVLmVscmkudjEudWkuSW50ZXJmYWNlIkUKE0dldEludGVyZmFjZVJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSEAoIc2VsZWN0ZWQYAyABKAgiWgoUR2V0SW50ZXJmYWNlUmVzcG9uc2USKAoJaW50ZXJmYWNlGAEgASgLMhUuZWxyaS52MS51aS5JbnRlcmZhY2USGAoQc2VsZWN0ZWRfdmVyc2lvbhgCIAEoBSJXChVMaXN0SW50ZXJmYWNlc1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSEwoLdmVyc2lvbnNfb2YYAiABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAMgASgIIkMKFkxpc3RJbnRlcmZhY2VzUmVzcG9uc2USKQoKaW50ZXJmYWNlcxgBIAMoCzIVLmVscmkudjEudWkuSW50ZXJmYWNlIrUBChZVcGRhdGVJbnRlcmZhY2VSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJEhEKBG5hbWUYAyABKAlIAIgBARIXCgpzdGF0ZV9qc29uGAQgASgJSAGIAQESIwoJc2V0X25vZGVzGAUgAygLMhAuZWxyaS52MS51aS5Ob2RlEhQKDHJlbW92ZV9ub2RlcxgGIAMoCUIHCgVfbmFtZUINCgtfc3RhdGVfanNvbiJDChdVcGRhdGVJbnRlcmZhY2VSZXNwb25zZRIoCglpbnRlcmZhY2UYASABKAsyFS5lbHJpLnYxLnVpLkludGVyZmFjZSI3ChdQdWJsaXNoSW50ZXJmYWNlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSJCChhQdWJsaXNoSW50ZXJmYWNlUmVzcG9uc2USJgoHdmVyc2lvbhgBIAEoCzIVLmVscmkudjEudWkuSW50ZXJmYWNlIksKFFNlbGVjdFZlcnNpb25SZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhAKCGRyYWZ0X2lkGAIgASgJEg8KB3ZlcnNpb24YAyABKAUiKAoVU2VsZWN0VmVyc2lvblJlc3BvbnNlEg8KB3ZlcnNpb24YASABKAUiQwoPRXZhbHVhdGVSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJEhIKCnN0YXRlX2pzb24YAyABKAkiOQoQRXZhbHVhdGVSZXNwb25zZRIlCgVub2RlcxgBIAMoCzIWLmVscmkudjEudWkuTm9kZVZhbHVlcyJ5Cg9EaXNwYXRjaFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSDwoHbm9kZV9pZBgDIAEoCRINCgVldmVudBgEIAEoCRISCgpzdGF0ZV9qc29uGAUgASgJEhQKDHBheWxvYWRfanNvbhgGIAEoCSJDChBEaXNwYXRjaFJlc3BvbnNlEhIKCnN0YXRlX2pzb24YASABKAkSDAoEbG9ncxgCIAMoCRINCgVlcnJvchgDIAEoCTK5BQoQSW50ZXJmYWNlU2VydmljZRJaCg9DcmVhdGVJbnRlcmZhY2USIi5lbHJpLnYxLnVpLkNyZWF0ZUludGVyZmFjZVJlcXVlc3QaIy5lbHJpLnYxLnVpLkNyZWF0ZUludGVyZmFjZVJlc3BvbnNlElEKDEdldEludGVyZmFjZRIfLmVscmkudjEudWkuR2V0SW50ZXJmYWNlUmVxdWVzdBogLmVscmkudjEudWkuR2V0SW50ZXJmYWNlUmVzcG9uc2USVwoOTGlzdEludGVyZmFjZXMSIS5lbHJpLnYxLnVpLkxpc3RJbnRlcmZhY2VzUmVxdWVzdBoiLmVscmkudjEudWkuTGlzdEludGVyZmFjZXNSZXNwb25zZRJaCg9VcGRhdGVJbnRlcmZhY2USIi5lbHJpLnYxLnVpLlVwZGF0ZUludGVyZmFjZVJlcXVlc3QaIy5lbHJpLnYxLnVpLlVwZGF0ZUludGVyZmFjZVJlc3BvbnNlEl0KEFB1Ymxpc2hJbnRlcmZhY2USIy5lbHJpLnYxLnVpLlB1Ymxpc2hJbnRlcmZhY2VSZXF1ZXN0GiQuZWxyaS52MS51aS5QdWJsaXNoSW50ZXJmYWNlUmVzcG9uc2USVAoNU2VsZWN0VmVyc2lvbhIgLmVscmkudjEudWkuU2VsZWN0VmVyc2lvblJlcXVlc3QaIS5lbHJpLnYxLnVpLlNlbGVjdFZlcnNpb25SZXNwb25zZRJFCghFdmFsdWF0ZRIbLmVscmkudjEudWkuRXZhbHVhdGVSZXF1ZXN0GhwuZWxyaS52MS51aS5FdmFsdWF0ZVJlc3BvbnNlEkUKCERpc3BhdGNoEhsuZWxyaS52MS51aS5EaXNwYXRjaFJlcXVlc3QaHC5lbHJpLnYxLnVpLkRpc3BhdGNoUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_ui_domain]);
+  fileDesc("ChNlbHJpL3YxL3VpL3VpLnByb3RvEgplbHJpLnYxLnVpInQKFkNyZWF0ZUludGVyZmFjZVJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDAoEbmFtZRgCIAEoCRISCgpzdGF0ZV9qc29uGAMgASgJEhEKCWNvbXBvbmVudBgEIAEoCBITCgtwYXJhbXNfanNvbhgFIAEoCSJDChdDcmVhdGVJbnRlcmZhY2VSZXNwb25zZRIoCglpbnRlcmZhY2UYASABKAsyFS5lbHJpLnYxLnVpLkludGVyZmFjZSJFChNHZXRJbnRlcmZhY2VSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJEhAKCHNlbGVjdGVkGAMgASgIIm4KFEdldEludGVyZmFjZVJlc3BvbnNlEigKCWludGVyZmFjZRgBIAEoCzIVLmVscmkudjEudWkuSW50ZXJmYWNlEhgKEHNlbGVjdGVkX3ZlcnNpb24YAiABKAUSEgoKY29tcGF0aWJsZRgDIAEoCCJrChVMaXN0SW50ZXJmYWNlc1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSEwoLdmVyc2lvbnNfb2YYAiABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAMgASgIEhIKCmNvbXBvbmVudHMYBCABKAgiQwoWTGlzdEludGVyZmFjZXNSZXNwb25zZRIpCgppbnRlcmZhY2VzGAEgAygLMhUuZWxyaS52MS51aS5JbnRlcmZhY2Ui3wEKFlVwZGF0ZUludGVyZmFjZVJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSEQoEbmFtZRgDIAEoCUgAiAEBEhcKCnN0YXRlX2pzb24YBCABKAlIAYgBARIjCglzZXRfbm9kZXMYBSADKAsyEC5lbHJpLnYxLnVpLk5vZGUSFAoMcmVtb3ZlX25vZGVzGAYgAygJEhgKC3BhcmFtc19qc29uGAcgASgJSAKIAQFCBwoFX25hbWVCDQoLX3N0YXRlX2pzb25CDgoMX3BhcmFtc19qc29uIkMKF1VwZGF0ZUludGVyZmFjZVJlc3BvbnNlEigKCWludGVyZmFjZRgBIAEoCzIVLmVscmkudjEudWkuSW50ZXJmYWNlIjcKF1B1Ymxpc2hJbnRlcmZhY2VSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJIkIKGFB1Ymxpc2hJbnRlcmZhY2VSZXNwb25zZRImCgd2ZXJzaW9uGAEgASgLMhUuZWxyaS52MS51aS5JbnRlcmZhY2UiSwoUU2VsZWN0VmVyc2lvblJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSEAoIZHJhZnRfaWQYAiABKAkSDwoHdmVyc2lvbhgDIAEoBSIoChVTZWxlY3RWZXJzaW9uUmVzcG9uc2USDwoHdmVyc2lvbhgBIAEoBSJDCg9FdmFsdWF0ZVJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSEgoKc3RhdGVfanNvbhgDIAEoCSJZChBFdmFsdWF0ZVJlc3BvbnNlEiUKBW5vZGVzGAEgAygLMhYuZWxyaS52MS51aS5Ob2RlVmFsdWVzEh4KBHRyZWUYAiADKAsyEC5lbHJpLnYxLnVpLk5vZGUiigEKD0Rpc3BhdGNoUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIPCgdub2RlX2lkGAMgASgJEg0KBWV2ZW50GAQgASgJEhIKCnN0YXRlX2pzb24YBSABKAkSFAoMcGF5bG9hZF9qc29uGAYgASgJEg8KB3ByZXZpZXcYByABKAgiQwoQRGlzcGF0Y2hSZXNwb25zZRISCgpzdGF0ZV9qc29uGAEgASgJEgwKBGxvZ3MYAiADKAkSDQoFZXJyb3IYAyABKAkyuQUKEEludGVyZmFjZVNlcnZpY2USWgoPQ3JlYXRlSW50ZXJmYWNlEiIuZWxyaS52MS51aS5DcmVhdGVJbnRlcmZhY2VSZXF1ZXN0GiMuZWxyaS52MS51aS5DcmVhdGVJbnRlcmZhY2VSZXNwb25zZRJRCgxHZXRJbnRlcmZhY2USHy5lbHJpLnYxLnVpLkdldEludGVyZmFjZVJlcXVlc3QaIC5lbHJpLnYxLnVpLkdldEludGVyZmFjZVJlc3BvbnNlElcKDkxpc3RJbnRlcmZhY2VzEiEuZWxyaS52MS51aS5MaXN0SW50ZXJmYWNlc1JlcXVlc3QaIi5lbHJpLnYxLnVpLkxpc3RJbnRlcmZhY2VzUmVzcG9uc2USWgoPVXBkYXRlSW50ZXJmYWNlEiIuZWxyaS52MS51aS5VcGRhdGVJbnRlcmZhY2VSZXF1ZXN0GiMuZWxyaS52MS51aS5VcGRhdGVJbnRlcmZhY2VSZXNwb25zZRJdChBQdWJsaXNoSW50ZXJmYWNlEiMuZWxyaS52MS51aS5QdWJsaXNoSW50ZXJmYWNlUmVxdWVzdBokLmVscmkudjEudWkuUHVibGlzaEludGVyZmFjZVJlc3BvbnNlElQKDVNlbGVjdFZlcnNpb24SIC5lbHJpLnYxLnVpLlNlbGVjdFZlcnNpb25SZXF1ZXN0GiEuZWxyaS52MS51aS5TZWxlY3RWZXJzaW9uUmVzcG9uc2USRQoIRXZhbHVhdGUSGy5lbHJpLnYxLnVpLkV2YWx1YXRlUmVxdWVzdBocLmVscmkudjEudWkuRXZhbHVhdGVSZXNwb25zZRJFCghEaXNwYXRjaBIbLmVscmkudjEudWkuRGlzcGF0Y2hSZXF1ZXN0GhwuZWxyaS52MS51aS5EaXNwYXRjaFJlc3BvbnNlYgZwcm90bzM", [file_elri_v1_ui_domain]);
 
 /**
  * @generated from message elri.v1.ui.CreateInterfaceRequest
@@ -32,6 +32,20 @@ export type CreateInterfaceRequest = Message<"elri.v1.ui.CreateInterfaceRequest"
    * @generated from field: string state_json = 3;
    */
   stateJson: string;
+
+  /**
+   * Create a component instead of an interface. 
+   *
+   * @generated from field: bool component = 4;
+   */
+  component: boolean;
+
+  /**
+   * Components: parameter defaults as a JSON object. 
+   *
+   * @generated from field: string params_json = 5;
+   */
+  paramsJson: string;
 };
 
 /**
@@ -52,6 +66,20 @@ export type CreateInterfaceRequestJson = {
    * @generated from field: string state_json = 3;
    */
   stateJson?: string;
+
+  /**
+   * Create a component instead of an interface. 
+   *
+   * @generated from field: bool component = 4;
+   */
+  component?: boolean;
+
+  /**
+   * Components: parameter defaults as a JSON object. 
+   *
+   * @generated from field: string params_json = 5;
+   */
+  paramsJson?: string;
 };
 
 /**
@@ -154,6 +182,14 @@ export type GetInterfaceResponse = Message<"elri.v1.ui.GetInterfaceResponse"> & 
    * @generated from field: int32 selected_version = 2;
    */
   selectedVersion: number;
+
+  /**
+   * False when the returned version was published for a newer catalog
+   * than this device has: it is shown read-only, handlers disabled. 
+   *
+   * @generated from field: bool compatible = 3;
+   */
+  compatible: boolean;
 };
 
 /**
@@ -171,6 +207,14 @@ export type GetInterfaceResponseJson = {
    * @generated from field: int32 selected_version = 2;
    */
   selectedVersion?: number;
+
+  /**
+   * False when the returned version was published for a newer catalog
+   * than this device has: it is shown read-only, handlers disabled. 
+   *
+   * @generated from field: bool compatible = 3;
+   */
+  compatible?: boolean;
 };
 
 /**
@@ -200,6 +244,13 @@ export type ListInterfacesRequest = Message<"elri.v1.ui.ListInterfacesRequest"> 
    * @generated from field: bool include_deleted = 3;
    */
   includeDeleted: boolean;
+
+  /**
+   * Components instead of interfaces. 
+   *
+   * @generated from field: bool components = 4;
+   */
+  components: boolean;
 };
 
 /**
@@ -222,6 +273,13 @@ export type ListInterfacesRequestJson = {
    * @generated from field: bool include_deleted = 3;
    */
   includeDeleted?: boolean;
+
+  /**
+   * Components instead of interfaces. 
+   *
+   * @generated from field: bool components = 4;
+   */
+  components?: boolean;
 };
 
 /**
@@ -296,6 +354,13 @@ export type UpdateInterfaceRequest = Message<"elri.v1.ui.UpdateInterfaceRequest"
    * @generated from field: repeated string remove_nodes = 6;
    */
   removeNodes: string[];
+
+  /**
+   * Components: parameter defaults as a JSON object. 
+   *
+   * @generated from field: optional string params_json = 7;
+   */
+  paramsJson?: string | undefined;
 };
 
 /**
@@ -336,6 +401,13 @@ export type UpdateInterfaceRequestJson = {
    * @generated from field: repeated string remove_nodes = 6;
    */
   removeNodes?: string[];
+
+  /**
+   * Components: parameter defaults as a JSON object. 
+   *
+   * @generated from field: optional string params_json = 7;
+   */
+  paramsJson?: string;
 };
 
 /**
@@ -577,6 +649,15 @@ export type EvaluateResponse = Message<"elri.v1.ui.EvaluateResponse"> & {
    * @generated from field: repeated elri.v1.ui.NodeValues nodes = 1;
    */
   nodes: NodeValues[];
+
+  /**
+   * The tree with every component node expanded: the component's nodes
+   * appear under it with ids `<component node id>/<inner id>`. Drawn in
+   * place of the interface's own nodes. 
+   *
+   * @generated from field: repeated elri.v1.ui.Node tree = 2;
+   */
+  tree: Node[];
 };
 
 /**
@@ -587,6 +668,15 @@ export type EvaluateResponseJson = {
    * @generated from field: repeated elri.v1.ui.NodeValues nodes = 1;
    */
   nodes?: NodeValuesJson[];
+
+  /**
+   * The tree with every component node expanded: the component's nodes
+   * appear under it with ids `<component node id>/<inner id>`. Drawn in
+   * place of the interface's own nodes. 
+   *
+   * @generated from field: repeated elri.v1.ui.Node tree = 2;
+   */
+  tree?: NodeJson[];
 };
 
 /**
@@ -633,6 +723,14 @@ export type DispatchRequest = Message<"elri.v1.ui.DispatchRequest"> & {
    * @generated from field: string payload_json = 6;
    */
   payloadJson: string;
+
+  /**
+   * Run the handler against a throwaway copy of the Space: nothing it
+   * writes is kept, extensions and notifications are disabled. 
+   *
+   * @generated from field: bool preview = 7;
+   */
+  preview: boolean;
 };
 
 /**
@@ -672,6 +770,14 @@ export type DispatchRequestJson = {
    * @generated from field: string payload_json = 6;
    */
   payloadJson?: string;
+
+  /**
+   * Run the handler against a throwaway copy of the Space: nothing it
+   * writes is kept, extensions and notifications are disabled. 
+   *
+   * @generated from field: bool preview = 7;
+   */
+  preview?: boolean;
 };
 
 /**

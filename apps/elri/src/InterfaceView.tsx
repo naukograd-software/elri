@@ -24,6 +24,8 @@ type Json = Record<string, unknown>
 interface Evaluated {
   values: Map<string, Json>
   errors: Map<string, Record<string, string>>
+  /** The tree with components expanded; drawn in place of the own nodes. */
+  tree: Node[]
 }
 
 export function InterfaceView({ clients, spaceId, interfaceId }: Props) {
@@ -64,7 +66,7 @@ export function InterfaceView({ clients, spaceId, interfaceId }: Props) {
         values.set(n.nodeId, parseJson(n.valuesJson))
         if (Object.keys(n.errors).length) errors.set(n.nodeId, n.errors)
       }
-      setEvaluated({ values, errors })
+      setEvaluated({ values, errors, tree: res.tree })
       setError(null)
     } catch (e) {
       setError(errorText(e))
@@ -115,7 +117,8 @@ export function InterfaceView({ clients, spaceId, interfaceId }: Props) {
 
   if (!iface) return <p className="muted">loading interface…</p>
   const byParent = new Map<string, Node[]>()
-  for (const n of iface.nodes) {
+  const nodes = evaluated?.tree.length ? evaluated.tree : iface.nodes
+  for (const n of nodes) {
     const list = byParent.get(n.parentId) ?? []
     list.push(n)
     byParent.set(n.parentId, list)
@@ -182,6 +185,7 @@ function renderNode(n: Node, ctx: RenderCtx): ReactNode {
   const has = (ev: string) => typeof handlers[ev] === 'string'
   switch (n.type) {
     case 'column':
+    case 'component':
       return (
         <div key={n.id} className="stack" style={{ gap: text(p.gap) || 8 }}>
           {children}

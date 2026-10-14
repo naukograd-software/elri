@@ -87,6 +87,7 @@ async fn interfaces_are_evaluated_and_driven_by_the_core() {
                 space_id: space.clone(),
                 name: "tasks".into(),
                 state_json: r#"{"draft": ""}"#.into(),
+                ..Default::default()
             },
         ))
         .await
@@ -229,6 +230,7 @@ async fn interfaces_are_evaluated_and_driven_by_the_core() {
                 event: "click".into(),
                 state_json: r#"{"draft": "milk"}"#.into(),
                 payload_json: String::new(),
+                preview: false,
             },
         ))
         .await
@@ -366,4 +368,317 @@ async fn interfaces_are_evaluated_and_driven_by_the_core() {
         .await
         .expect_err("managed kind");
     assert_eq!(refused.code, Code::InvalidArgument);
+}
+
+#[tokio::test]
+async fn components_expand_with_parameters_and_previews_leave_no_trace() {
+    let dir = tmp_dir("components");
+    let _core = Core::start(Config::new(&dir, build()))
+        .await
+        .expect("start");
+    let endpoint = Endpoint::read(&dir).expect("endpoint");
+    let conn = Client::dial(&endpoint.url, ClientConfig::default())
+        .await
+        .expect("dial");
+    let spaces = SpaceServiceClient::new(conn.clone());
+    let objects = ObjectServiceClient::new(conn.clone());
+    let ui = InterfaceServiceClient::new(conn);
+    let space = spaces
+        .create_space(authed(&endpoint, CreateSpaceRequest { name: "s".into() }))
+        .await
+        .expect("space")
+        .msg
+        .space
+        .expect("space")
+        .id;
+
+    // A greeting component: a text bound to its parameter and a button
+    // whose handler records who was greeted.
+    let component = ui
+        .create_interface(authed(
+            &endpoint,
+            CreateInterfaceRequest {
+                space_id: space.clone(),
+                name: "greeting".into(),
+                state_json: "{}".into(),
+                component: true,
+                params_json: r#"{"who": "world"}"#.into(),
+            },
+        ))
+        .await
+        .expect("component")
+        .msg
+        .interface
+        .expect("interface");
+    assert!(component.component);
+    let component = ui
+        .update_interface(authed(
+            &endpoint,
+            UpdateInterfaceRequest {
+                space_id: space.clone(),
+                id: component.id.clone(),
+                set_nodes: vec![
+                    node(
+                        "",
+                        0,
+                        "text",
+                        "{}",
+                        r#"{"text": "\"Hello, \" .. params.who"}"#,
+                        "{}",
+                    ),
+                    node(
+                        "",
+                        1,
+                        "button",
+                        r#"{"label": "Greet"}"#,
+                        "{}",
+                        r#"{"click": "elri.create({ fields = { greeted = params.who } })"}"#,
+                    ),
+                ],
+                ..Default::default()
+            },
+        ))
+        .await
+        .expect("nodes")
+        .msg
+        .interface
+        .expect("interface");
+    let inner_text = component.nodes[0].id.clone();
+    let inner_button = component.nodes[1].id.clone();
+
+    // A component placing itself is refused.
+    let err = ui
+        .update_interface(authed(
+            &endpoint,
+            UpdateInterfaceRequest {
+                space_id: space.clone(),
+                id: component.id.clone(),
+                set_nodes: vec![node(
+                    "",
+                    2,
+                    "component",
+                    &format!(r#"{{"ref": "{}"}}"#, component.id),
+                    "{}",
+                    "{}",
+                )],
+                ..Default::default()
+            },
+        ))
+        .await
+        .expect_err("self reference");
+    assert_eq!(err.code, Code::InvalidArgument);
+
+    // An interface places it twice: once with literal parameters, once
+    // with parameters bound to local state.
+    let iface = ui
+        .create_interface(authed(
+            &endpoint,
+            CreateInterfaceRequest {
+                space_id: space.clone(),
+                name: "page".into(),
+                state_json: r#"{"name": "Ada"}"#.into(),
+                ..Default::default()
+            },
+        ))
+        .await
+        .expect("interface")
+        .msg
+        .interface
+        .expect("interface");
+    let iface = ui
+        .update_interface(authed(
+            &endpoint,
+            UpdateInterfaceRequest {
+                space_id: space.clone(),
+                id: iface.id.clone(),
+                set_nodes: vec![
+                    node(
+                        "",
+                        0,
+                        "component",
+                        &format!(
+                            r#"{{"ref": "{}", "params": {{"who": "moon"}}}}"#,
+                            component.id
+                        ),
+                        "{}",
+                        "{}",
+                    ),
+                    node(
+                        "",
+                        1,
+                        "component",
+                        &format!(r#"{{"ref": "{}"}}"#, component.id),
+                        r#"{"params": "{ who = state.name }"}"#,
+                        "{}",
+                    ),
+                ],
+                ..Default::default()
+            },
+        ))
+        .await
+        .expect("place")
+        .msg
+        .interface
+        .expect("interface");
+    let first = iface.nodes[0].id.clone();
+    let second = iface.nodes[1].id.clone();
+
+    let eval = ui
+        .evaluate(authed(
+            &endpoint,
+            EvaluateRequest {
+                space_id: space.clone(),
+                id: iface.id.clone(),
+                state_json: r#"{"name": "Ada"}"#.into(),
+            },
+        ))
+        .await
+        .expect("evaluate")
+        .msg;
+    // The expanded tree: two component nodes, each with the two inner
+    // nodes under it, ids prefixed by the instance.
+    assert_eq!(eval.tree.len(), 6);
+    let inner = |instance: &str, inner: &str| format!("{instance}/{inner}");
+    let placed = eval
+        .tree
+        .iter()
+        .find(|n| n.id == inner(&first, &inner_text))
+        .expect("placed text");
+    assert_eq!(placed.parent_id, first);
+    assert_eq!(placed.r#type, "text");
+    let value = |id: &str| -> serde_json::Value {
+        serde_json::from_str(
+            &eval
+                .nodes
+                .iter()
+                .find(|n| n.node_id == id)
+                .unwrap_or_else(|| panic!("no values for {id}"))
+                .values_json,
+        )
+        .expect("json")
+    };
+    assert_eq!(value(&inner(&first, &inner_text))["text"], "Hello, moon");
+    assert_eq!(value(&inner(&second, &inner_text))["text"], "Hello, Ada");
+
+    // A preview click runs the handler against a copy: no object appears.
+    let res = ui
+        .dispatch(authed(
+            &endpoint,
+            DispatchRequest {
+                space_id: space.clone(),
+                id: iface.id.clone(),
+                node_id: inner(&second, &inner_button),
+                event: "click".into(),
+                state_json: r#"{"name": "Ada"}"#.into(),
+                payload_json: String::new(),
+                preview: true,
+            },
+        ))
+        .await
+        .expect("preview")
+        .msg;
+    assert_eq!(res.error, "", "{:?}", res.logs);
+    let greeted = |objects: &ObjectServiceClient| {
+        let req = authed(
+            &endpoint,
+            ListObjectsRequest {
+                space_id: space.clone(),
+                kind: ObjectKind::Entity.into(),
+                ..Default::default()
+            },
+        );
+        let objects = objects.clone();
+        async move {
+            objects
+                .list_objects(req)
+                .await
+                .expect("list")
+                .msg
+                .objects
+                .into_iter()
+                .filter_map(|o| o.fields.get("greeted").cloned())
+                .collect::<Vec<_>>()
+        }
+    };
+    assert!(greeted(&objects).await.is_empty(), "preview left a trace");
+
+    // A real click records who was greeted, with the instance's parameters.
+    let res = ui
+        .dispatch(authed(
+            &endpoint,
+            DispatchRequest {
+                space_id: space.clone(),
+                id: iface.id.clone(),
+                node_id: inner(&second, &inner_button),
+                event: "click".into(),
+                state_json: r#"{"name": "Ada"}"#.into(),
+                payload_json: String::new(),
+                preview: false,
+            },
+        ))
+        .await
+        .expect("click")
+        .msg;
+    assert_eq!(res.error, "", "{:?}", res.logs);
+    assert_eq!(greeted(&objects).await, vec![s("Ada")]);
+
+    // Published copies carry the catalog they were made for and are
+    // compatible with this build; components are listed apart.
+    let v1 = ui
+        .publish_interface(authed(
+            &endpoint,
+            PublishInterfaceRequest {
+                space_id: space.clone(),
+                id: component.id.clone(),
+            },
+        ))
+        .await
+        .expect("publish")
+        .msg
+        .version
+        .expect("version");
+    assert!(v1.component);
+    assert_eq!(v1.catalog, 1);
+    let got = ui
+        .get_interface(authed(
+            &endpoint,
+            GetInterfaceRequest {
+                space_id: space.clone(),
+                id: v1.id.clone(),
+                selected: false,
+            },
+        ))
+        .await
+        .expect("get")
+        .msg;
+    assert!(got.compatible);
+    let components = ui
+        .list_interfaces(authed(
+            &endpoint,
+            ListInterfacesRequest {
+                space_id: space.clone(),
+                components: true,
+                ..Default::default()
+            },
+        ))
+        .await
+        .expect("list")
+        .msg
+        .interfaces;
+    assert_eq!(components.len(), 1);
+    assert_eq!(components[0].id, component.id);
+    let interfaces = ui
+        .list_interfaces(authed(
+            &endpoint,
+            ListInterfacesRequest {
+                space_id: space.clone(),
+                ..Default::default()
+            },
+        ))
+        .await
+        .expect("list")
+        .msg
+        .interfaces;
+    assert_eq!(interfaces.len(), 1);
+    assert_eq!(interfaces[0].id, iface.id);
 }

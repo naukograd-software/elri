@@ -2979,6 +2979,68 @@ async fn pending_counts(db: &mut Db) -> Result<(usize, usize), StoreError> {
     Ok((pending, rejected))
 }
 
+/// A throwaway copy of the device database and one Space, for previews:
+/// opened as its own [`Store`] under a temporary directory that goes away
+/// with the fork.
+pub struct Fork {
+    root: PathBuf,
+    store: Arc<Store>,
+}
+
+impl Fork {
+    /// The copy.
+    pub fn store(&self) -> Arc<Store> {
+        Arc::clone(&self.store)
+    }
+}
+
+impl Drop for Fork {
+    fn drop(&mut self) {
+        // Open handles keep working on unlinked files; the directory is
+        // gone for everyone else at once.
+        let _ = std::fs::remove_dir_all(&self.root);
+    }
+}
+
+impl Store {
+    /// Copies the device database and `space_id`'s file into a fresh
+    /// directory and opens them as a separate store. Writes to the copy
+    /// never reach this store.
+    pub async fn fork_space(&self, space_id: SpaceId) -> Result<Fork, StoreError> {
+        let root = self.root.join("preview").join(Uuid::now_v7().to_string());
+        let spaces = root.join("spaces");
+        std::fs::create_dir_all(&spaces).map_err(|source| StoreError::Io {
+            path: spaces.clone(),
+            source,
+        })?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt as _;
+            for dir in [&root, &spaces] {
+                let _ = std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700));
+            }
+        }
+        let space = self.space(space_id).await?;
+        {
+            let mut db = self.device.lock().await;
+            vacuum_into(&mut db, &root.join("device.db")).await?;
+        }
+        {
+            let mut db = space.db.lock().await;
+            vacuum_into(&mut db, &spaces.join(format!("{space_id}.db"))).await?;
+        }
+        let device = self.device_id;
+        let store = match Store::open(&root, device).await {
+            Ok(s) => Arc::new(s),
+            Err(e) => {
+                let _ = std::fs::remove_dir_all(&root);
+                return Err(e);
+            }
+        };
+        Ok(Fork { root, store })
+    }
+}
+
 /// Has the engine write a compacted, consistent copy of the open database.
 async fn vacuum_into(db: &mut Db, path: &Path) -> Result<(), StoreError> {
     let quoted = path.to_string_lossy().replace('\'', "''");

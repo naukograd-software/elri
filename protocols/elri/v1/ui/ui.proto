@@ -30,6 +30,10 @@ message CreateInterfaceRequest {
     string space_id = 1;
     string name = 2;
     string state_json = 3;
+    /* Create a component instead of an interface. */
+    bool component = 4;
+    /* Components: parameter defaults as a JSON object. */
+    string params_json = 5;
 }
 
 message CreateInterfaceResponse {
@@ -47,6 +51,9 @@ message GetInterfaceResponse {
     Interface interface = 1;
     /* The version this device has selected for the draft; 0 = draft. */
     int32 selected_version = 2;
+    /* False when the returned version was published for a newer catalog
+       than this device has: it is shown read-only, handlers disabled. */
+    bool compatible = 3;
 }
 
 message ListInterfacesRequest {
@@ -54,6 +61,8 @@ message ListInterfacesRequest {
     /* Published copies of this draft instead of drafts. */
     string versions_of = 2;
     bool include_deleted = 3;
+    /* Components instead of interfaces. */
+    bool components = 4;
 }
 
 message ListInterfacesResponse {
@@ -70,6 +79,8 @@ message UpdateInterfaceRequest {
     repeated Node set_nodes = 5;
     /* Node ids to remove with their subtrees. */
     repeated string remove_nodes = 6;
+    /* Components: parameter defaults as a JSON object. */
+    optional string params_json = 7;
 }
 
 message UpdateInterfaceResponse {
@@ -106,6 +117,10 @@ message EvaluateRequest {
 
 message EvaluateResponse {
     repeated NodeValues nodes = 1;
+    /* The tree with every component node expanded: the component's nodes
+       appear under it with ids `<component node id>/<inner id>`. Drawn in
+       place of the interface's own nodes. */
+    repeated Node tree = 2;
 }
 
 message DispatchRequest {
@@ -117,6 +132,9 @@ message DispatchRequest {
     string state_json = 5;
     /* Event payload as JSON: the input's value, the chosen item, ... */
     string payload_json = 6;
+    /* Run the handler against a throwaway copy of the Space: nothing it
+       writes is kept, extensions and notifications are disabled. */
+    bool preview = 7;
 }
 
 message DispatchResponse {

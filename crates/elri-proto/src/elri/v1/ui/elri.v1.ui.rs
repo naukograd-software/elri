@@ -16,7 +16,10 @@ pub struct Node {
     /// Position among siblings, from 0. 
     #[prost(int32, tag = "3")]
     pub index: i32,
-    /// Catalog type: column, row, text, button, input, checkbox, list, table, card. 
+    /// Catalog type: column, row, text, button, input, checkbox, list, table,
+    /// card, or component. A component node's props name the component in
+    /// `ref` and its parameters in `params`; its subtree is the component's
+    /// tree, expanded by `Evaluate`. 
     #[prost(string, tag = "4")]
     pub r#type: ::prost::alloc::string::String,
     /// Literal properties as a JSON object. 
@@ -60,6 +63,17 @@ pub struct Interface {
     pub updated_at_ms: i64,
     #[prost(int64, optional, tag = "10")]
     pub deleted_at_ms: ::core::option::Option<i64>,
+    /// A component: a reusable subtree other interfaces place with a
+    /// `component` node. Its bindings and handlers see `params`. 
+    #[prost(bool, tag = "11")]
+    pub component: bool,
+    /// Components: parameter name → default value, as a JSON object. 
+    #[prost(string, tag = "12")]
+    pub params_json: ::prost::alloc::string::String,
+    /// Published copies: the catalog version they were made for. A device
+    /// whose catalog is older shows the version read-only. 
+    #[prost(int32, tag = "13")]
+    pub catalog: i32,
 }
 /// A node's evaluated properties: literal ones merged with bound ones. 
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -81,6 +95,12 @@ pub struct CreateInterfaceRequest {
     pub name: ::prost::alloc::string::String,
     #[prost(string, tag = "3")]
     pub state_json: ::prost::alloc::string::String,
+    /// Create a component instead of an interface. 
+    #[prost(bool, tag = "4")]
+    pub component: bool,
+    /// Components: parameter defaults as a JSON object. 
+    #[prost(string, tag = "5")]
+    pub params_json: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateInterfaceResponse {
@@ -104,6 +124,10 @@ pub struct GetInterfaceResponse {
     /// The version this device has selected for the draft; 0 = draft. 
     #[prost(int32, tag = "2")]
     pub selected_version: i32,
+    /// False when the returned version was published for a newer catalog
+    /// than this device has: it is shown read-only, handlers disabled. 
+    #[prost(bool, tag = "3")]
+    pub compatible: bool,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListInterfacesRequest {
@@ -114,6 +138,9 @@ pub struct ListInterfacesRequest {
     pub versions_of: ::prost::alloc::string::String,
     #[prost(bool, tag = "3")]
     pub include_deleted: bool,
+    /// Components instead of interfaces. 
+    #[prost(bool, tag = "4")]
+    pub components: bool,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListInterfacesResponse {
@@ -137,6 +164,9 @@ pub struct UpdateInterfaceRequest {
     /// Node ids to remove with their subtrees. 
     #[prost(string, repeated, tag = "6")]
     pub remove_nodes: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Components: parameter defaults as a JSON object. 
+    #[prost(string, optional, tag = "7")]
+    pub params_json: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateInterfaceResponse {
@@ -185,6 +215,11 @@ pub struct EvaluateRequest {
 pub struct EvaluateResponse {
     #[prost(message, repeated, tag = "1")]
     pub nodes: ::prost::alloc::vec::Vec<NodeValues>,
+    /// The tree with every component node expanded: the component's nodes
+    /// appear under it with ids `<component node id>/<inner id>`. Drawn in
+    /// place of the interface's own nodes. 
+    #[prost(message, repeated, tag = "2")]
+    pub tree: ::prost::alloc::vec::Vec<Node>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DispatchRequest {
@@ -202,6 +237,10 @@ pub struct DispatchRequest {
     /// Event payload as JSON: the input's value, the chosen item, ... 
     #[prost(string, tag = "6")]
     pub payload_json: ::prost::alloc::string::String,
+    /// Run the handler against a throwaway copy of the Space: nothing it
+    /// writes is kept, extensions and notifications are disabled. 
+    #[prost(bool, tag = "7")]
+    pub preview: bool,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct DispatchResponse {

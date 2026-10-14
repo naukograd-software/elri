@@ -70,8 +70,8 @@ use elri_proto::elri::v1::workflow::{
 };
 
 use elri_proto::elri::v1::ui::{
-    CreateInterfaceRequest, EvaluateRequest, Interface, ListInterfacesRequest, Node,
-    PublishInterfaceRequest, SelectVersionRequest, UpdateInterfaceRequest,
+    CreateInterfaceRequest, DispatchRequest, EvaluateRequest, Interface, ListInterfacesRequest,
+    Node, PublishInterfaceRequest, SelectVersionRequest, UpdateInterfaceRequest,
 };
 use serde_json::json;
 use ws_proto::{Client, ClientConfig, Request};
@@ -480,7 +480,7 @@ enum TransferCmd {
 
 #[derive(Subcommand, Debug)]
 enum UiCmd {
-    /// Create an interface draft.
+    /// Create an interface draft, or a component with --component.
     Create {
         #[arg(long)]
         space: String,
@@ -488,6 +488,12 @@ enum UiCmd {
         /// Declared local state as a JSON object.
         #[arg(long, default_value = "{}")]
         state: String,
+        /// A reusable subtree other interfaces place with a `component` node.
+        #[arg(long)]
+        component: bool,
+        /// Components: parameter defaults as a JSON object.
+        #[arg(long, default_value = "{}")]
+        params: String,
     },
     /// List drafts of a Space, or the versions of one draft.
     List {
@@ -495,6 +501,25 @@ enum UiCmd {
         space: String,
         #[arg(long)]
         versions_of: Option<String>,
+        /// Components instead of interfaces.
+        #[arg(long)]
+        components: bool,
+    },
+    /// Send an event to a node: run its handler with STATE and PAYLOAD.
+    Dispatch {
+        #[arg(long)]
+        space: String,
+        id: String,
+        node: String,
+        #[arg(default_value = "click")]
+        event: String,
+        #[arg(long, default_value = "{}")]
+        state: String,
+        #[arg(long, default_value = "null")]
+        payload: String,
+        /// Run against a throwaway copy of the Space: nothing is kept.
+        #[arg(long)]
+        preview: bool,
     },
     /// Add a node (or rewrite one with --id) in a draft.
     Node {
@@ -1719,6 +1744,9 @@ fn interface_json(i: &Interface) -> serde_json::Value {
         "name": i.name,
         "version": i.version,
         "draft_id": i.draft_id,
+        "component": i.component,
+        "params": serde_json::from_str::<serde_json::Value>(&i.params_json).unwrap_or(json!({})),
+        "catalog": i.catalog,
         "state": serde_json::from_str::<serde_json::Value>(&i.state_json).unwrap_or(json!({})),
         "nodes": i.nodes.iter().map(|n| json!({
             "id": n.id, "parent_id": n.parent_id, "index": n.index, "type": n.r#type,
@@ -1729,14 +1757,23 @@ fn interface_json(i: &Interface) -> serde_json::Value {
     })
 }
 
-async fn run_ui(endpoint: &Endpoint, conn: Client, cmd: UiCmd) -> Result<serde_json::Value> {
-    let client = InterfaceServiceClient::new(conn);
+async fn run_ui_edit(
+    client: &InterfaceServiceClient,
+    endpoint: &Endpoint,
+    cmd: UiCmd,
+) -> Result<serde_json::Value> {
     let iface = |o: Option<Interface>| -> Result<serde_json::Value> {
         o.map(|i| interface_json(&i))
             .ok_or_else(|| anyhow::anyhow!("core returned no interface"))
     };
     match cmd {
-        UiCmd::Create { space, name, state } => {
+        UiCmd::Create {
+            space,
+            name,
+            state,
+            component,
+            params,
+        } => {
             let res = client
                 .create_interface(authed(
                     endpoint,
@@ -1744,12 +1781,61 @@ async fn run_ui(endpoint: &Endpoint, conn: Client, cmd: UiCmd) -> Result<serde_j
                         space_id: space,
                         name,
                         state_json: state,
+                        component,
+                        params_json: params,
                     },
                 ))
                 .await?;
             iface(res.msg.interface)
         }
-        UiCmd::List { space, versions_of } => {
+        UiCmd::Dispatch {
+            space,
+            id,
+            node,
+            event,
+            state,
+            payload,
+            preview,
+        } => {
+            let res = client
+                .dispatch(authed(
+                    endpoint,
+                    DispatchRequest {
+                        space_id: space,
+                        id,
+                        node_id: node,
+                        event,
+                        state_json: state,
+                        payload_json: payload,
+                        preview,
+                    },
+                ))
+                .await?;
+            Ok(json!({
+                "state": serde_json::from_str::<serde_json::Value>(&res.msg.state_json).unwrap_or(json!({})),
+                "logs": res.msg.logs,
+                "error": res.msg.error,
+            }))
+        }
+        _ => bail!("not an edit command"),
+    }
+}
+
+async fn run_ui(endpoint: &Endpoint, conn: Client, cmd: UiCmd) -> Result<serde_json::Value> {
+    let client = InterfaceServiceClient::new(conn);
+    let iface = |o: Option<Interface>| -> Result<serde_json::Value> {
+        o.map(|i| interface_json(&i))
+            .ok_or_else(|| anyhow::anyhow!("core returned no interface"))
+    };
+    match cmd {
+        cmd @ (UiCmd::Create { .. } | UiCmd::Dispatch { .. }) => {
+            run_ui_edit(&client, endpoint, cmd).await
+        }
+        UiCmd::List {
+            space,
+            versions_of,
+            components,
+        } => {
             let res = client
                 .list_interfaces(authed(
                     endpoint,
@@ -1757,6 +1843,7 @@ async fn run_ui(endpoint: &Endpoint, conn: Client, cmd: UiCmd) -> Result<serde_j
                         space_id: space,
                         versions_of: versions_of.unwrap_or_default(),
                         include_deleted: false,
+                        components,
                     },
                 ))
                 .await?;

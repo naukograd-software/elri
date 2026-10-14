@@ -249,7 +249,7 @@ pub async fn resolve(
     }
     match resolution {
         Resolution::Done(result_json) => {
-            if result_json.len() > script::OUTPUT_LIMIT {
+            if result_json.len() > script::STEP_RESULT_LIMIT {
                 return Err(ScriptError::Limit("step result size"));
             }
             if !result_json.is_empty() {

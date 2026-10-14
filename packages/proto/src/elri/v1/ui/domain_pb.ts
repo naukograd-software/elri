@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/ui/domain.proto.
  */
 export const file_elri_v1_ui_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChdlbHJpL3YxL3VpL2RvbWFpbi5wcm90bxIKZWxyaS52MS51aSKEAQoETm9kZRIKCgJpZBgBIAEoCRIRCglwYXJlbnRfaWQYAiABKAkSDQoFaW5kZXgYAyABKAUSDAoEdHlwZRgEIAEoCRISCgpwcm9wc19qc29uGAUgASgJEhUKDWJpbmRpbmdzX2pzb24YBiABKAkSFQoNaGFuZGxlcnNfanNvbhgHIAEoCSLrAQoJSW50ZXJmYWNlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSHwoFbm9kZXMYBCADKAsyEC5lbHJpLnYxLnVpLk5vZGUSEgoKc3RhdGVfanNvbhgFIAEoCRIPCgd2ZXJzaW9uGAYgASgFEhAKCGRyYWZ0X2lkGAcgASgJEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMilQEKCk5vZGVWYWx1ZXMSDwoHbm9kZV9pZBgBIAEoCRITCgt2YWx1ZXNfanNvbhgCIAEoCRIyCgZlcnJvcnMYAyADKAsyIi5lbHJpLnYxLnVpLk5vZGVWYWx1ZXMuRXJyb3JzRW50cnkaLQoLRXJyb3JzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AWIGcHJvdG8z");
+  fileDesc("ChdlbHJpL3YxL3VpL2RvbWFpbi5wcm90bxIKZWxyaS52MS51aSKEAQoETm9kZRIKCgJpZBgBIAEoCRIRCglwYXJlbnRfaWQYAiABKAkSDQoFaW5kZXgYAyABKAUSDAoEdHlwZRgEIAEoCRISCgpwcm9wc19qc29uGAUgASgJEhUKDWJpbmRpbmdzX2pzb24YBiABKAkSFQoNaGFuZGxlcnNfanNvbhgHIAEoCSKkAgoJSW50ZXJmYWNlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSHwoFbm9kZXMYBCADKAsyEC5lbHJpLnYxLnVpLk5vZGUSEgoKc3RhdGVfanNvbhgFIAEoCRIPCgd2ZXJzaW9uGAYgASgFEhAKCGRyYWZ0X2lkGAcgASgJEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQESEQoJY29tcG9uZW50GAsgASgIEhMKC3BhcmFtc19qc29uGAwgASgJEg8KB2NhdGFsb2cYDSABKAVCEAoOX2RlbGV0ZWRfYXRfbXMilQEKCk5vZGVWYWx1ZXMSDwoHbm9kZV9pZBgBIAEoCRITCgt2YWx1ZXNfanNvbhgCIAEoCRIyCgZlcnJvcnMYAyADKAsyIi5lbHJpLnYxLnVpLk5vZGVWYWx1ZXMuRXJyb3JzRW50cnkaLQoLRXJyb3JzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4AWIGcHJvdG8z");
 
 /**
  *
@@ -44,7 +44,10 @@ export type Node = Message<"elri.v1.ui.Node"> & {
   index: number;
 
   /**
-   * Catalog type: column, row, text, button, input, checkbox, list, table, card. 
+   * Catalog type: column, row, text, button, input, checkbox, list, table,
+   * card, or component. A component node's props name the component in
+   * `ref` and its parameters in `params`; its subtree is the component's
+   * tree, expanded by `Evaluate`. 
    *
    * @generated from field: string type = 4;
    */
@@ -104,7 +107,10 @@ export type NodeJson = {
   index?: number;
 
   /**
-   * Catalog type: column, row, text, button, input, checkbox, list, table, card. 
+   * Catalog type: column, row, text, button, input, checkbox, list, table,
+   * card, or component. A component node's props name the component in
+   * `ref` and its parameters in `params`; its subtree is the component's
+   * tree, expanded by `Evaluate`. 
    *
    * @generated from field: string type = 4;
    */
@@ -206,6 +212,29 @@ export type Interface = Message<"elri.v1.ui.Interface"> & {
    * @generated from field: optional int64 deleted_at_ms = 10;
    */
   deletedAtMs?: bigint | undefined;
+
+  /**
+   * A component: a reusable subtree other interfaces place with a
+   * `component` node. Its bindings and handlers see `params`. 
+   *
+   * @generated from field: bool component = 11;
+   */
+  component: boolean;
+
+  /**
+   * Components: parameter name → default value, as a JSON object. 
+   *
+   * @generated from field: string params_json = 12;
+   */
+  paramsJson: string;
+
+  /**
+   * Published copies: the catalog version they were made for. A device
+   * whose catalog is older shows the version read-only. 
+   *
+   * @generated from field: int32 catalog = 13;
+   */
+  catalog: number;
 };
 
 /**
@@ -275,6 +304,29 @@ export type InterfaceJson = {
    * @generated from field: optional int64 deleted_at_ms = 10;
    */
   deletedAtMs?: string;
+
+  /**
+   * A component: a reusable subtree other interfaces place with a
+   * `component` node. Its bindings and handlers see `params`. 
+   *
+   * @generated from field: bool component = 11;
+   */
+  component?: boolean;
+
+  /**
+   * Components: parameter name → default value, as a JSON object. 
+   *
+   * @generated from field: string params_json = 12;
+   */
+  paramsJson?: string;
+
+  /**
+   * Published copies: the catalog version they were made for. A device
+   * whose catalog is older shows the version read-only. 
+   *
+   * @generated from field: int32 catalog = 13;
+   */
+  catalog?: number;
 };
 
 /**

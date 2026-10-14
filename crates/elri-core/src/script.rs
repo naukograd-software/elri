@@ -40,6 +40,10 @@ const HOST_CALL_LIMIT: u32 = 10_000;
 pub const OUTPUT_LIMIT: usize = 1 << 20;
 /// Longest step name.
 const STEP_NAME_LIMIT: usize = 200;
+/// Most steps one workflow run may record.
+const STEP_LIMIT: usize = 1000;
+/// Longest step result kept, in bytes.
+pub const STEP_RESULT_LIMIT: usize = 64 * 1024;
 
 /// Run failures that are not storage failures.
 #[derive(Debug, thiserror::Error)]
@@ -240,6 +244,9 @@ pub struct Host {
     store: Arc<Store>,
     device_id: String,
     modules: crate::extension::Modules,
+    /// A preview host: runs against a throwaway copy of the data, with
+    /// extensions and notifications disabled.
+    preview: bool,
 }
 
 /// One run's identity for attribution.
@@ -270,6 +277,19 @@ impl Host {
             store,
             device_id,
             modules,
+            preview: false,
+        }
+    }
+
+    /// A host over `store`, a throwaway copy, for previews: nothing it
+    /// does reaches outside the copy.
+    #[must_use]
+    pub fn preview_over(&self, store: Arc<Store>) -> Self {
+        Self {
+            store,
+            device_id: self.device_id.clone(),
+            modules: self.modules.clone(),
+            preview: true,
         }
     }
 
@@ -345,6 +365,7 @@ impl Host {
         space: SpaceId,
         exprs: &[(String, String, String)],
         state: &serde_json::Value,
+        params: &serde_json::Value,
     ) -> Vec<Result<serde_json::Value, String>> {
         let started = Instant::now();
         let access = Arc::new(Mutex::new(Access {
@@ -368,6 +389,8 @@ impl Host {
         if let Err(e) = lua
             .to_value(state)
             .and_then(|v| lua.globals().set("state", v))
+            .and_then(|()| lua.to_value(params))
+            .and_then(|v| lua.globals().set("params", v))
         {
             return exprs.iter().map(|_| Err(e.to_string())).collect();
         }
@@ -397,6 +420,7 @@ impl Host {
         source: &str,
         state: serde_json::Value,
         payload: serde_json::Value,
+        params: serde_json::Value,
         identity: RunIdentity,
     ) -> (serde_json::Value, Vec<String>, String) {
         let started = Instant::now();
@@ -416,6 +440,9 @@ impl Host {
                 .map_err(|e| lua_err(&e))?;
             lua.globals()
                 .set("event", lua.to_value(&payload).map_err(|e| lua_err(&e))?)
+                .map_err(|e| lua_err(&e))?;
+            lua.globals()
+                .set("params", lua.to_value(&params).map_err(|e| lua_err(&e))?)
                 .map_err(|e| lua_err(&e))?;
             let f = lua
                 .load(source)
@@ -566,12 +593,16 @@ impl Host {
         let a = Arc::clone(access);
         let store = Arc::clone(&self.store);
         let source = actor.clone();
+        let preview = self.preview;
         let notify = lua
             .create_function(move |_, text: String| {
-                a.lock()
-                    .unwrap_or_else(std::sync::PoisonError::into_inner)
-                    .charge()
-                    .map_err(to_lua)?;
+                let mut g = a.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+                g.charge().map_err(to_lua)?;
+                if preview {
+                    g.logs.push(format!("preview: notify suppressed: {text}"));
+                    return Ok(());
+                }
+                drop(g);
                 store.emit(event::Event::Notice(NoticeEvent {
                     space_id: own.to_string(),
                     source: source.clone(),
@@ -804,7 +835,14 @@ impl Host {
                                     "step {name}: outcome unknown; resolve it before resuming"
                                 )));
                             }
-                            _ => {}
+                            Some(_) => {}
+                            None => {
+                                if store.workflow_step_count(run).await.map_err(to_lua)?
+                                    >= STEP_LIMIT
+                                {
+                                    return Err(to_lua(ScriptError::Limit("workflow steps")));
+                                }
+                            }
                         }
                         store
                             .workflow_step_intent(run, &name)
@@ -826,7 +864,17 @@ impl Host {
                             } else {
                                 json.to_string()
                             };
-                            if text.len() > OUTPUT_LIMIT {
+                            if text.len() > STEP_RESULT_LIMIT {
+                                store
+                                    .workflow_step_finish(
+                                        run,
+                                        &name,
+                                        st::FAILED,
+                                        "",
+                                        "step result too large",
+                                    )
+                                    .await
+                                    .map_err(to_lua)?;
                                 return Err(to_lua(ScriptError::Limit("step result size")));
                             }
                             store
@@ -853,6 +901,7 @@ impl Host {
         let a = Arc::clone(access);
         let store = Arc::clone(&self.store);
         let modules = self.modules.clone();
+        let preview = self.preview;
         let ext = lua
             .create_async_function(
                 move |lua, (name, func, args): (String, String, Option<LuaValue>)| {
@@ -860,6 +909,11 @@ impl Host {
                     let store = Arc::clone(&store);
                     let modules = modules.clone();
                     async move {
+                        if preview {
+                            return Err(to_lua(ScriptError::Denied(
+                                "extensions are disabled in a preview".to_owned(),
+                            )));
+                        }
                         {
                             let mut g = a.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
                             g.charge().map_err(to_lua)?;

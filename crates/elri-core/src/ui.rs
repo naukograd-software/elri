@@ -18,10 +18,28 @@ pub const VERSION: &str = "$version";
 pub const DRAFT: &str = "$draft";
 /// Device-setting prefix: the version selected for a draft.
 pub const SELECTED: &str = "ui_version:";
+/// Reserved field: a component's parameter defaults as JSON.
+pub const PARAMS: &str = "$params";
+/// Reserved field: the catalog version a published copy was made for.
+pub const CATALOG_FIELD: &str = "$catalog";
+/// The catalog this build draws. A version published for a newer one is
+/// shown read-only.
+pub const CATALOG_VERSION: i32 = 1;
+/// Deepest nesting of components inside components.
+pub const MAX_COMPONENT_DEPTH: usize = 4;
 
 /// Node types the renderer draws.
 pub const CATALOG: &[&str] = &[
-    "column", "row", "text", "button", "input", "checkbox", "list", "table", "card",
+    "column",
+    "row",
+    "text",
+    "button",
+    "input",
+    "checkbox",
+    "list",
+    "table",
+    "card",
+    "component",
 ];
 
 /// Whether a type is in the catalog.
@@ -44,7 +62,65 @@ pub fn interface_of(o: &Object, doc: &ObjectDoc) -> Result<Interface, crate::mod
         created_at_ms: o.created_at_ms,
         updated_at_ms: o.updated_at_ms,
         deleted_at_ms: o.deleted_at_ms,
+        component: o.kind() == ObjectKind::Component,
+        params_json: string_field(o, PARAMS).unwrap_or("{}").to_owned(),
+        catalog: i32::try_from(int_field(o, CATALOG_FIELD).unwrap_or(0)).unwrap_or(0),
     })
+}
+
+/// Whether this build can run a published copy's handlers.
+pub fn compatible(iface: &Interface) -> bool {
+    iface.catalog <= CATALOG_VERSION
+}
+
+/// The component a `component` node places, and its literal parameters.
+pub fn component_ref(n: &Node) -> Option<(ObjectId, serde_json::Map<String, serde_json::Value>)> {
+    if n.r#type.trim() != "component" {
+        return None;
+    }
+    let props = json_object(&n.props_json).ok()?;
+    let id = ObjectId::parse(props.get("ref")?.as_str()?).ok()?;
+    let params = match props.get("params") {
+        Some(serde_json::Value::Object(m)) => m.clone(),
+        _ => serde_json::Map::new(),
+    };
+    Some((id, params))
+}
+
+/// The parameters an instance of a component runs with: the component's
+/// defaults under the instance's literal and evaluated `params`.
+pub fn merged_params(
+    defaults: &str,
+    literal: &serde_json::Map<String, serde_json::Value>,
+    evaluated: Option<&serde_json::Value>,
+) -> serde_json::Value {
+    let mut out = json_object(defaults).unwrap_or_default();
+    for (k, v) in literal {
+        out.insert(k.clone(), v.clone());
+    }
+    if let Some(serde_json::Value::Object(m)) = evaluated {
+        for (k, v) in m {
+            out.insert(k.clone(), v.clone());
+        }
+    }
+    serde_json::Value::Object(out)
+}
+
+/// The component's nodes placed under `instance`, ids prefixed with the
+/// instance's so every expansion is distinct.
+pub fn placed(instance: &str, nodes: &[Node]) -> Vec<Node> {
+    nodes
+        .iter()
+        .map(|n| Node {
+            id: format!("{instance}/{}", n.id),
+            parent_id: if n.parent_id.is_empty() {
+                instance.to_owned()
+            } else {
+                format!("{instance}/{}", n.parent_id)
+            },
+            ..n.clone()
+        })
+        .collect()
 }
 
 /// Hex SHA-256 over the nodes' handlers: what a grant for the interface's
@@ -93,7 +169,19 @@ pub fn check_node(n: &Node) -> Result<(), String> {
     if !in_catalog(n.r#type.trim()) {
         return Err(format!("type {} is not in the catalog", n.r#type));
     }
-    json_object(&n.props_json).map_err(|e| format!("props: {e}"))?;
+    let props = json_object(&n.props_json).map_err(|e| format!("props: {e}"))?;
+    if n.r#type.trim() == "component" {
+        let id = props
+            .get("ref")
+            .and_then(serde_json::Value::as_str)
+            .ok_or("component: props.ref must name a component")?;
+        ObjectId::parse(id).map_err(|_| "component: props.ref is not an id".to_owned())?;
+        if let Some(p) = props.get("params") {
+            if !p.is_object() {
+                return Err("component: props.params must be an object".to_owned());
+            }
+        }
+    }
     let bindings = json_object(&n.bindings_json).map_err(|e| format!("bindings: {e}"))?;
     for (prop, expr) in &bindings {
         let Some(expr) = expr.as_str() else {
@@ -125,9 +213,20 @@ pub async fn evaluate(
     iface: &Interface,
     state: &serde_json::Value,
 ) -> Vec<NodeValues> {
+    evaluate_nodes(host, space, &iface.nodes, state, &serde_json::Value::Null).await
+}
+
+/// Evaluates the bindings of `nodes` with `state` and `params` in scope.
+pub async fn evaluate_nodes(
+    host: &Host,
+    space: SpaceId,
+    nodes: &[Node],
+    state: &serde_json::Value,
+    params: &serde_json::Value,
+) -> Vec<NodeValues> {
     let mut exprs: Vec<(String, String, String)> = Vec::new();
     let mut literal: BTreeMap<String, serde_json::Map<String, serde_json::Value>> = BTreeMap::new();
-    for n in &iface.nodes {
+    for n in nodes {
         literal.insert(n.id.clone(), json_object(&n.props_json).unwrap_or_default());
         if let Ok(b) = json_object(&n.bindings_json) {
             for (prop, expr) in b {
@@ -137,9 +236,9 @@ pub async fn evaluate(
             }
         }
     }
-    let results = host.evaluate(space, &exprs, state).await;
-    let mut out = Vec::with_capacity(iface.nodes.len());
-    for n in &iface.nodes {
+    let results = host.evaluate(space, &exprs, state, params).await;
+    let mut out = Vec::with_capacity(nodes.len());
+    for n in nodes {
         let mut values = literal.remove(&n.id).unwrap_or_default();
         let mut errors = std::collections::HashMap::new();
         for ((node, prop, _), r) in exprs.iter().zip(&results) {
@@ -174,6 +273,8 @@ pub struct UiEvent<'a> {
     pub state: serde_json::Value,
     /// What the renderer attached.
     pub payload: serde_json::Value,
+    /// The component parameters in scope, or null outside a component.
+    pub params: serde_json::Value,
 }
 
 /// Runs a node's handler for an event. Returns the state afterwards, the
@@ -181,7 +282,8 @@ pub struct UiEvent<'a> {
 pub async fn dispatch(
     host: &Host,
     space: SpaceId,
-    iface: &Interface,
+    owner: &Interface,
+    node: &Node,
     grant_id: String,
     ev: UiEvent<'_>,
 ) -> (serde_json::Value, Vec<String>, String) {
@@ -190,10 +292,11 @@ pub async fn dispatch(
         event,
         state,
         payload,
+        params,
     } = ev;
-    let Some(node) = iface.nodes.iter().find(|n| n.id == node_id) else {
+    if node.id != node_id {
         return (state, Vec::new(), format!("no node {node_id}"));
-    };
+    }
     let handlers = match json_object(&node.handlers_json) {
         Ok(h) => h,
         Err(e) => return (state, Vec::new(), format!("handlers: {e}")),
@@ -202,16 +305,17 @@ pub async fn dispatch(
         return (state, Vec::new(), String::new());
     };
     let identity = RunIdentity {
-        script_id: iface.id.clone(),
+        script_id: owner.id.clone(),
         rule_id: None,
         grant_id,
     };
-    host.handle(space, src, state, payload, identity).await
+    host.handle(space, src, state, payload, params, identity)
+        .await
 }
 
-/// Kinds an interface may be stored as.
+/// Kinds an interface may be stored as: interfaces and components.
 pub fn is_interface(o: &Object) -> bool {
-    o.kind() == ObjectKind::Interface
+    matches!(o.kind(), ObjectKind::Interface | ObjectKind::Component)
 }
 
 /// Device setting key for the selected version of a draft.

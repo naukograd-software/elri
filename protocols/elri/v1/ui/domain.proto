@@ -15,7 +15,10 @@ message Node {
     string parent_id = 2;
     /* Position among siblings, from 0. */
     int32 index = 3;
-    /* Catalog type: column, row, text, button, input, checkbox, list, table, card. */
+    /* Catalog type: column, row, text, button, input, checkbox, list, table,
+       card, or component. A component node's props name the component in
+       `ref` and its parameters in `params`; its subtree is the component's
+       tree, expanded by `Evaluate`. */
     string type = 4;
     /* Literal properties as a JSON object. */
     string props_json = 5;
@@ -46,6 +49,14 @@ message Interface {
     int64 created_at_ms = 8;
     int64 updated_at_ms = 9;
     optional int64 deleted_at_ms = 10;
+    /* A component: a reusable subtree other interfaces place with a
+       `component` node. Its bindings and handlers see `params`. */
+    bool component = 11;
+    /* Components: parameter name → default value, as a JSON object. */
+    string params_json = 12;
+    /* Published copies: the catalog version they were made for. A device
+       whose catalog is older shows the version read-only. */
+    int32 catalog = 13;
 }
 
 /* A node's evaluated properties: literal ones merged with bound ones. */

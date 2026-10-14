@@ -243,6 +243,17 @@ impl Store {
         }))
     }
 
+    /// How many steps a run has recorded.
+    pub async fn workflow_step_count(&self, run: Uuid) -> Result<usize, StoreError> {
+        let mut db = self.device.lock().await;
+        Ok(
+            WorkflowStepRow::filter(WorkflowStepRow::fields().run_id().eq(run))
+                .exec(&mut *db)
+                .await?
+                .len(),
+        )
+    }
+
     /// Records that a step is about to run, replacing a failed record.
     pub async fn workflow_step_intent(&self, run: Uuid, name: &str) -> Result<(), StoreError> {
         let mut db = self.device.lock().await;

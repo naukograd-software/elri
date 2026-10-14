@@ -99,6 +99,7 @@ pub fn is_managed(kind: ObjectKind) -> bool {
                 | ObjectKind::Publication
                 | ObjectKind::Context
                 | ObjectKind::Constraint
+                | ObjectKind::Component
         )
 }
 

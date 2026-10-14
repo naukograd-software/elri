@@ -174,6 +174,8 @@ pub enum ObjectKind {
     Context = 12,
     /// A declarative constraint over a field; see elri.v1.definition. 
     Constraint = 13,
+    /// A reusable interface subtree with parameters. 
+    Component = 14,
 }
 impl ObjectKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -196,6 +198,7 @@ impl ObjectKind {
             Self::Publication => "OBJECT_KIND_PUBLICATION",
             Self::Context => "OBJECT_KIND_CONTEXT",
             Self::Constraint => "OBJECT_KIND_CONSTRAINT",
+            Self::Component => "OBJECT_KIND_COMPONENT",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -215,6 +218,7 @@ impl ObjectKind {
             "OBJECT_KIND_PUBLICATION" => Some(Self::Publication),
             "OBJECT_KIND_CONTEXT" => Some(Self::Context),
             "OBJECT_KIND_CONSTRAINT" => Some(Self::Constraint),
+            "OBJECT_KIND_COMPONENT" => Some(Self::Component),
             _ => None,
         }
     }
