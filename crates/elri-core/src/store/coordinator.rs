@@ -115,6 +115,7 @@ impl Store {
         }
 
         // Stage everything first; nothing live changes until the decision.
+        let peer = self.peer.load(std::sync::atomic::Ordering::Relaxed);
         let mut staged: Vec<Vec<StagedDoc>> = Vec::with_capacity(stores.len());
         let mut edits: Vec<Option<Edit>> = edits.into_iter().map(|(_, e)| Some(e)).collect();
         let mut written: Vec<Option<Object>> = vec![None; edits.len()];
@@ -125,7 +126,7 @@ impl Store {
                 let Some(edit) = edits[i].take() else {
                     continue;
                 };
-                let d = stage(guard, *space, primary, edit).await?;
+                let d = stage(guard, *space, primary, peer, edit).await?;
                 written[i] = Some(d.rec.clone());
                 docs.push(d);
             }
@@ -448,6 +449,7 @@ async fn stage(
     db: &mut Db,
     space: SpaceId,
     primary: SpaceId,
+    peer: u64,
     edit: Edit,
 ) -> Result<StagedDoc, StoreError> {
     let space_id = if space == primary {
@@ -482,6 +484,7 @@ async fn stage(
         }
         Edit::Update(id, f) => {
             let (doc, pending) = load_doc(db, id).await?;
+            doc.set_peer(peer)?;
             let before = doc.version_vector();
             f(&doc)?;
             doc.touch(now_ms())?;
@@ -516,9 +519,15 @@ async fn restage_from_bytes(db: &mut Db, env: &Envelope) -> Result<Vec<StagedDoc
         let object_id = ObjectId::parse(&part.object_id)?;
         let (doc, pending, is_new) = match load_doc(db, object_id).await {
             Ok((doc, pending)) => {
+                let before = doc.protected().ok();
                 if !doc.import(&part.bytes)? {
                     return Err(StoreError::Model(ModelError::Malformed(
                         "coordinated change with missing predecessors",
+                    )));
+                }
+                if before != doc.protected().ok() {
+                    return Err(StoreError::Model(ModelError::Malformed(
+                        "protected metadata changed",
                     )));
                 }
                 (doc, pending, false)
@@ -558,6 +567,9 @@ async fn stage_admit(
                 Reason::Purged,
                 format!("object {object_id} was purged"),
             )));
+        }
+        if let Some(outcome) = super::foreign_peers(db, &env.device_id, &part.bytes).await? {
+            return Ok(Err(outcome));
         }
     }
     let docs = match restage_from_bytes(db, env).await {
@@ -608,6 +620,9 @@ async fn install_with_status(
     let change_id = uuid_arg(&env.id)?;
     let mut tx = db.transaction().await?;
     write_change_flagged(&mut tx, env, status, accepted_seq, "", coordinated).await?;
+    if accepted_seq.is_some() {
+        super::claim_peers(&mut tx, env).await?;
+    }
     for d in docs {
         write_deps(&mut tx, change_id, &d.deps).await?;
         if d.is_new {

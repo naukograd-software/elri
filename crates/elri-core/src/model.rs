@@ -205,6 +205,20 @@ pub fn is_scalar(v: &Value) -> bool {
     )
 }
 
+/// Registry-mirrored metadata of a document that only administrative
+/// commands may change; compared before and after an import.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Protected {
+    /// `ObjectKind` code.
+    pub kind: i64,
+    /// Owning Space.
+    pub space: String,
+    /// Creation instant.
+    pub created_at: i64,
+    /// Layer target, if any.
+    pub target: Option<String>,
+}
+
 /// Reserved field ids that definitions use for their own attributes.
 pub mod reserved {
     /// Display name of a definition.
@@ -842,6 +856,45 @@ impl ObjectDoc {
             }
         }
         fields
+    }
+
+    /// Makes further local operations carry `peer`: one editing peer per
+    /// device session, so a replica cannot pass off another's operations
+    /// as its own and excluded counters are never reused.
+    pub fn set_peer(&self, peer: u64) -> Result<(), ModelError> {
+        self.doc.set_peer_id(peer)?;
+        Ok(())
+    }
+
+    /// The metadata no ordinary edit may change once the document exists.
+    pub fn protected(&self) -> Result<Protected, ModelError> {
+        let LoroValue::Map(meta) = self.meta().get_value() else {
+            return Err(ModelError::Malformed("meta is not a map"));
+        };
+        let int = |key: &str| match meta.get(key) {
+            Some(LoroValue::I64(i)) => Some(*i),
+            _ => None,
+        };
+        let text = |key: &str| match meta.get(key) {
+            Some(LoroValue::String(s)) => Some(s.to_string()),
+            _ => None,
+        };
+        Ok(Protected {
+            kind: int("kind").unwrap_or(0),
+            space: text("space").unwrap_or_default(),
+            created_at: int("created_at").unwrap_or(0),
+            target: text("target"),
+        })
+    }
+
+    /// The editing peers whose operations an update blob carries, read
+    /// from its header without applying it.
+    pub fn blob_peers(bytes: &[u8]) -> Result<Vec<u64>, ModelError> {
+        let meta = LoroDoc::decode_import_blob_meta(bytes, false)?;
+        let mut peers: Vec<u64> = meta.partial_end_vv.keys().copied().collect();
+        peers.sort_unstable();
+        peers.dedup();
+        Ok(peers)
     }
 
     /// Materializes the current state.

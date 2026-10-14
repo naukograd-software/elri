@@ -11,6 +11,7 @@ mod models;
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
 use elri_proto::elri::v1::change::{Change, ChangePart, ChangeStatus};
@@ -39,8 +40,8 @@ use crate::model::{
 use models::{
     BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, ExtensionRow,
     FieldValueRow, GrantRow, GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow,
-    PinRow, PlacementRow, RemoteRow, RuleRunRow, SettingRow, SpaceLogRow, SpaceRow, SyncStateRow,
-    TypeFieldRow,
+    PeerRow, PinRow, PlacementRow, RemoteRow, RuleRunRow, SettingRow, SpaceLogRow, SpaceRow,
+    SyncStateRow, TypeFieldRow,
 };
 
 mod coordinator;
@@ -235,6 +236,15 @@ pub struct Store {
     /// submission worker.
     dirty: Notify,
     blobs: Blobs,
+    /// The editing peer local operations carry; fresh per session and
+    /// after every rebuild that excluded operations.
+    peer: Arc<AtomicU64>,
+}
+
+/// A random editing peer id.
+fn fresh_peer() -> u64 {
+    use rand::RngCore as _;
+    rand::rng().next_u64() | 1
 }
 
 /// Events a watcher can miss before it is told it lagged.
@@ -275,6 +285,7 @@ impl Store {
             gate: tokio::sync::RwLock::new(()),
             dirty: Notify::new(),
             blobs,
+            peer: Arc::new(AtomicU64::new(fresh_peer())),
         };
         store.recover().await?;
         Ok(store)
@@ -678,6 +689,7 @@ impl Store {
             self.device_id,
             self.events.clone(),
             self.blobs.clone(),
+            Arc::clone(&self.peer),
         )
         .await?;
         {
@@ -731,6 +743,7 @@ impl Store {
                 self.device_id,
                 self.events.clone(),
                 self.blobs.clone(),
+                Arc::clone(&self.peer),
             )
             .await?,
         );
@@ -881,6 +894,8 @@ pub struct SpaceStore {
     dirty: Notify,
     events: broadcast::Sender<Event>,
     blobs: Blobs,
+    /// The session's editing peer, shared with the [`Store`].
+    peer: Arc<AtomicU64>,
 }
 
 impl SpaceStore {
@@ -889,6 +904,7 @@ impl SpaceStore {
         device_id: DeviceId,
         events: broadcast::Sender<Event>,
         blobs: Blobs,
+        peer: Arc<AtomicU64>,
     ) -> Result<Self, StoreError> {
         let stem = path
             .file_stem()
@@ -915,6 +931,7 @@ impl SpaceStore {
                 GraveyardRow,
                 BlobRow,
                 PinRow,
+                PeerRow,
                 SpaceLogRow,
                 SyncStateRow
             ),
@@ -934,6 +951,7 @@ impl SpaceStore {
             dirty: Notify::new(),
             events,
             blobs,
+            peer,
         })
     }
 
@@ -1203,6 +1221,7 @@ impl SpaceStore {
         let mut db = self.db.lock().await;
         Self::writable(&mut db).await?;
         let (doc, pending) = load_doc(&mut db, id).await?;
+        doc.set_peer(self.peer.load(Ordering::Relaxed))?;
         let before = doc.version_vector();
         edit(&doc)?;
         doc.touch(now_ms())?;
@@ -1697,6 +1716,9 @@ impl SpaceStore {
             rebuilt.push((object, kind, live));
         }
         tx.commit().await?;
+        // Excluded operations leave counters behind that a later write
+        // must not reuse: the session continues under a fresh peer.
+        self.peer.store(fresh_peer(), Ordering::Relaxed);
         self.dirty.notify_one();
         for id in &revived {
             self.emit_change(*id, ChangeStatus::Local);
@@ -1823,6 +1845,11 @@ impl SpaceStore {
             rebuilt.push((object, kind, live));
         }
         tx.commit().await?;
+        if status == ChangeStatus::Rejected {
+            // Excluded operations leave counters behind that a later write
+            // must not reuse: the session continues under a fresh peer.
+            self.peer.store(fresh_peer(), Ordering::Relaxed);
+        }
         self.emit_change(id, status);
         for dep in &paused {
             self.emit_change(*dep, ChangeStatus::Paused);
@@ -1935,65 +1962,10 @@ impl SpaceStore {
         }
 
         // Stage every part on a candidate document before touching storage.
-        let mut staged: Vec<(ObjectDoc, Object, usize)> = Vec::with_capacity(env.parts.len());
-        for part in &env.parts {
-            let Ok(object_id) = ObjectId::parse(&part.object_id) else {
-                return Ok(rejected(Reason::Invalid, "object id"));
-            };
-            if is_purged(&mut db, object_id.uuid()).await? {
-                return Ok(rejected(
-                    Reason::Purged,
-                    format!("object {object_id} was purged"),
-                ));
-            }
-            let (doc, pending) = match load_doc(&mut db, object_id).await {
-                Ok((doc, pending)) => {
-                    match doc.import(&part.bytes) {
-                        Ok(true) => {}
-                        Ok(false) => {
-                            return Ok(rejected(
-                                Reason::MissingPredecessors,
-                                "operations build on history the server does not have",
-                            ))
-                        }
-                        Err(e) => return Ok(rejected(Reason::Invalid, e.to_string())),
-                    }
-                    (doc, pending)
-                }
-                Err(StoreError::ObjectNotFound(_)) => {
-                    match ObjectDoc::from_updates(
-                        object_id,
-                        std::slice::from_ref(&part.bytes.to_vec()),
-                    ) {
-                        Ok(doc) => (doc, 0),
-                        Err(ModelError::Malformed(_)) => {
-                            return Ok(rejected(
-                                Reason::MissingPredecessors,
-                                "operations build on history the server does not have",
-                            ));
-                        }
-                        Err(e) => return Ok(rejected(Reason::Invalid, e.to_string())),
-                    }
-                }
-                Err(e) => return Err(e),
-            };
-            let rec = match doc.read() {
-                Ok(r) => r,
-                Err(e) => return Ok(rejected(Reason::Invalid, e.to_string())),
-            };
-            if rec.kind != part.kind {
-                return Ok(rejected(Reason::Invalid, "kind mismatch"));
-            }
-            // The document's own Space claim must name this Space, so checks
-            // that read it see the Space authorization was checked for.
-            if rec.space_id != self.id.to_string() {
-                return Ok(rejected(Reason::Invalid, "space mismatch"));
-            }
-            if let Err(msg) = check(&rec) {
-                return Ok(rejected(Reason::Invalid, msg));
-            }
-            staged.push((doc, rec, pending));
-        }
+        let staged = match stage_parts(&mut db, self.id, env, check).await? {
+            Ok(staged) => staged,
+            Err(outcome) => return Ok(outcome),
+        };
 
         let recs: Vec<Object> = staged.iter().map(|(_, r, _)| r.clone()).collect();
         if let Some(outcome) = strict_rejection(&mut db, &recs).await? {
@@ -2014,6 +1986,7 @@ impl SpaceStore {
         for ((doc, rec, pending), part) in staged.iter().zip(&env.parts) {
             install_part(&mut tx, doc, rec, part, change_id, *pending).await?;
         }
+        claim_peers(&mut tx, env).await?;
         tx.commit().await?;
         Ok(accepted(seq))
     }
@@ -2754,6 +2727,130 @@ fn canonical_row(cols: &[Value]) -> Option<String> {
         }
         _ => return None,
     })
+}
+
+/// Stages every part of `env` on a candidate document without touching
+/// storage; any failure is the rejection the Change earns.
+async fn stage_parts(
+    db: &mut Db,
+    space_id: SpaceId,
+    env: &Envelope,
+    check: &(dyn Fn(&Object) -> Result<(), String> + Sync),
+) -> Result<Result<Vec<(ObjectDoc, Object, usize)>, Outcome>, StoreError> {
+    let missing = || {
+        rejected(
+            Reason::MissingPredecessors,
+            "operations build on history the server does not have",
+        )
+    };
+    let invalid = |msg: String| rejected(Reason::Invalid, msg);
+    let mut staged: Vec<(ObjectDoc, Object, usize)> = Vec::with_capacity(env.parts.len());
+    for part in &env.parts {
+        let Ok(object_id) = ObjectId::parse(&part.object_id) else {
+            return Ok(Err(rejected(Reason::Invalid, "object id")));
+        };
+        if is_purged(db, object_id.uuid()).await? {
+            return Ok(Err(rejected(
+                Reason::Purged,
+                format!("object {object_id} was purged"),
+            )));
+        }
+        if let Some(outcome) = foreign_peers(db, &env.device_id, &part.bytes).await? {
+            return Ok(Err(outcome));
+        }
+        let (doc, pending) = match load_doc(db, object_id).await {
+            Ok((doc, pending)) => {
+                let before = doc.protected().ok();
+                match doc.import(&part.bytes) {
+                    Ok(true) => {}
+                    Ok(false) => return Ok(Err(missing())),
+                    Err(e) => return Ok(Err(invalid(e.to_string()))),
+                }
+                if before != doc.protected().ok() {
+                    return Ok(Err(rejected(Reason::Invalid, "protected metadata changed")));
+                }
+                (doc, pending)
+            }
+            Err(StoreError::ObjectNotFound(_)) => {
+                match ObjectDoc::from_updates(object_id, std::slice::from_ref(&part.bytes.to_vec()))
+                {
+                    Ok(doc) => (doc, 0),
+                    Err(ModelError::Malformed(_)) => return Ok(Err(missing())),
+                    Err(e) => return Ok(Err(invalid(e.to_string()))),
+                }
+            }
+            Err(e) => return Err(e),
+        };
+        let rec = match doc.read() {
+            Ok(r) => r,
+            Err(e) => return Ok(Err(invalid(e.to_string()))),
+        };
+        if rec.kind != part.kind {
+            return Ok(Err(rejected(Reason::Invalid, "kind mismatch")));
+        }
+        // The document's own Space claim must name this Space, so checks
+        // that read it see the Space authorization was checked for.
+        if rec.space_id != space_id.to_string() {
+            return Ok(Err(rejected(Reason::Invalid, "space mismatch")));
+        }
+        if let Err(msg) = check(&rec) {
+            return Ok(Err(invalid(msg)));
+        }
+        staged.push((doc, rec, pending));
+    }
+    Ok(Ok(staged))
+}
+
+/// Rejects an update whose editing peers another device already owns.
+pub(super) async fn foreign_peers(
+    db: &mut Db,
+    device_id: &str,
+    bytes: &[u8],
+) -> Result<Option<Outcome>, StoreError> {
+    let peers = match ObjectDoc::blob_peers(bytes) {
+        Ok(p) => p,
+        Err(e) => return Ok(Some(rejected(Reason::Invalid, e.to_string()))),
+    };
+    for peer in peers {
+        let key = i64::from_ne_bytes(peer.to_ne_bytes());
+        if let Some(row) = PeerRow::filter_by_peer(key).first().exec(&mut *db).await? {
+            if row.device_id != device_id {
+                return Ok(Some(rejected(
+                    Reason::Invalid,
+                    "operations claim an editing peer of another device",
+                )));
+            }
+        }
+    }
+    Ok(None)
+}
+
+/// Records the submitting device as owner of every peer its parts carry.
+pub(super) async fn claim_peers(
+    tx: &mut toasty::Transaction<'_>,
+    env: &Envelope,
+) -> Result<(), StoreError> {
+    let now = now_ms();
+    for part in &env.parts {
+        for peer in ObjectDoc::blob_peers(&part.bytes)? {
+            let key = i64::from_ne_bytes(peer.to_ne_bytes());
+            if PeerRow::filter_by_peer(key)
+                .first()
+                .exec(&mut *tx)
+                .await?
+                .is_none()
+            {
+                toasty::create!(PeerRow {
+                    peer: key,
+                    device_id: env.device_id.clone(),
+                    first_seen: now,
+                })
+                .exec(&mut *tx)
+                .await?;
+            }
+        }
+    }
+    Ok(())
 }
 
 /// The rejection a Change earns from [`check_strict`], if any.

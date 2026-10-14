@@ -945,3 +945,105 @@ async fn retention_purges_what_was_deleted_long_enough_ago() {
         .await
         .expect_err("no such object");
 }
+
+#[tokio::test]
+async fn admission_refuses_forged_peers_and_protected_metadata() {
+    let space_id = SpaceId::new();
+    let a = store("forge-a").await;
+    let server = store("forge-server").await;
+    for s in [&a, &server] {
+        s.register_space(space_id, "shared", Authority::Server)
+            .await
+            .expect("register");
+    }
+    let a_space = a.space(space_id).await.expect("a space");
+    let s_space = server.space(space_id).await.expect("server space");
+
+    let doc = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 1).expect("doc");
+    doc.set_field("title", &string_value("mine")).expect("set");
+    let created = a_space.insert(&doc).await.expect("insert");
+    let created_id = ObjectId::parse(&created.id).expect("id");
+    let first = a_space.outbox(0).await.expect("outbox").remove(0);
+    let outcome = s_space.admit(&first).await.expect("admit");
+    assert_eq!(outcome, Outcome::AcceptedSeq(1));
+    a_space
+        .record_outcome(&first.id, &outcome)
+        .await
+        .expect("record");
+
+    // A's session peer becomes known with its first accepted update.
+    a_space
+        .update(created_id, |d| {
+            d.set_field("title", &string_value("still mine"))
+        })
+        .await
+        .expect("update");
+    let second = a_space.outbox(0).await.expect("outbox").remove(0);
+    let outcome = s_space.admit(&second).await.expect("admit real");
+    assert_eq!(outcome, Outcome::AcceptedSeq(2));
+    a_space
+        .record_outcome(&second.id, &outcome)
+        .await
+        .expect("record");
+
+    // Another device replays A's next operations under its own name: the
+    // peer belongs to A.
+    a_space
+        .update(created_id, |d| {
+            d.set_field("title", &string_value("mine again"))
+        })
+        .await
+        .expect("update");
+    let third = a_space.outbox(0).await.expect("outbox").remove(0);
+    let forged = elri_proto::elri::v1::sync::Envelope {
+        id: uuid::Uuid::now_v7().to_string(),
+        device_id: "someone-else".to_owned(),
+        ..third.clone()
+    };
+    assert_eq!(
+        s_space.admit(&forged).await.expect("admit forged"),
+        rejected(
+            Reason::Invalid,
+            "operations claim an editing peer of another device"
+        )
+    );
+    assert_eq!(
+        s_space.admit(&third).await.expect("admit third"),
+        Outcome::AcceptedSeq(3)
+    );
+
+    // A fresh peer rewriting the kind: the registry mirror is protected.
+    let raw = loro::LoroDoc::new();
+    raw.import(&first.parts[0].bytes).expect("import first");
+    raw.import(&second.parts[0].bytes).expect("import second");
+    raw.import(&third.parts[0].bytes).expect("import third");
+    let from = raw.oplog_vv();
+    raw.get_map("meta")
+        .insert("kind", i64::from(ObjectKind::Layer as i32))
+        .expect("insert");
+    raw.commit();
+    let bytes = raw
+        .export(loro::ExportMode::updates(&from))
+        .expect("export");
+    let tampered = elri_proto::elri::v1::sync::Envelope {
+        id: uuid::Uuid::now_v7().to_string(),
+        space_id: space_id.to_string(),
+        device_id: "a".to_owned(),
+        created_at_ms: 3,
+        actor: "user".to_owned(),
+        parts: vec![elri_proto::elri::v1::sync::Part {
+            object_id: created_id.to_string(),
+            kind: ObjectKind::Layer.into(),
+            bytes: bytes.into(),
+            ..Default::default()
+        }],
+    };
+    assert_eq!(
+        s_space.admit(&tampered).await.expect("admit tampered"),
+        rejected(Reason::Invalid, "protected metadata changed")
+    );
+    assert_eq!(
+        s_space.get(created_id).await.expect("intact").kind(),
+        ObjectKind::Entity
+    );
+}
