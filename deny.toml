@@ -30,6 +30,9 @@ allow = [
     "BSL-1.0",
     # MIT No Attribution (borrow-or-share via toasty)
     "MIT-0",
+    # Community Data License, permissive: the Mozilla CA root list
+    # (webpki-roots, webpki-root-certs via reqwest)
+    "CDLA-Permissive-2.0",
 ]
 
 [bans]

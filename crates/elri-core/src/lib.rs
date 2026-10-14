@@ -25,6 +25,7 @@ pub mod hostops;
 pub mod hypothesis;
 pub mod mapping;
 pub mod model;
+pub mod net;
 pub mod policy;
 pub mod remote;
 pub mod rules;

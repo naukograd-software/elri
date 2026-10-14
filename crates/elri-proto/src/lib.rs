@@ -85,6 +85,12 @@ pub mod elri {
             include!("elri/v1/search/elri.v1.search.rs");
             // @@protoc_insertion_point(elri.v1.search)
         }
+        #[cfg(feature = "elri-v1-settings")]
+        // @@protoc_insertion_point(attribute:elri.v1.settings)
+        pub mod settings {
+            include!("elri/v1/settings/elri.v1.settings.rs");
+            // @@protoc_insertion_point(elri.v1.settings)
+        }
         #[cfg(feature = "elri-v1-space")]
         // @@protoc_insertion_point(attribute:elri.v1.space)
         pub mod space {

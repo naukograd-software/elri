@@ -483,3 +483,14 @@ pub struct WorkflowStepRow {
     /// Instant of the last change.
     pub at: i64,
 }
+
+/// A device preference stored as an encoded protocol message.
+#[derive(Debug, toasty::Model)]
+#[table = "prefs"]
+pub struct PrefRow {
+    /// Name, e.g. `settings`.
+    #[key]
+    pub key: String,
+    /// Encoded message.
+    pub value: Vec<u8>,
+}

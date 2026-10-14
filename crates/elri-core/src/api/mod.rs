@@ -8,6 +8,7 @@ mod definitions;
 mod document;
 mod extensions;
 mod scripts;
+mod settings;
 mod transfer;
 mod ui;
 mod workflows;
@@ -93,6 +94,10 @@ pub struct Services {
     pub scripts: crate::script::Host,
     /// Installed extension modules.
     pub modules: crate::extension::Modules,
+    /// Outgoing HTTP with the device's proxy.
+    pub net: Arc<crate::net::Net>,
+    /// The device's credential store.
+    pub secrets: crate::secrets::Secrets,
 }
 
 /// Builds the loopback server: origin policy, bearer-token middleware, all
@@ -123,6 +128,7 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     extensions::register(&server, Arc::clone(&services));
     contexts::register(&server, Arc::clone(&services));
     document::register(&server, Arc::clone(&services));
+    settings::register(&server, Arc::clone(&services));
     workflows::register(&server, services);
     server
 }

@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package elri.v1.settings;
+
+/*
+Device settings: how this device reaches the network, whether it builds a
+semantic index, and its AI defaults. They stay on the device and are
+never synchronized; secrets are kept apart in the credential store.
+*/
+service SettingsService {
+    rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+    /* Replaces the sections that are set; the others stay. */
+    rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse);
+    /* Which proxy a request to `url` would go through now, and why. */
+    rpc ResolveProxy(ResolveProxyRequest) returns (ResolveProxyResponse);
+}
+
+/* Where the proxy comes from. Unspecified = SYSTEM. */
+enum ProxyMode {
+    PROXY_MODE_UNSPECIFIED = 0;
+    /* The operating system's settings (GNOME or KDE on Linux, the system
+       configuration on macOS and Windows), then the environment. */
+    PROXY_MODE_SYSTEM = 1;
+    /* Only HTTPS_PROXY, HTTP_PROXY, ALL_PROXY and NO_PROXY. */
+    PROXY_MODE_ENVIRONMENT = 2;
+    /* The URL given here. */
+    PROXY_MODE_MANUAL = 3;
+    /* Direct connections only. */
+    PROXY_MODE_NONE = 4;
+}
+
+message ProxySettings {
+    ProxyMode mode = 1;
+    /* MANUAL: `http://`, `https://` or `socks5://` URL, credentials allowed. */
+    string url = 2;
+    /* MANUAL: hosts that bypass the proxy, comma separated, NO_PROXY syntax. */
+    string no_proxy = 3;
+}
+
+message SemanticSettings {
+    /* Build and use the semantic index on this device. */
+    bool enabled = 1;
+}
+
+message Settings {
+    ProxySettings proxy = 1;
+    SemanticSettings semantic = 2;
+}
+
+message GetSettingsRequest {}
+
+message GetSettingsResponse {
+    Settings settings = 1;
+}
+
+message UpdateSettingsRequest {
+    ProxySettings proxy = 1;
+    SemanticSettings semantic = 2;
+}
+
+message UpdateSettingsResponse {
+    Settings settings = 1;
+}
+
+message ResolveProxyRequest {
+    /* Defaults to https://api.openai.com/ when empty. */
+    string url = 1;
+}
+
+message ResolveProxyResponse {
+    /* The proxy URL with any password removed; empty = direct. */
+    string proxy = 1;
+    /* `manual`, `environment`, `gnome`, `kde`, `system`, `none`, or
+       `bypass` when NO_PROXY matched. */
+    string source = 2;
+}

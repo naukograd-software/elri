@@ -26,6 +26,8 @@ thiserror.workspace = true
 tracing.workspace = true
 rand.workspace = true
 sha2.workspace = true
+reqwest.workspace = true
+futures-util = "0.3"
 mlua.workspace = true
 wasmtime.workspace = true
 keyring = { workspace = true, optional = true }
@@ -43,3 +45,7 @@ keyring = ["dep:keyring"]
 tokio = { workspace = true, features = ["rt-multi-thread", "test-util"] }
 sha2.workspace = true
 wat = "1"
+
+[target.'cfg(target_os = "android")'.dependencies]
+webpki-roots.workspace = true
+rustls = { version = "0.23", default-features = false, features = ["std"] }

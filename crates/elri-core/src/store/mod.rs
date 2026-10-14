@@ -40,8 +40,8 @@ use crate::model::{
 use models::{
     BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, ExtensionRow,
     FieldValueRow, GrantRow, GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow,
-    PeerRow, PinRow, PlacementRow, RemoteRow, RuleRunRow, SettingRow, SpaceLogRow, SpaceRow,
-    SyncStateRow, TypeFieldRow, WorkflowRunRow, WorkflowStepRow,
+    PeerRow, PinRow, PlacementRow, PrefRow, RemoteRow, RuleRunRow, SettingRow, SpaceLogRow,
+    SpaceRow, SyncStateRow, TypeFieldRow, WorkflowRunRow, WorkflowStepRow,
 };
 
 mod coordinator;
@@ -274,7 +274,8 @@ impl Store {
                 ExtensionRow,
                 RuleRunRow,
                 WorkflowRunRow,
-                WorkflowStepRow
+                WorkflowStepRow,
+                PrefRow
             ),
         )
         .await?;
@@ -532,6 +533,60 @@ impl Store {
             .exec(&mut *db)
             .await?
             .map_or(default, |r| r.value))
+    }
+
+    /// The device settings, with defaults for what was never set.
+    pub async fn settings(&self) -> Result<elri_proto::elri::v1::settings::Settings, StoreError> {
+        use elri_proto::elri::v1::settings::{
+            ProxyMode, ProxySettings, SemanticSettings, Settings,
+        };
+        let mut db = self.device.lock().await;
+        let row = PrefRow::filter_by_key("settings".to_owned())
+            .first()
+            .exec(&mut *db)
+            .await?;
+        let mut s = match row {
+            Some(r) => <Settings as prost::Message>::decode(r.value.as_slice()).map_err(|_| {
+                StoreError::Corrupt {
+                    table: "prefs",
+                    what: "settings",
+                }
+            })?,
+            None => Settings {
+                proxy: None,
+                semantic: Some(SemanticSettings { enabled: true }),
+            },
+        };
+        if s.proxy.is_none() {
+            s.proxy = Some(ProxySettings {
+                mode: ProxyMode::System.into(),
+                url: String::new(),
+                no_proxy: String::new(),
+            });
+        }
+        if s.semantic.is_none() {
+            s.semantic = Some(SemanticSettings { enabled: true });
+        }
+        Ok(s)
+    }
+
+    /// Replaces the device settings.
+    pub async fn set_settings(
+        &self,
+        s: &elri_proto::elri::v1::settings::Settings,
+    ) -> Result<(), StoreError> {
+        let mut db = self.device.lock().await;
+        PrefRow::filter_by_key("settings".to_owned())
+            .delete()
+            .exec(&mut *db)
+            .await?;
+        toasty::create!(PrefRow {
+            key: "settings".to_owned(),
+            value: prost::Message::encode_to_vec(s),
+        })
+        .exec(&mut *db)
+        .await?;
+        Ok(())
     }
 
     /// Sets a device setting.

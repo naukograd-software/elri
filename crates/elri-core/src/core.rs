@@ -119,6 +119,9 @@ pub enum CoreError {
     /// The secret store could not be opened.
     #[error(transparent)]
     Secrets(#[from] SecretsError),
+    /// The HTTP client could not be built.
+    #[error(transparent)]
+    Net(#[from] crate::net::NetError),
     /// File system failure.
     #[error("{path}: {source}")]
     Io {
@@ -198,10 +201,23 @@ impl Core {
         let token = LaunchToken::generate();
         let store = Arc::new(Store::open(&config.data_dir, device_id).await?);
         let secrets = Secrets::open(config.secrets, &config.data_dir, &device_id.as_string())?;
+        let settings = store.settings().await?;
+        let net = Arc::new(
+            crate::net::Net::new(settings.proxy.clone().unwrap_or_default()).or_else(|e| {
+                // A stored proxy that no longer parses must not keep the
+                // core from starting; it goes direct until fixed.
+                tracing::warn!(error = %e, "stored proxy unusable; connecting directly");
+                crate::net::Net::new(elri_proto::elri::v1::settings::ProxySettings {
+                    mode: elri_proto::elri::v1::settings::ProxyMode::None.into(),
+                    ..Default::default()
+                })
+            })?,
+        );
         let remote = Arc::new(Remote::new(
             Arc::clone(&store),
             device_id.as_string(),
-            secrets,
+            secrets.clone(),
+            Arc::clone(&net),
         ));
 
         let listener = TcpListener::bind(config.bind)
@@ -248,6 +264,8 @@ impl Core {
                 remote: Arc::clone(&remote),
                 scripts,
                 modules,
+                net: Arc::clone(&net),
+                secrets,
             },
             config.allowed_origins.clone(),
         );

@@ -17,10 +17,12 @@ use elri_proto::elri::v1::sync::{
 };
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest as _;
 use ws_proto::{CallOptions, Client, ClientConfig, Code, Reconnect, Request, Status};
 
 use crate::change::{Outcome, Reason};
 use crate::model::{ObjectId, SpaceId};
+use crate::net::Net;
 use crate::secrets::{Secrets, SecretsError};
 use crate::store::{RemoteConfig, SpaceStore, Store, StoreError};
 
@@ -66,6 +68,8 @@ struct Session {
     user_name: String,
     client: Client,
     workers: HashMap<SpaceId, JoinHandle<()>>,
+    /// Re-dials when a connection without its own reconnect ends.
+    supervisor: Option<JoinHandle<()>>,
     /// Submits Changes that span Spaces from the coordinator journal.
     coordinator: JoinHandle<()>,
 }
@@ -75,6 +79,7 @@ pub struct Remote {
     store: Arc<Store>,
     device_id: String,
     secrets: Secrets,
+    net: Arc<Net>,
     session: Mutex<Option<Session>>,
 }
 
@@ -115,11 +120,12 @@ fn authed<T>(token: &str, msg: T) -> Request<T> {
 impl Remote {
     /// Creates the link; nothing connects until [`Remote::resume`] or
     /// [`Remote::connect`].
-    pub fn new(store: Arc<Store>, device_id: String, secrets: Secrets) -> Self {
+    pub fn new(store: Arc<Store>, device_id: String, secrets: Secrets, net: Arc<Net>) -> Self {
         Self {
             store,
             device_id,
             secrets,
+            net,
             session: Mutex::new(None),
         }
     }
@@ -161,7 +167,7 @@ impl Remote {
         url: &str,
         token: &str,
     ) -> Result<RemoteConfig, RemoteError> {
-        let client = dial(url).await?;
+        let (client, _) = dial(&self.net, url).await?;
         let hello = SyncServiceClient::new(client.clone())
             .hello(authed(
                 token,
@@ -199,8 +205,44 @@ impl Remote {
     }
 
     async fn open_session(self: &Arc<Self>, cfg: RemoteConfig) -> Result<(), RemoteError> {
-        let client = dial(&cfg.url).await?;
+        let (client, _) = dial(&self.net, &cfg.url).await?;
         self.install_session(cfg, client).await
+    }
+
+    /// Re-dials after a connection that cannot reconnect by itself (one
+    /// tunnelled through a proxy) has ended, with backoff, until a
+    /// session is up again or the session is closed.
+    fn supervise(self: &Arc<Self>, client: Client, cfg: RemoteConfig) -> JoinHandle<()> {
+        let me = Arc::downgrade(self);
+        tokio::spawn(async move {
+            client.closed_for_good().await;
+            let mut wait = Duration::from_millis(500);
+            loop {
+                tokio::time::sleep(wait).await;
+                let Some(me) = me.upgrade() else { return };
+                match dial(&me.net, &cfg.url).await {
+                    Ok((client, _)) => {
+                        // Replace the session without aborting this task
+                        // from inside itself.
+                        let old = me.session.lock().await.take();
+                        if let Some(s) = old {
+                            for (_, w) in s.workers {
+                                w.abort();
+                            }
+                            s.coordinator.abort();
+                        }
+                        if let Err(e) = me.install_session(cfg.clone(), client).await {
+                            tracing::warn!(error = %e, "re-established link could not start");
+                        }
+                        return;
+                    }
+                    Err(e) => {
+                        tracing::debug!(error = %e, "server still unreachable");
+                        wait = (wait * 2).min(Duration::from_secs(30));
+                    }
+                }
+            }
+        })
     }
 
     async fn install_session(
@@ -210,6 +252,7 @@ impl Remote {
     ) -> Result<(), RemoteError> {
         let coordinator =
             spawn_coordinator(Arc::clone(&self.store), client.clone(), cfg.token.clone());
+        let supervisor = Some(self.supervise(client.clone(), cfg.clone()));
         let mut session = Session {
             url: cfg.url,
             token: cfg.token,
@@ -218,6 +261,7 @@ impl Remote {
             client,
             workers: HashMap::new(),
             coordinator,
+            supervisor,
         };
         for info in self.store.list_spaces().await? {
             if info.authority() == Authority::Server {
@@ -240,6 +284,9 @@ impl Remote {
                 w.abort();
             }
             s.coordinator.abort();
+            if let Some(sup) = s.supervisor {
+                sup.abort();
+            }
             s.client.close();
             self.store.emit_remote();
         }
@@ -474,15 +521,58 @@ impl Remote {
     }
 }
 
-async fn dial(url: &str) -> Result<Client, RemoteError> {
-    let cfg = ClientConfig {
-        reconnect: Some(Reconnect {
-            initial: Duration::from_millis(200),
-            max: Duration::from_secs(30),
-        }),
-        ..ClientConfig::default()
+/// Dials the server: directly with ws-proto's own reconnect, or through a
+/// tunnel when the device's proxy applies to the server's host. Returns
+/// whether the connection is tunnelled.
+async fn dial(net: &Net, url: &str) -> Result<(Client, bool), RemoteError> {
+    let parsed = reqwest::Url::parse(url)
+        .map_err(|_| RemoteError::Rpc(Status::new(Code::InvalidArgument, "server url")))?;
+    let host = parsed.host_str().unwrap_or_default().to_owned();
+    let tls = parsed.scheme() == "wss";
+    let port = parsed.port().unwrap_or(if tls { 443 } else { 80 });
+    let loopback = host == "127.0.0.1" || host == "localhost" || host == "::1";
+    let Some(proxy) = (!loopback).then(|| net.tunnel_proxy(&host)).flatten() else {
+        let cfg = ClientConfig {
+            reconnect: Some(Reconnect {
+                initial: Duration::from_millis(200),
+                max: Duration::from_secs(30),
+            }),
+            ..ClientConfig::default()
+        };
+        return Ok((Client::dial(url, cfg).await?, false));
     };
-    Ok(Client::dial(url, cfg).await?)
+    let unavailable = |e: String| RemoteError::Rpc(Status::new(Code::Unavailable, e));
+    let stream = crate::net::tunnel(&proxy, &host, port)
+        .await
+        .map_err(|e| unavailable(format!("proxy {}: {e}", crate::net::redacted(&proxy))))?;
+    let mut req = url
+        .into_client_request()
+        .map_err(|e| unavailable(format!("dial: {e}")))?;
+    req.headers_mut().insert(
+        "sec-websocket-protocol",
+        tokio_tungstenite::tungstenite::http::HeaderValue::from_static(ws_proto::SUBPROTOCOL),
+    );
+    let (ws, resp) = tokio_tungstenite::client_async_tls_with_config(req, stream, None, None)
+        .await
+        .map_err(|e| unavailable(format!("dial through proxy: {e}")))?;
+    let got = resp
+        .headers()
+        .get("sec-websocket-protocol")
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
+    if got != ws_proto::SUBPROTOCOL {
+        return Err(unavailable(format!(
+            "server did not negotiate {} (got {got:?})",
+            ws_proto::SUBPROTOCOL
+        )));
+    }
+    Ok((
+        Client::from_conn(
+            ws_proto::conn::tungstenite::TungsteniteConn::new(ws),
+            ClientConfig::default(),
+        ),
+        true,
+    ))
 }
 
 /// Submits coordinated Changes, oldest first, and records their outcomes
