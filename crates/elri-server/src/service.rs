@@ -355,20 +355,21 @@ impl SyncServiceHandler for State {
             let Some(s) = known.iter().find(|s| s.id == id) else {
                 continue;
             };
-            let last_seq = self
+            let store = self
                 .spaces
                 .space(ObjectId::from_uuid(space_id))
                 .await
-                .map_err(storage)?
-                .last_seq()
-                .await
                 .map_err(storage)?;
+            let last_seq = store.last_seq().await.map_err(storage)?;
+            let retention_days =
+                i32::try_from(store.retention_days().await.map_err(storage)?).unwrap_or(i32::MAX);
             spaces.push(spb::Space {
                 id: s.id.clone(),
                 name: s.name.clone(),
                 role: role_to_pb(role).into(),
                 authority: Authority::Server.into(),
                 last_seq,
+                retention_days,
             });
         }
         Ok(Response::new(ListSpacesResponse { spaces }))

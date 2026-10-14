@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse } from "./space_pb.ts";
-import { CreateSpaceRequestSchema, CreateSpaceResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema } from "./space_pb.ts";
+import type { CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse, SetRetentionRequest, SetRetentionResponse } from "./space_pb.ts";
+import { CreateSpaceRequestSchema, CreateSpaceResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, SetRetentionRequestSchema, SetRetentionResponseSchema } from "./space_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -35,6 +35,14 @@ const SpaceService_CreateSpace: MethodInfo<CreateSpaceRequest, CreateSpaceRespon
   output: CreateSpaceResponseSchema,
 };
 
+const SpaceService_SetRetention: MethodInfo<SetRetentionRequest, SetRetentionResponse> = {
+  typeName: "elri.v1.space.SpaceService",
+  name: "SetRetention",
+  kind: "unary",
+  input: SetRetentionRequestSchema,
+  output: SetRetentionResponseSchema,
+};
+
 /**
  *
  * Spaces known to this core: local-only Spaces and server Spaces selected for
@@ -60,6 +68,17 @@ export class SpaceServiceClient {
    */
   async createSpace(req: CreateSpaceRequest, options?: CallOptions): Promise<CreateSpaceResponse> {
     const res = await this.transport.unary(SpaceService_CreateSpace, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Local Spaces: how long deleted Objects stay recoverable before the
+   * core purges them. Server Spaces take the server's setting. 
+   *
+   * @generated from rpc elri.v1.space.SpaceService.SetRetention
+   */
+  async setRetention(req: SetRetentionRequest, options?: CallOptions): Promise<SetRetentionResponse> {
+    const res = await this.transport.unary(SpaceService_SetRetention, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

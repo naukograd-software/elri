@@ -12,7 +12,75 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/space/space.proto.
  */
 export const file_elri_v1_space_space: GenFile = /*@__PURE__*/
-  fileDesc("ChllbHJpL3YxL3NwYWNlL3NwYWNlLnByb3RvEg1lbHJpLnYxLnNwYWNlIhMKEUxpc3RTcGFjZXNSZXF1ZXN0IjoKEkxpc3RTcGFjZXNSZXNwb25zZRIkCgZzcGFjZXMYASADKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIiIKEkNyZWF0ZVNwYWNlUmVxdWVzdBIMCgRuYW1lGAEgASgJIjoKE0NyZWF0ZVNwYWNlUmVzcG9uc2USIwoFc3BhY2UYASABKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlMrcBCgxTcGFjZVNlcnZpY2USUQoKTGlzdFNwYWNlcxIgLmVscmkudjEuc3BhY2UuTGlzdFNwYWNlc1JlcXVlc3QaIS5lbHJpLnYxLnNwYWNlLkxpc3RTcGFjZXNSZXNwb25zZRJUCgtDcmVhdGVTcGFjZRIhLmVscmkudjEuc3BhY2UuQ3JlYXRlU3BhY2VSZXF1ZXN0GiIuZWxyaS52MS5zcGFjZS5DcmVhdGVTcGFjZVJlc3BvbnNlYgZwcm90bzM", [file_elri_v1_space_domain]);
+  fileDesc("ChllbHJpL3YxL3NwYWNlL3NwYWNlLnByb3RvEg1lbHJpLnYxLnNwYWNlIjUKE1NldFJldGVudGlvblJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDAoEZGF5cxgCIAEoBSIkChRTZXRSZXRlbnRpb25SZXNwb25zZRIMCgRkYXlzGAEgASgFIhMKEUxpc3RTcGFjZXNSZXF1ZXN0IjoKEkxpc3RTcGFjZXNSZXNwb25zZRIkCgZzcGFjZXMYASADKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIiIKEkNyZWF0ZVNwYWNlUmVxdWVzdBIMCgRuYW1lGAEgASgJIjoKE0NyZWF0ZVNwYWNlUmVzcG9uc2USIwoFc3BhY2UYASABKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlMpACCgxTcGFjZVNlcnZpY2USUQoKTGlzdFNwYWNlcxIgLmVscmkudjEuc3BhY2UuTGlzdFNwYWNlc1JlcXVlc3QaIS5lbHJpLnYxLnNwYWNlLkxpc3RTcGFjZXNSZXNwb25zZRJUCgtDcmVhdGVTcGFjZRIhLmVscmkudjEuc3BhY2UuQ3JlYXRlU3BhY2VSZXF1ZXN0GiIuZWxyaS52MS5zcGFjZS5DcmVhdGVTcGFjZVJlc3BvbnNlElcKDFNldFJldGVudGlvbhIiLmVscmkudjEuc3BhY2UuU2V0UmV0ZW50aW9uUmVxdWVzdBojLmVscmkudjEuc3BhY2UuU2V0UmV0ZW50aW9uUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_space_domain]);
+
+/**
+ * @generated from message elri.v1.space.SetRetentionRequest
+ */
+export type SetRetentionRequest = Message<"elri.v1.space.SetRetentionRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * 0 keeps deleted Objects until an explicit purge. 
+   *
+   * @generated from field: int32 days = 2;
+   */
+  days: number;
+};
+
+/**
+ * @generated from message elri.v1.space.SetRetentionRequest
+ */
+export type SetRetentionRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * 0 keeps deleted Objects until an explicit purge. 
+   *
+   * @generated from field: int32 days = 2;
+   */
+  days?: number;
+};
+
+/**
+ * Describes the message elri.v1.space.SetRetentionRequest.
+ * Use `create(SetRetentionRequestSchema)` to create a new message.
+ */
+export const SetRetentionRequestSchema: GenMessage<SetRetentionRequest, {jsonType: SetRetentionRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_space_space, 0);
+
+/**
+ * @generated from message elri.v1.space.SetRetentionResponse
+ */
+export type SetRetentionResponse = Message<"elri.v1.space.SetRetentionResponse"> & {
+  /**
+   * @generated from field: int32 days = 1;
+   */
+  days: number;
+};
+
+/**
+ * @generated from message elri.v1.space.SetRetentionResponse
+ */
+export type SetRetentionResponseJson = {
+  /**
+   * @generated from field: int32 days = 1;
+   */
+  days?: number;
+};
+
+/**
+ * Describes the message elri.v1.space.SetRetentionResponse.
+ * Use `create(SetRetentionResponseSchema)` to create a new message.
+ */
+export const SetRetentionResponseSchema: GenMessage<SetRetentionResponse, {jsonType: SetRetentionResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_space_space, 1);
 
 /**
  * @generated from message elri.v1.space.ListSpacesRequest
@@ -31,7 +99,7 @@ export type ListSpacesRequestJson = {
  * Use `create(ListSpacesRequestSchema)` to create a new message.
  */
 export const ListSpacesRequestSchema: GenMessage<ListSpacesRequest, {jsonType: ListSpacesRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_space_space, 0);
+  messageDesc(file_elri_v1_space_space, 2);
 
 /**
  * @generated from message elri.v1.space.ListSpacesResponse
@@ -58,7 +126,7 @@ export type ListSpacesResponseJson = {
  * Use `create(ListSpacesResponseSchema)` to create a new message.
  */
 export const ListSpacesResponseSchema: GenMessage<ListSpacesResponse, {jsonType: ListSpacesResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_space_space, 1);
+  messageDesc(file_elri_v1_space_space, 3);
 
 /**
  * @generated from message elri.v1.space.CreateSpaceRequest
@@ -85,7 +153,7 @@ export type CreateSpaceRequestJson = {
  * Use `create(CreateSpaceRequestSchema)` to create a new message.
  */
 export const CreateSpaceRequestSchema: GenMessage<CreateSpaceRequest, {jsonType: CreateSpaceRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_space_space, 2);
+  messageDesc(file_elri_v1_space_space, 4);
 
 /**
  * @generated from message elri.v1.space.CreateSpaceResponse
@@ -112,7 +180,7 @@ export type CreateSpaceResponseJson = {
  * Use `create(CreateSpaceResponseSchema)` to create a new message.
  */
 export const CreateSpaceResponseSchema: GenMessage<CreateSpaceResponse, {jsonType: CreateSpaceResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_space_space, 3);
+  messageDesc(file_elri_v1_space_space, 5);
 
 /**
  *
@@ -139,6 +207,17 @@ export const SpaceService: GenService<{
     methodKind: "unary";
     input: typeof CreateSpaceRequestSchema;
     output: typeof CreateSpaceResponseSchema;
+  },
+  /**
+   * Local Spaces: how long deleted Objects stay recoverable before the
+   * core purges them. Server Spaces take the server's setting. 
+   *
+   * @generated from rpc elri.v1.space.SpaceService.SetRetention
+   */
+  setRetention: {
+    methodKind: "unary";
+    input: typeof SetRetentionRequestSchema;
+    output: typeof SetRetentionResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_space_space, 0);

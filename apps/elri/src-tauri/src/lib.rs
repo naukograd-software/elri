@@ -5,9 +5,13 @@ use std::sync::Mutex;
 
 use elri_core::secrets::SecretsBackend;
 use elri_core::{BuildInfo, Config, Core, Endpoint};
+#[cfg(desktop)]
 use tauri::menu::{Menu, MenuItem};
+#[cfg(desktop)]
 use tauri::tray::TrayIconBuilder;
-use tauri::{Manager, WindowEvent};
+use tauri::Manager;
+#[cfg(desktop)]
+use tauri::WindowEvent;
 
 /// Core handle kept for the lifetime of the application.
 struct CoreState(Mutex<Option<Core>>);

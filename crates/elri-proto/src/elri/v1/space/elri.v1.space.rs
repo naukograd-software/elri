@@ -14,6 +14,9 @@ pub struct Space {
     /// Server Spaces: highest accepted sequence on the server when listed. 
     #[prost(int64, tag = "5")]
     pub last_seq: i64,
+    /// Days a deleted Object stays recoverable before the authority purges it. 
+    #[prost(int32, tag = "6")]
+    pub retention_days: i32,
 }
 /// Role of the current user in a Space. 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -82,6 +85,19 @@ impl Authority {
             _ => None,
         }
     }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SetRetentionRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    /// 0 keeps deleted Objects until an explicit purge. 
+    #[prost(int32, tag = "2")]
+    pub days: i32,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SetRetentionResponse {
+    #[prost(int32, tag = "1")]
+    pub days: i32,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListSpacesRequest {

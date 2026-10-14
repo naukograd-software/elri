@@ -12,6 +12,19 @@ service SpaceService {
     rpc ListSpaces(ListSpacesRequest) returns (ListSpacesResponse);
     /* Creates a local-only Space on this device. */
     rpc CreateSpace(CreateSpaceRequest) returns (CreateSpaceResponse);
+    /* Local Spaces: how long deleted Objects stay recoverable before the
+       core purges them. Server Spaces take the server's setting. */
+    rpc SetRetention(SetRetentionRequest) returns (SetRetentionResponse);
+}
+
+message SetRetentionRequest {
+    string space_id = 1;
+    /* 0 keeps deleted Objects until an explicit purge. */
+    int32 days = 2;
+}
+
+message SetRetentionResponse {
+    int32 days = 1;
 }
 
 message ListSpacesRequest {}

@@ -67,6 +67,7 @@ pub struct State {
 pub struct Server {
     addr: SocketAddr,
     task: JoinHandle<()>,
+    retention: JoinHandle<()>,
     state: Arc<State>,
 }
 
@@ -107,8 +108,27 @@ impl Server {
                 tracing::error!(error = %e, "listener stopped");
             }
         });
+        let retention = {
+            let state = Arc::clone(&state);
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+                loop {
+                    match state.spaces.purge_expired(true).await {
+                        Ok(0) => {}
+                        Ok(n) => tracing::info!(purged = n, "retention purge"),
+                        Err(e) => tracing::warn!(error = %e, "retention purge failed"),
+                    }
+                    tokio::time::sleep(std::time::Duration::from_hours(1)).await;
+                }
+            })
+        };
         tracing::info!(%addr, "elri-server listening");
-        Ok(Self { addr, task, state })
+        Ok(Self {
+            addr,
+            task,
+            retention,
+            state,
+        })
     }
 
     /// Where clients connect.
@@ -129,5 +149,6 @@ impl Server {
     /// Stops serving.
     pub fn shutdown(self) {
         self.task.abort();
+        self.retention.abort();
     }
 }

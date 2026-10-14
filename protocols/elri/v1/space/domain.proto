@@ -28,4 +28,6 @@ message Space {
     Authority authority = 4;
     /* Server Spaces: highest accepted sequence on the server when listed. */
     int64 last_seq = 5;
+    /* Days a deleted Object stays recoverable before the authority purges it. */
+    int32 retention_days = 6;
 }

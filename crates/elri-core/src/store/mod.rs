@@ -340,6 +340,21 @@ impl Store {
         &self.blobs
     }
 
+    /// Purges expired deleted Objects in every Space this store is the
+    /// authority for: local Spaces on a device, every Space on a server.
+    pub async fn purge_expired(&self, all: bool) -> Result<usize, StoreError> {
+        let now = now_ms();
+        let mut count = 0;
+        for info in self.list_spaces().await? {
+            if !all && info.authority() != Authority::Local {
+                continue;
+            }
+            let space = self.space(ObjectId::parse(&info.id)?).await?;
+            count += space.purge_expired(now).await?.len();
+        }
+        Ok(count)
+    }
+
     // --- grants and settings ----------------------------------------------
 
     /// A device setting; `default` when unset.
@@ -536,6 +551,7 @@ impl Store {
             role: Role::Owner.into(),
             authority: authority.into(),
             last_seq: 0,
+            retention_days: 0,
         })
     }
 
@@ -649,6 +665,7 @@ fn space_of(row: &SpaceRow) -> Result<Space, StoreError> {
         role: Role::Owner.into(),
         authority: authority.into(),
         last_seq: 0,
+        retention_days: 0,
     })
 }
 
@@ -1083,6 +1100,53 @@ impl SpaceStore {
             }
         }
         Ok(field_def_kind(&load_doc(&mut db, id).await?.0.read()?))
+    }
+
+    // --- retention ------------------------------------------------------
+
+    /// Days a deleted Object stays recoverable; 0 = until an explicit purge.
+    pub async fn retention_days(&self) -> Result<i64, StoreError> {
+        let mut db = self.db.lock().await;
+        Ok(
+            match SyncStateRow::filter_by_key(RETENTION_DAYS.to_owned())
+                .first()
+                .exec(&mut *db)
+                .await?
+            {
+                Some(r) => r.value,
+                None => DEFAULT_RETENTION_DAYS,
+            },
+        )
+    }
+
+    /// Sets the retention.
+    pub async fn set_retention_days(&self, days: i64) -> Result<(), StoreError> {
+        let mut db = self.db.lock().await;
+        write_state(&mut db, RETENTION_DAYS, days.max(0)).await
+    }
+
+    /// Authority side: purges every Object deleted longer ago than the
+    /// retention. Returns what was purged.
+    pub async fn purge_expired(&self, now: i64) -> Result<Vec<ObjectId>, StoreError> {
+        let days = self.retention_days().await?;
+        if days <= 0 {
+            return Ok(Vec::new());
+        }
+        let cutoff = now - days * 24 * 60 * 60 * 1000;
+        let expired: Vec<ObjectId> = {
+            let mut db = self.db.lock().await;
+            ObjectRow::all()
+                .exec(&mut *db)
+                .await?
+                .into_iter()
+                .filter(|r| r.deleted_at.is_some_and(|d| d < cutoff))
+                .map(|r| ObjectId::from_uuid(r.object_id))
+                .collect()
+        };
+        for id in &expired {
+            self.purge_object(*id).await?;
+        }
+        Ok(expired)
     }
 
     // --- schema pins ----------------------------------------------------
@@ -2254,6 +2318,10 @@ const CURSOR: &str = "cursor";
 const INITIAL_TARGET: &str = "initial_target";
 /// Sync-state key: the schema epoch, moved by every pin.
 const SCHEMA_EPOCH: &str = "schema_epoch";
+/// Sync-state key: retention of deleted Objects in days; absent = default.
+const RETENTION_DAYS: &str = "retention_days";
+/// Retention of deleted Objects when none was set.
+pub const DEFAULT_RETENTION_DAYS: i64 = 90;
 
 async fn write_pin(tx: &mut toasty::Transaction<'_>, pin: &Pin) -> Result<(), StoreError> {
     let definition = uuid_arg(&pin.definition_id)?;

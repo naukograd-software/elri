@@ -176,6 +176,7 @@ struct Inner {
     store: Arc<Store>,
     remote: Arc<Remote>,
     rules_task: JoinHandle<()>,
+    retention_task: JoinHandle<()>,
 }
 
 impl Core {
@@ -221,6 +222,7 @@ impl Core {
         };
         write_endpoint(&config.data_dir, &endpoint)?;
 
+        let retention_task = spawn_retention(Arc::clone(&store));
         let scripts = crate::script::Host::new(Arc::clone(&store), device_id.as_string());
         let rules_task =
             crate::rules::spawn_runner(Arc::clone(&store), scripts.clone(), device_id.as_string());
@@ -255,6 +257,7 @@ impl Core {
                 store,
                 remote,
                 rules_task,
+                retention_task,
             }),
             listener_task,
         })
@@ -291,6 +294,7 @@ impl Core {
         tokio::spawn(async move { remote.close().await });
         self.listener_task.abort();
         self.inner.rules_task.abort();
+        self.inner.retention_task.abort();
         remove_endpoint(&self.inner.config.data_dir);
         tracing::info!("core stopped");
     }
@@ -300,6 +304,7 @@ impl Drop for Core {
     fn drop(&mut self) {
         self.listener_task.abort();
         self.inner.rules_task.abort();
+        self.inner.retention_task.abort();
         remove_endpoint(&self.inner.config.data_dir);
     }
 }
@@ -307,6 +312,22 @@ impl Drop for Core {
 /// The endpoint file contains the launch token, so it is owner-only and
 /// written atomically: a temporary file with restricted permissions, then a
 /// rename over the final name.
+/// Purges expired deleted Objects of local Spaces shortly after start and
+/// then every hour.
+pub fn spawn_retention(store: Arc<Store>) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        loop {
+            match store.purge_expired(false).await {
+                Ok(0) => {}
+                Ok(n) => tracing::info!(purged = n, "retention purge"),
+                Err(e) => tracing::warn!(error = %e, "retention purge failed"),
+            }
+            tokio::time::sleep(std::time::Duration::from_hours(1)).await;
+        }
+    })
+}
+
 /// Whether a core is running on `data_dir`: its endpoint file names a
 /// socket that still answers.
 pub async fn in_use(data_dir: &std::path::Path) -> bool {

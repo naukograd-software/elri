@@ -899,3 +899,49 @@ async fn a_coordinated_change_with_a_bad_part_leaves_every_space_untouched() {
         .await
         .is_err());
 }
+
+#[tokio::test]
+async fn retention_purges_what_was_deleted_long_enough_ago() {
+    let space_id = SpaceId::new();
+    let a = store("a9").await;
+    a.register_space(space_id, "s", Authority::Local)
+        .await
+        .expect("register");
+    let space = a.space(space_id).await.expect("space");
+    assert_eq!(space.retention_days().await.expect("days"), 90);
+    let old = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 1).expect("doc");
+    old.touch(1).expect("touch");
+    space.insert(&old).await.expect("insert");
+    // Deleted 100 days ago.
+    let long_ago = elri_core::model::now_ms() - 100 * 24 * 60 * 60 * 1000;
+    space
+        .update(old.id(), |d| d.mark_deleted(long_ago))
+        .await
+        .expect("delete");
+    let fresh = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 1).expect("doc");
+    fresh.touch(1).expect("touch");
+    space.insert(&fresh).await.expect("insert");
+    space
+        .update(fresh.id(), |d| d.mark_deleted(elri_core::model::now_ms()))
+        .await
+        .expect("delete");
+
+    let purged = a.purge_expired(false).await.expect("purge");
+    assert_eq!(purged, 1);
+    assert!(space.is_purged(old.id()).await.expect("graveyard"));
+    assert!(!space.is_purged(fresh.id()).await.expect("graveyard"));
+
+    // Retention 0 keeps everything; a shorter retention takes the rest.
+    space.set_retention_days(0).await.expect("set");
+    assert_eq!(a.purge_expired(false).await.expect("purge"), 0);
+    space.set_retention_days(1).await.expect("set");
+    assert_eq!(
+        a.purge_expired(false).await.expect("purge"),
+        0,
+        "deleted just now"
+    );
+    space
+        .update(ObjectId::new(), |d| d.mark_deleted(0))
+        .await
+        .expect_err("no such object");
+}

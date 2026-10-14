@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/space/domain.proto.
  */
 export const file_elri_v1_space_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChplbHJpL3YxL3NwYWNlL2RvbWFpbi5wcm90bxINZWxyaS52MS5zcGFjZSKDAQoFU3BhY2USCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIhCgRyb2xlGAMgASgOMhMuZWxyaS52MS5zcGFjZS5Sb2xlEisKCWF1dGhvcml0eRgEIAEoDjIYLmVscmkudjEuc3BhY2UuQXV0aG9yaXR5EhAKCGxhc3Rfc2VxGAUgASgDKl4KBFJvbGUSFAoQUk9MRV9VTlNQRUNJRklFRBAAEg4KClJPTEVfT1dORVIQARIOCgpST0xFX0FETUlOEAISDwoLUk9MRV9FRElUT1IQAxIPCgtST0xFX1ZJRVdFUhAEKlEKCUF1dGhvcml0eRIZChVBVVRIT1JJVFlfVU5TUEVDSUZJRUQQABITCg9BVVRIT1JJVFlfTE9DQUwQARIUChBBVVRIT1JJVFlfU0VSVkVSEAJiBnByb3RvMw");
+  fileDesc("ChplbHJpL3YxL3NwYWNlL2RvbWFpbi5wcm90bxINZWxyaS52MS5zcGFjZSKbAQoFU3BhY2USCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIhCgRyb2xlGAMgASgOMhMuZWxyaS52MS5zcGFjZS5Sb2xlEisKCWF1dGhvcml0eRgEIAEoDjIYLmVscmkudjEuc3BhY2UuQXV0aG9yaXR5EhAKCGxhc3Rfc2VxGAUgASgDEhYKDnJldGVudGlvbl9kYXlzGAYgASgFKl4KBFJvbGUSFAoQUk9MRV9VTlNQRUNJRklFRBAAEg4KClJPTEVfT1dORVIQARIOCgpST0xFX0FETUlOEAISDwoLUk9MRV9FRElUT1IQAxIPCgtST0xFX1ZJRVdFUhAEKlEKCUF1dGhvcml0eRIZChVBVVRIT1JJVFlfVU5TUEVDSUZJRUQQABITCg9BVVRIT1JJVFlfTE9DQUwQARIUChBBVVRIT1JJVFlfU0VSVkVSEAJiBnByb3RvMw");
 
 /**
  * @generated from message elri.v1.space.Space
@@ -44,6 +44,13 @@ export type Space = Message<"elri.v1.space.Space"> & {
    * @generated from field: int64 last_seq = 5;
    */
   lastSeq: bigint;
+
+  /**
+   * Days a deleted Object stays recoverable before the authority purges it. 
+   *
+   * @generated from field: int32 retention_days = 6;
+   */
+  retentionDays: number;
 };
 
 /**
@@ -78,6 +85,13 @@ export type SpaceJson = {
    * @generated from field: int64 last_seq = 5;
    */
   lastSeq?: string;
+
+  /**
+   * Days a deleted Object stays recoverable before the authority purges it. 
+   *
+   * @generated from field: int32 retention_days = 6;
+   */
+  retentionDays?: number;
 };
 
 /**

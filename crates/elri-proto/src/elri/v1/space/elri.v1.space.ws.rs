@@ -21,6 +21,10 @@ pub mod space_service_ws {
         route: "/elri.v1.space.SpaceService/CreateSpace",
         kind: StreamKind::Unary,
     };
+    pub const SET_RETENTION: MethodSpec = MethodSpec {
+        route: "/elri.v1.space.SpaceService/SetRetention",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `SpaceService` service. Implement with `async fn`.
     pub trait SpaceServiceHandler: Send + Sync + 'static {
         fn list_spaces(
@@ -35,6 +39,14 @@ pub mod space_service_ws {
             req: Request<super::CreateSpaceRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::CreateSpaceResponse>, Status>,
+        > + Send;
+        ///  Local Spaces: how long deleted Objects stay recoverable before the
+        /// core purges them. Server Spaces take the server's setting.
+        fn set_retention(
+            &self,
+            req: Request<super::SetRetentionRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::SetRetentionResponse>, Status>,
         > + Send;
     }
     /// Registers `handler` on `server` for every `SpaceService` method.
@@ -68,6 +80,17 @@ pub mod space_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    SET_RETENTION.route,
+                    move |req: Request<super::SetRetentionRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.set_retention(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `SpaceService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -94,6 +117,14 @@ pub mod space_service_ws {
             req: impl Into<Request<super::CreateSpaceRequest>>,
         ) -> Result<Response<super::CreateSpaceResponse>, Status> {
             self.conn.invoke_unary(CREATE_SPACE, req.into()).await
+        }
+        ///  Local Spaces: how long deleted Objects stay recoverable before the
+        /// core purges them. Server Spaces take the server's setting.
+        pub async fn set_retention(
+            &self,
+            req: impl Into<Request<super::SetRetentionRequest>>,
+        ) -> Result<Response<super::SetRetentionResponse>, Status> {
+            self.conn.invoke_unary(SET_RETENTION, req.into()).await
         }
     }
 }

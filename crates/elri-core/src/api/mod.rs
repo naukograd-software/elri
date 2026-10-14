@@ -53,6 +53,7 @@ use elri_proto::elri::v1::space::space_service_ws::{
 };
 use elri_proto::elri::v1::space::{
     Authority, CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse,
+    SetRetentionRequest, SetRetentionResponse,
 };
 use ws_proto::server::{Handler, OriginPolicy};
 use ws_proto::{Code, Request, Response, Server, ServerConfig, Status};
@@ -302,9 +303,45 @@ impl SpaceServiceHandler for Services {
         &self,
         _req: Request<ListSpacesRequest>,
     ) -> Result<Response<ListSpacesResponse>, Status> {
-        Ok(Response::new(ListSpacesResponse {
-            spaces: self.store.list_spaces().await?,
-        }))
+        let mut spaces = self.store.list_spaces().await?;
+        for s in &mut spaces {
+            if let Ok(id) = ObjectId::parse(&s.id) {
+                if let Ok(space) = self.store.space(id).await {
+                    s.retention_days =
+                        i32::try_from(space.retention_days().await?).unwrap_or(i32::MAX);
+                }
+            }
+        }
+        Ok(Response::new(ListSpacesResponse { spaces }))
+    }
+
+    async fn set_retention(
+        &self,
+        req: Request<SetRetentionRequest>,
+    ) -> Result<Response<SetRetentionResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        if req.msg.days < 0 {
+            return Err(invalid("days must not be negative"));
+        }
+        let authority = self
+            .store
+            .list_spaces()
+            .await?
+            .into_iter()
+            .find(|s| s.id == space_id.to_string())
+            .map_or(Authority::Local, |s| s.authority());
+        if authority == Authority::Server {
+            return Err(Status::new(
+                Code::FailedPrecondition,
+                "a server space takes the server's retention",
+            ));
+        }
+        self.store
+            .space(space_id)
+            .await?
+            .set_retention_days(i64::from(req.msg.days))
+            .await?;
+        Ok(Response::new(SetRetentionResponse { days: req.msg.days }))
     }
 
     async fn create_space(
