@@ -390,16 +390,15 @@ impl SpaceServiceHandler for Services {
         let rules = crate::policy::rules_json(&req.msg.rules);
         let space = self.store.space(space_id).await?;
         // One policy Object per Space: rewrite it, or create the first.
-        let rec = match crate::policy::policy_object(&self.store, space_id).await? {
-            Some(existing) => {
+        let rec =
+            if let Some(existing) = crate::policy::policy_object(&self.store, space_id).await? {
                 let id = parse_id(&existing.id, "policy id")?;
                 space
                     .update(id, move |doc| {
                         doc.set_field(crate::model::reserved::RULES, &string_value(rules))
                     })
                     .await?
-            }
-            None => {
+            } else {
                 let doc = ObjectDoc::create(
                     ObjectId::new(),
                     space_id,
@@ -411,8 +410,7 @@ impl SpaceServiceHandler for Services {
                     .map_err(StoreError::from)?;
                 doc.touch(now_ms()).map_err(StoreError::from)?;
                 space.insert(&doc).await?
-            }
-        };
+            };
         Ok(Response::new(SetTransferPolicyResponse {
             policy: Some(crate::policy::policy_of(&rec)),
         }))

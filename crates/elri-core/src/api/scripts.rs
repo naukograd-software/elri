@@ -43,10 +43,11 @@ impl From<ScriptError> for Status {
             ScriptError::Lua(_) | ScriptError::Manifest(_) => {
                 Status::new(Code::InvalidArgument, e.to_string())
             }
-            ScriptError::Denied(_) => Status::new(Code::PermissionDenied, e.to_string()),
+            ScriptError::Denied(_) | ScriptError::Policy(_) => {
+                Status::new(Code::PermissionDenied, e.to_string())
+            }
             ScriptError::Limit(_) => Status::new(Code::ResourceExhausted, e.to_string()),
             ScriptError::Workflow(_) => Status::new(Code::FailedPrecondition, e.to_string()),
-            ScriptError::Policy(_) => Status::new(Code::PermissionDenied, e.to_string()),
         }
     }
 }
