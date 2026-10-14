@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CheckScriptRequest, CheckScriptResponse, CreateRuleRequest, CreateRuleResponse, CreateScriptRequest, CreateScriptResponse, GetPolicyRequest, GetPolicyResponse, GetScriptRequest, GetScriptResponse, GrantScriptRequest, GrantScriptResponse, ListGrantsRequest, ListGrantsResponse, ListRuleRunsRequest, ListRuleRunsResponse, ListRulesRequest, ListRulesResponse, ListScriptsRequest, ListScriptsResponse, RevokeGrantRequest, RevokeGrantResponse, RunRuleRequest, RunRuleResponse, RunScriptRequest, RunScriptResponse, SetPolicyRequest, SetPolicyResponse, UpdateRuleRequest, UpdateRuleResponse, UpdateScriptRequest, UpdateScriptResponse } from "./script_pb.ts";
-import { CheckScriptRequestSchema, CheckScriptResponseSchema, CreateRuleRequestSchema, CreateRuleResponseSchema, CreateScriptRequestSchema, CreateScriptResponseSchema, GetPolicyRequestSchema, GetPolicyResponseSchema, GetScriptRequestSchema, GetScriptResponseSchema, GrantScriptRequestSchema, GrantScriptResponseSchema, ListGrantsRequestSchema, ListGrantsResponseSchema, ListRuleRunsRequestSchema, ListRuleRunsResponseSchema, ListRulesRequestSchema, ListRulesResponseSchema, ListScriptsRequestSchema, ListScriptsResponseSchema, RevokeGrantRequestSchema, RevokeGrantResponseSchema, RunRuleRequestSchema, RunRuleResponseSchema, RunScriptRequestSchema, RunScriptResponseSchema, SetPolicyRequestSchema, SetPolicyResponseSchema, UpdateRuleRequestSchema, UpdateRuleResponseSchema, UpdateScriptRequestSchema, UpdateScriptResponseSchema } from "./script_pb.ts";
+import type { CheckScriptRequest, CheckScriptResponse, CreateRuleRequest, CreateRuleResponse, CreateScriptRequest, CreateScriptResponse, GetPolicyRequest, GetPolicyResponse, GetScriptRequest, GetScriptResponse, GetSdkRequest, GetSdkResponse, GrantScriptRequest, GrantScriptResponse, ListGrantsRequest, ListGrantsResponse, ListRuleRunsRequest, ListRuleRunsResponse, ListRulesRequest, ListRulesResponse, ListScriptsRequest, ListScriptsResponse, RevokeGrantRequest, RevokeGrantResponse, RunRuleRequest, RunRuleResponse, RunScriptRequest, RunScriptResponse, SetPolicyRequest, SetPolicyResponse, UpdateRuleRequest, UpdateRuleResponse, UpdateScriptRequest, UpdateScriptResponse } from "./script_pb.ts";
+import { CheckScriptRequestSchema, CheckScriptResponseSchema, CreateRuleRequestSchema, CreateRuleResponseSchema, CreateScriptRequestSchema, CreateScriptResponseSchema, GetPolicyRequestSchema, GetPolicyResponseSchema, GetScriptRequestSchema, GetScriptResponseSchema, GetSdkRequestSchema, GetSdkResponseSchema, GrantScriptRequestSchema, GrantScriptResponseSchema, ListGrantsRequestSchema, ListGrantsResponseSchema, ListRuleRunsRequestSchema, ListRuleRunsResponseSchema, ListRulesRequestSchema, ListRulesResponseSchema, ListScriptsRequestSchema, ListScriptsResponseSchema, RevokeGrantRequestSchema, RevokeGrantResponseSchema, RunRuleRequestSchema, RunRuleResponseSchema, RunScriptRequestSchema, RunScriptResponseSchema, SetPolicyRequestSchema, SetPolicyResponseSchema, UpdateRuleRequestSchema, UpdateRuleResponseSchema, UpdateScriptRequestSchema, UpdateScriptResponseSchema } from "./script_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -57,6 +57,14 @@ const ScriptService_CheckScript: MethodInfo<CheckScriptRequest, CheckScriptRespo
   kind: "unary",
   input: CheckScriptRequestSchema,
   output: CheckScriptResponseSchema,
+};
+
+const ScriptService_GetSdk: MethodInfo<GetSdkRequest, GetSdkResponse> = {
+  typeName: "elri.v1.script.ScriptService",
+  name: "GetSdk",
+  kind: "unary",
+  input: GetSdkRequestSchema,
+  output: GetSdkResponseSchema,
 };
 
 const ScriptService_RunScript: MethodInfo<RunScriptRequest, RunScriptResponse> = {
@@ -114,6 +122,16 @@ export class ScriptServiceClient {
    */
   async checkScript(req: CheckScriptRequest, options?: CallOptions): Promise<CheckScriptResponse> {
     const res = await this.transport.unary(ScriptService_CheckScript, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * The Luau declarations of the host API, for editors and analyzers. 
+   *
+   * @generated from rpc elri.v1.script.ScriptService.GetSdk
+   */
+  async getSdk(req: GetSdkRequest, options?: CallOptions): Promise<GetSdkResponse> {
+    const res = await this.transport.unary(ScriptService_GetSdk, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

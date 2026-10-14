@@ -252,7 +252,17 @@ pub struct Host {
     /// A preview host: runs against a throwaway copy of the data, with
     /// extensions and notifications disabled.
     preview: bool,
+    /// Runs allowed at once; the rest wait their turn.
+    slots: Arc<tokio::sync::Semaphore>,
+    limit: Arc<std::sync::atomic::AtomicUsize>,
 }
+
+/// The Luau declarations of the host API.
+pub const SDK: &str = include_str!("../sdk/elri.d.luau");
+/// Default script runs executed at once.
+pub const DEFAULT_CONCURRENCY: usize = 4;
+/// Most script runs ever executed at once.
+pub const MAX_CONCURRENCY: usize = 64;
 
 /// One run's identity for attribution.
 #[derive(Debug, Clone)]
@@ -283,6 +293,24 @@ impl Host {
             device_id,
             modules,
             preview: false,
+            slots: Arc::new(tokio::sync::Semaphore::new(DEFAULT_CONCURRENCY)),
+            limit: Arc::new(std::sync::atomic::AtomicUsize::new(DEFAULT_CONCURRENCY)),
+        }
+    }
+
+    /// Runs allowed at once.
+    pub fn concurrency(&self) -> usize {
+        self.limit.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// Changes how many runs may execute at once, from the next run on.
+    pub fn set_concurrency(&self, n: usize) {
+        let n = n.clamp(1, MAX_CONCURRENCY);
+        let old = self.limit.swap(n, std::sync::atomic::Ordering::Relaxed);
+        if n > old {
+            self.slots.add_permits(n - old);
+        } else {
+            self.slots.forget_permits(old - n);
         }
     }
 
@@ -295,6 +323,8 @@ impl Host {
             device_id: self.device_id.clone(),
             modules: self.modules.clone(),
             preview: true,
+            slots: Arc::clone(&self.slots),
+            limit: Arc::clone(&self.limit),
         }
     }
 
@@ -331,6 +361,8 @@ impl Host {
         identity: RunIdentity,
         workflow: Option<uuid::Uuid>,
     ) -> RunResult {
+        // Wait for a slot; the time limit starts once the run does.
+        let _slot = self.slots.acquire().await;
         let started = Instant::now();
         let manifest = script.manifest.clone().unwrap_or_default();
         let access = Arc::new(Mutex::new(Access {
@@ -1415,4 +1447,55 @@ pub fn kind_matches(kinds: &[i32], kind: i32) -> bool {
 #[allow(dead_code)]
 fn _reach(o: &Object) -> Option<i64> {
     int_field(o, reserved::SIZE)
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::expect_used)]
+
+    use super::*;
+
+    #[tokio::test]
+    async fn the_sdk_declares_every_host_function() {
+        let dir = std::env::temp_dir().join(format!("elri-sdk-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let device = crate::device::DeviceId::load_or_create(&dir).expect("device");
+        let store = Arc::new(Store::open(&dir, device).await.expect("store"));
+        let host = Host::new(
+            Arc::clone(&store),
+            device.as_string(),
+            crate::extension::Modules::new(&dir),
+        );
+        let access = Arc::new(Mutex::new(Access {
+            own: SpaceId::new(),
+            manifest: Manifest::default(),
+            labels: BTreeSet::new(),
+            logs: Vec::new(),
+            calls: 0,
+            bytes_out: 0,
+            workflow: None,
+        }));
+        let identity = RunIdentity {
+            script_id: String::new(),
+            rule_id: None,
+            grant_id: String::new(),
+        };
+        let lua = host
+            .vm(SpaceId::new(), &identity, &access, Instant::now(), false)
+            .expect("vm");
+        let elri: Table = lua.globals().get("elri").expect("elri");
+        let declared = SDK
+            .split("declare elri: {")
+            .nth(1)
+            .and_then(|rest| rest.split("\n}").next())
+            .expect("declaration block")
+            .to_owned();
+        for pair in elri.pairs::<String, LuaValue>() {
+            let (name, _) = pair.expect("pair");
+            assert!(
+                declared.contains(&format!("\n    {name}:")),
+                "elri.{name} is not declared in elri.d.luau"
+            );
+        }
+    }
 }

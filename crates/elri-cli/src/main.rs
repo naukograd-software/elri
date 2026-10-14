@@ -57,10 +57,10 @@ use elri_proto::elri::v1::script::grant_service_ws::GrantServiceClient;
 use elri_proto::elri::v1::script::rule_service_ws::RuleServiceClient;
 use elri_proto::elri::v1::script::script_service_ws::ScriptServiceClient;
 use elri_proto::elri::v1::script::{
-    CheckScriptRequest, CreateRuleRequest, CreateScriptRequest, GetPolicyRequest,
+    CheckScriptRequest, CreateRuleRequest, CreateScriptRequest, GetPolicyRequest, GetSdkRequest,
     GrantScriptRequest, ListGrantsRequest, ListRuleRunsRequest, ListRulesRequest,
-    ListScriptsRequest, Manifest, MissedRuns, RevokeGrantRequest, Rule, RunRuleRequest,
-    RunScriptRequest, Script, SetPolicyRequest, Trigger, UpdateRuleRequest,
+    ListScriptsRequest, Manifest, MissedRuns, NotifyPolicy, RevokeGrantRequest, Rule,
+    RunRuleRequest, RunScriptRequest, Script, SetPolicyRequest, Trigger, UpdateRuleRequest,
 };
 use elri_proto::elri::v1::search::search_service_ws::SearchServiceClient;
 use elri_proto::elri::v1::search::SearchRequest;
@@ -238,6 +238,8 @@ enum RemoteCmd {
 
 #[derive(Subcommand, Debug)]
 enum ScriptCmd {
+    /// Print `elri.d.luau`: the host API as Luau declarations.
+    Sdk,
     /// Create a script from a Luau source file.
     Create {
         #[arg(long)]
@@ -697,6 +699,9 @@ enum GrantCmd {
     Policy {
         #[arg(long)]
         auto_benign: Option<bool>,
+        /// Script runs executed at once on this device.
+        #[arg(long)]
+        max_concurrent: Option<i32>,
     },
 }
 
@@ -725,6 +730,9 @@ enum RuleCmd {
         /// skip, latest, catch-up, ask.
         #[arg(long, default_value = "latest", value_parser = parse_missed)]
         missed: MissedRuns,
+        /// When runs tell the user: never, on-error, always.
+        #[arg(long, default_value = "on-error", value_parser = parse_notify)]
+        notify: NotifyPolicy,
     },
     /// Run a rule now on this device, whatever its trigger.
     Run {
@@ -1427,6 +1435,13 @@ fn run_json(r: &elri_proto::elri::v1::script::RuleRun) -> serde_json::Value {
     })
 }
 
+fn parse_notify(s: &str) -> Result<NotifyPolicy, String> {
+    match parse_enum("NOTIFY_POLICY", s, NotifyPolicy::from_str_name)? {
+        NotifyPolicy::Unspecified => Err("notify is required".to_owned()),
+        n => Ok(n),
+    }
+}
+
 fn parse_missed(s: &str) -> Result<MissedRuns, String> {
     match s {
         "skip" => Ok(MissedRuns::Skip),
@@ -1452,6 +1467,7 @@ fn rule_json(r: &Rule) -> serde_json::Value {
         })),
         "executor_device_id": r.executor_device_id,
         "enabled": r.enabled,
+        "notify": r.notify().as_str_name().trim_start_matches("NOTIFY_POLICY_").to_lowercase(),
     })
 }
 
@@ -1509,6 +1525,11 @@ async fn run_script(
                 .iter()
                 .map(script_json)
                 .collect::<Vec<_>>()))
+        }
+        ScriptCmd::Sdk => {
+            let res = client.get_sdk(authed(endpoint, GetSdkRequest {})).await?;
+            print!("{}", res.msg.source);
+            Ok(serde_json::Value::Null)
         }
         ScriptCmd::Check { file } => {
             let source = std::fs::read_to_string(&file)?;
@@ -1814,29 +1835,33 @@ async fn run_grant(endpoint: &Endpoint, conn: Client, cmd: GrantCmd) -> Result<s
                 .await?;
             Ok(json!({ "revoked": id }))
         }
-        GrantCmd::Policy { auto_benign } => {
-            let value = match auto_benign {
-                Some(v) => {
-                    client
-                        .set_policy(authed(
-                            endpoint,
-                            SetPolicyRequest {
-                                auto_grant_benign: v,
-                            },
-                        ))
-                        .await?
-                        .msg
-                        .auto_grant_benign
-                }
-                None => {
-                    client
-                        .get_policy(authed(endpoint, GetPolicyRequest {}))
-                        .await?
-                        .msg
-                        .auto_grant_benign
-                }
-            };
-            Ok(json!({ "auto_grant_benign": value }))
+        GrantCmd::Policy {
+            auto_benign,
+            max_concurrent,
+        } => {
+            let current = client
+                .get_policy(authed(endpoint, GetPolicyRequest {}))
+                .await?
+                .msg;
+            if auto_benign.is_some() || max_concurrent.is_some() {
+                client
+                    .set_policy(authed(
+                        endpoint,
+                        SetPolicyRequest {
+                            auto_grant_benign: auto_benign.unwrap_or(current.auto_grant_benign),
+                            max_concurrent_scripts: max_concurrent.unwrap_or(0),
+                        },
+                    ))
+                    .await?;
+            }
+            let now = client
+                .get_policy(authed(endpoint, GetPolicyRequest {}))
+                .await?
+                .msg;
+            Ok(json!({
+                "auto_grant_benign": now.auto_grant_benign,
+                "max_concurrent_scripts": now.max_concurrent_scripts,
+            }))
         }
     }
 }
@@ -1878,6 +1903,7 @@ async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<ser
             every,
             on_events,
             missed,
+            notify,
         } => {
             let req = CreateRuleRequest {
                 space_id: space,
@@ -1891,6 +1917,7 @@ async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<ser
                     missed: missed.into(),
                 }),
                 executor_device_id: String::new(),
+                notify: notify.into(),
             };
             rule_create(endpoint, &client, req).await
         }

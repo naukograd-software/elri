@@ -31,6 +31,10 @@ pub mod script_service_ws {
         route: "/elri.v1.script.ScriptService/CheckScript",
         kind: StreamKind::Unary,
     };
+    pub const GET_SDK: MethodSpec = MethodSpec {
+        route: "/elri.v1.script.ScriptService/GetSdk",
+        kind: StreamKind::Unary,
+    };
     pub const RUN_SCRIPT: MethodSpec = MethodSpec {
         route: "/elri.v1.script.ScriptService/RunScript",
         kind: StreamKind::Unary,
@@ -67,6 +71,13 @@ pub mod script_service_ws {
             req: Request<super::CheckScriptRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::CheckScriptResponse>, Status>,
+        > + Send;
+        ///  The Luau declarations of the host API, for editors and analyzers.
+        fn get_sdk(
+            &self,
+            req: Request<super::GetSdkRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::GetSdkResponse>, Status>,
         > + Send;
         ///  Runs now with JSON arguments, under the device's grant for this version.
         fn run_script(
@@ -147,6 +158,17 @@ pub mod script_service_ws {
             let h = ::std::sync::Arc::clone(&handler);
             server
                 .register_unary(
+                    GET_SDK.route,
+                    move |req: Request<super::GetSdkRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.get_sdk(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
                     RUN_SCRIPT.route,
                     move |req: Request<super::RunScriptRequest>| {
                         let h = ::std::sync::Arc::clone(&h);
@@ -198,6 +220,13 @@ pub mod script_service_ws {
             req: impl Into<Request<super::CheckScriptRequest>>,
         ) -> Result<Response<super::CheckScriptResponse>, Status> {
             self.conn.invoke_unary(CHECK_SCRIPT, req.into()).await
+        }
+        ///  The Luau declarations of the host API, for editors and analyzers.
+        pub async fn get_sdk(
+            &self,
+            req: impl Into<Request<super::GetSdkRequest>>,
+        ) -> Result<Response<super::GetSdkResponse>, Status> {
+            self.conn.invoke_unary(GET_SDK, req.into()).await
         }
         ///  Runs now with JSON arguments, under the device's grant for this version.
         pub async fn run_script(

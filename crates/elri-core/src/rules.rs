@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use elri_proto::elri::v1::events::{event, NoticeEvent};
 use elri_proto::elri::v1::object::{Object, ObjectKind};
-use elri_proto::elri::v1::script::{MissedRuns, Rule, RuleRun, Trigger};
+use elri_proto::elri::v1::script::{MissedRuns, NotifyPolicy, Rule, RuleRun, Trigger};
 use tokio::task::JoinHandle;
 
 use crate::model::{
@@ -32,6 +32,10 @@ pub const EVERY_SECONDS: &str = "$every_seconds";
 pub const ON_EVENTS: &str = "$on_events";
 /// Reserved field: `MissedRuns` code.
 pub const MISSED: &str = "$missed";
+/// Reserved field: `NotifyPolicy` code.
+pub const NOTIFY: &str = "$notify";
+/// Device setting: script runs executed at once.
+pub const MAX_CONCURRENT_SCRIPTS: &str = "max_concurrent_scripts";
 /// Most slots a catch-up runs for.
 const CATCH_UP_LIMIT: i64 = 10;
 /// Longest schedule period honoured: a year.
@@ -81,7 +85,15 @@ pub fn rule_of(o: &Object) -> Rule {
         created_at_ms: o.created_at_ms,
         updated_at_ms: o.updated_at_ms,
         deleted_at_ms: o.deleted_at_ms,
+        notify: crate::model::int_field(o, NOTIFY)
+            .and_then(|m| i32::try_from(m).ok())
+            .unwrap_or(0),
     }
+}
+
+/// Writes the notification policy onto a rule document.
+pub fn write_notify(doc: &ObjectDoc, n: NotifyPolicy) -> Result<(), crate::model::ModelError> {
+    doc.set_field(NOTIFY, &int_value(i64::from(n as i32)))
 }
 
 /// Writes a trigger onto a rule document.
@@ -380,6 +392,22 @@ async fn run_rule(
         error: outcome,
     };
     store.record_rule_run(&run).await?;
+    let tell = match r.notify() {
+        NotifyPolicy::Never => false,
+        NotifyPolicy::Always => true,
+        NotifyPolicy::Unspecified | NotifyPolicy::OnError => !run.error.is_empty(),
+    };
+    if tell {
+        store.emit(event::Event::Notice(NoticeEvent {
+            space_id: space_id.to_string(),
+            source: format!("rule:{}", r.id),
+            text: if run.error.is_empty() {
+                format!("rule {} ran ({cause})", r.name)
+            } else {
+                format!("rule {} failed ({cause}): {}", r.name, run.error)
+            },
+        }));
+    }
     Ok(run)
 }
 

@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/script/domain.proto.
  */
 export const file_elri_v1_script_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL3NjcmlwdC9kb21haW4ucHJvdG8SDmVscmkudjEuc2NyaXB0IlcKCE1hbmlmZXN0Eg0KBXJlYWRzGAEgAygJEg4KBndyaXRlcxgCIAMoCRIMCgRodHRwGAMgASgIEgoKAmFpGAQgASgIEhIKCmV4dGVuc2lvbnMYBSADKAki7QEKBlNjcmlwdBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnNvdXJjZRgEIAEoCRIqCghtYW5pZmVzdBgFIAEoCzIYLmVscmkudjEuc2NyaXB0Lk1hbmlmZXN0Eg8KB3ZlcnNpb24YBiABKAkSDgoGYmVuaWduGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMingEKBUdyYW50EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIPCgd2ZXJzaW9uGAQgASgJEg4KBmJlbmlnbhgFIAEoCBIVCg1ncmFudGVkX2F0X21zGAYgASgDEhoKDXJldm9rZWRfYXRfbXMYByABKANIAIgBAUIQCg5fcmV2b2tlZF9hdF9tcyKbAQoHVHJpZ2dlchIpCgVraW5kcxgBIAMoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDwoHdHlwZV9pZBgCIAEoCRIVCg1ldmVyeV9zZWNvbmRzGAMgASgDEhEKCW9uX2V2ZW50cxgEIAEoCBIqCgZtaXNzZWQYBSABKA4yGi5lbHJpLnYxLnNjcmlwdC5NaXNzZWRSdW5zImQKB1J1bGVSdW4SDwoHcnVsZV9pZBgBIAEoCRIVCg1zdGFydGVkX2F0X21zGAIgASgDEhMKC2R1cmF0aW9uX21zGAMgASgDEg0KBWNhdXNlGAQgASgJEg0KBWVycm9yGAUgASgJIvgBCgRSdWxlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEQoJc2NyaXB0X2lkGAQgASgJEigKB3RyaWdnZXIYBSABKAsyFy5lbHJpLnYxLnNjcmlwdC5UcmlnZ2VyEhoKEmV4ZWN1dG9yX2RldmljZV9pZBgGIAEoCRIPCgdlbmFibGVkGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMidAoJUnVuUmVzdWx0EhMKC291dHB1dF9qc29uGAEgASgJEgwKBGxvZ3MYAiADKAkSEwoLZHVyYXRpb25fbXMYAyABKAMSDQoFZXJyb3IYBCABKAkSDgoGbGFiZWxzGAUgAygJEhAKCGdyYW50X2lkGAYgASgJKoYBCgpNaXNzZWRSdW5zEhsKF01JU1NFRF9SVU5TX1VOU1BFQ0lGSUVEEAASFAoQTUlTU0VEX1JVTlNfU0tJUBABEhYKEk1JU1NFRF9SVU5TX0xBVEVTVBACEhgKFE1JU1NFRF9SVU5TX0NBVENIX1VQEAMSEwoPTUlTU0VEX1JVTlNfQVNLEARiBnByb3RvMw", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL3NjcmlwdC9kb21haW4ucHJvdG8SDmVscmkudjEuc2NyaXB0IlcKCE1hbmlmZXN0Eg0KBXJlYWRzGAEgAygJEg4KBndyaXRlcxgCIAMoCRIMCgRodHRwGAMgASgIEgoKAmFpGAQgASgIEhIKCmV4dGVuc2lvbnMYBSADKAki7QEKBlNjcmlwdBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnNvdXJjZRgEIAEoCRIqCghtYW5pZmVzdBgFIAEoCzIYLmVscmkudjEuc2NyaXB0Lk1hbmlmZXN0Eg8KB3ZlcnNpb24YBiABKAkSDgoGYmVuaWduGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMingEKBUdyYW50EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIPCgd2ZXJzaW9uGAQgASgJEg4KBmJlbmlnbhgFIAEoCBIVCg1ncmFudGVkX2F0X21zGAYgASgDEhoKDXJldm9rZWRfYXRfbXMYByABKANIAIgBAUIQCg5fcmV2b2tlZF9hdF9tcyKbAQoHVHJpZ2dlchIpCgVraW5kcxgBIAMoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDwoHdHlwZV9pZBgCIAEoCRIVCg1ldmVyeV9zZWNvbmRzGAMgASgDEhEKCW9uX2V2ZW50cxgEIAEoCBIqCgZtaXNzZWQYBSABKA4yGi5lbHJpLnYxLnNjcmlwdC5NaXNzZWRSdW5zImQKB1J1bGVSdW4SDwoHcnVsZV9pZBgBIAEoCRIVCg1zdGFydGVkX2F0X21zGAIgASgDEhMKC2R1cmF0aW9uX21zGAMgASgDEg0KBWNhdXNlGAQgASgJEg0KBWVycm9yGAUgASgJIqYCCgRSdWxlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEQoJc2NyaXB0X2lkGAQgASgJEigKB3RyaWdnZXIYBSABKAsyFy5lbHJpLnYxLnNjcmlwdC5UcmlnZ2VyEhoKEmV4ZWN1dG9yX2RldmljZV9pZBgGIAEoCRIPCgdlbmFibGVkGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQESLAoGbm90aWZ5GAsgASgOMhwuZWxyaS52MS5zY3JpcHQuTm90aWZ5UG9saWN5QhAKDl9kZWxldGVkX2F0X21zInQKCVJ1blJlc3VsdBITCgtvdXRwdXRfanNvbhgBIAEoCRIMCgRsb2dzGAIgAygJEhMKC2R1cmF0aW9uX21zGAMgASgDEg0KBWVycm9yGAQgASgJEg4KBmxhYmVscxgFIAMoCRIQCghncmFudF9pZBgGIAEoCSqGAQoKTWlzc2VkUnVucxIbChdNSVNTRURfUlVOU19VTlNQRUNJRklFRBAAEhQKEE1JU1NFRF9SVU5TX1NLSVAQARIWChJNSVNTRURfUlVOU19MQVRFU1QQAhIYChRNSVNTRURfUlVOU19DQVRDSF9VUBADEhMKD01JU1NFRF9SVU5TX0FTSxAEKnwKDE5vdGlmeVBvbGljeRIdChlOT1RJRllfUE9MSUNZX1VOU1BFQ0lGSUVEEAASFwoTTk9USUZZX1BPTElDWV9ORVZFUhABEhoKFk5PVElGWV9QT0xJQ1lfT05fRVJST1IQAhIYChROT1RJRllfUE9MSUNZX0FMV0FZUxADYgZwcm90bzM", [file_elri_v1_object_domain]);
 
 /**
  *
@@ -570,6 +570,11 @@ export type Rule = Message<"elri.v1.script.Rule"> & {
    * @generated from field: optional int64 deleted_at_ms = 10;
    */
   deletedAtMs?: bigint | undefined;
+
+  /**
+   * @generated from field: elri.v1.script.NotifyPolicy notify = 11;
+   */
+  notify: NotifyPolicy;
 };
 
 /**
@@ -629,6 +634,11 @@ export type RuleJson = {
    * @generated from field: optional int64 deleted_at_ms = 10;
    */
   deletedAtMs?: string;
+
+  /**
+   * @generated from field: elri.v1.script.NotifyPolicy notify = 11;
+   */
+  notify?: NotifyPolicyJson;
 };
 
 /**
@@ -789,4 +799,44 @@ export type MissedRunsJson = "MISSED_RUNS_UNSPECIFIED" | "MISSED_RUNS_SKIP" | "M
  */
 export const MissedRunsSchema: GenEnum<MissedRuns, MissedRunsJson> = /*@__PURE__*/
   enumDesc(file_elri_v1_script_domain, 0);
+
+/**
+ * When a rule's runs tell the user. Unspecified = ON_ERROR. 
+ *
+ * @generated from enum elri.v1.script.NotifyPolicy
+ */
+export enum NotifyPolicy {
+  /**
+   * @generated from enum value: NOTIFY_POLICY_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: NOTIFY_POLICY_NEVER = 1;
+   */
+  NEVER = 1,
+
+  /**
+   * @generated from enum value: NOTIFY_POLICY_ON_ERROR = 2;
+   */
+  ON_ERROR = 2,
+
+  /**
+   * @generated from enum value: NOTIFY_POLICY_ALWAYS = 3;
+   */
+  ALWAYS = 3,
+}
+
+/**
+ * When a rule's runs tell the user. Unspecified = ON_ERROR. 
+ *
+ * @generated from enum elri.v1.script.NotifyPolicy
+ */
+export type NotifyPolicyJson = "NOTIFY_POLICY_UNSPECIFIED" | "NOTIFY_POLICY_NEVER" | "NOTIFY_POLICY_ON_ERROR" | "NOTIFY_POLICY_ALWAYS";
+
+/**
+ * Describes the enum elri.v1.script.NotifyPolicy.
+ */
+export const NotifyPolicySchema: GenEnum<NotifyPolicy, NotifyPolicyJson> = /*@__PURE__*/
+  enumDesc(file_elri_v1_script_domain, 1);
 

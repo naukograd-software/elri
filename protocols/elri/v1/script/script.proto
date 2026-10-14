@@ -12,6 +12,8 @@ service ScriptService {
     rpc ListScripts(ListScriptsRequest) returns (ListScriptsResponse);
     /* Compiles without running. */
     rpc CheckScript(CheckScriptRequest) returns (CheckScriptResponse);
+    /* The Luau declarations of the host API, for editors and analyzers. */
+    rpc GetSdk(GetSdkRequest) returns (GetSdkResponse);
     /* Runs now with JSON arguments, under the device's grant for this version. */
     rpc RunScript(RunScriptRequest) returns (RunScriptResponse);
 }
@@ -103,6 +105,13 @@ message CheckScriptRequest {
     string source = 1;
 }
 
+message GetSdkRequest {}
+
+message GetSdkResponse {
+    /* `elri.d.luau`. */
+    string source = 1;
+}
+
 message CheckScriptResponse {
     /* Empty when the source compiles. */
     repeated string diagnostics = 1;
@@ -148,10 +157,14 @@ message GetPolicyRequest {}
 
 message GetPolicyResponse {
     bool auto_grant_benign = 1;
+    /* Script runs this device executes at once; the rest wait. */
+    int32 max_concurrent_scripts = 2;
 }
 
 message SetPolicyRequest {
     bool auto_grant_benign = 1;
+    /* 0 keeps the current value. */
+    int32 max_concurrent_scripts = 2;
 }
 
 message SetPolicyResponse {
@@ -165,6 +178,7 @@ message CreateRuleRequest {
     Trigger trigger = 4;
     /* Empty = this device. */
     string executor_device_id = 5;
+    NotifyPolicy notify = 6;
 }
 
 message CreateRuleResponse {
@@ -178,6 +192,7 @@ message UpdateRuleRequest {
     optional bool enabled = 4;
     Trigger trigger = 5;
     optional string executor_device_id = 6;
+    NotifyPolicy notify = 7;
 }
 
 message UpdateRuleResponse {

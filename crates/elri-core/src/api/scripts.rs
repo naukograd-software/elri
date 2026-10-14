@@ -15,12 +15,12 @@ use elri_proto::elri::v1::script::script_service_ws::{
 use elri_proto::elri::v1::script::{
     CheckScriptRequest, CheckScriptResponse, CreateRuleRequest, CreateRuleResponse,
     CreateScriptRequest, CreateScriptResponse, GetPolicyRequest, GetPolicyResponse,
-    GetScriptRequest, GetScriptResponse, GrantScriptRequest, GrantScriptResponse,
-    ListGrantsRequest, ListGrantsResponse, ListRuleRunsRequest, ListRuleRunsResponse,
-    ListRulesRequest, ListRulesResponse, ListScriptsRequest, ListScriptsResponse,
-    RevokeGrantRequest, RevokeGrantResponse, RunRuleRequest, RunRuleResponse, RunScriptRequest,
-    RunScriptResponse, SetPolicyRequest, SetPolicyResponse, UpdateRuleRequest, UpdateRuleResponse,
-    UpdateScriptRequest, UpdateScriptResponse,
+    GetScriptRequest, GetScriptResponse, GetSdkRequest, GetSdkResponse, GrantScriptRequest,
+    GrantScriptResponse, ListGrantsRequest, ListGrantsResponse, ListRuleRunsRequest,
+    ListRuleRunsResponse, ListRulesRequest, ListRulesResponse, ListScriptsRequest,
+    ListScriptsResponse, RevokeGrantRequest, RevokeGrantResponse, RunRuleRequest, RunRuleResponse,
+    RunScriptRequest, RunScriptResponse, SetPolicyRequest, SetPolicyResponse, UpdateRuleRequest,
+    UpdateRuleResponse, UpdateScriptRequest, UpdateScriptResponse,
 };
 use ws_proto::{Code, Request, Response, Server, Status};
 
@@ -175,6 +175,15 @@ impl ScriptServiceHandler for Services {
         }))
     }
 
+    async fn get_sdk(
+        &self,
+        _req: Request<GetSdkRequest>,
+    ) -> Result<Response<GetSdkResponse>, Status> {
+        Ok(Response::new(GetSdkResponse {
+            source: script::SDK.to_owned(),
+        }))
+    }
+
     async fn run_script(
         &self,
         req: Request<RunScriptRequest>,
@@ -264,6 +273,7 @@ impl GrantServiceHandler for Services {
     ) -> Result<Response<GetPolicyResponse>, Status> {
         Ok(Response::new(GetPolicyResponse {
             auto_grant_benign: self.store.setting(AUTO_GRANT_BENIGN, 1).await? != 0,
+            max_concurrent_scripts: i32::try_from(self.scripts.concurrency()).unwrap_or(i32::MAX),
         }))
     }
 
@@ -274,6 +284,15 @@ impl GrantServiceHandler for Services {
         self.store
             .set_setting(AUTO_GRANT_BENIGN, i64::from(req.msg.auto_grant_benign))
             .await?;
+        if req.msg.max_concurrent_scripts > 0 {
+            let n = usize::try_from(req.msg.max_concurrent_scripts)
+                .unwrap_or(1)
+                .min(script::MAX_CONCURRENCY);
+            self.store
+                .set_setting(rules::MAX_CONCURRENT_SCRIPTS, i64::try_from(n).unwrap_or(1))
+                .await?;
+            self.scripts.set_concurrency(n);
+        }
         Ok(Response::new(SetPolicyResponse {
             auto_grant_benign: req.msg.auto_grant_benign,
         }))
@@ -306,6 +325,7 @@ impl RuleServiceHandler for Services {
             .map_err(StoreError::from)?;
         rules::write_trigger(&doc, &m.trigger.clone().unwrap_or_default())
             .map_err(StoreError::from)?;
+        rules::write_notify(&doc, m.notify()).map_err(StoreError::from)?;
         doc.touch(now_ms()).map_err(StoreError::from)?;
         let rec = self.store.space(space_id).await?.insert(&doc).await?;
         Ok(Response::new(CreateRuleResponse {
@@ -333,8 +353,12 @@ impl RuleServiceHandler for Services {
         let enabled = m.enabled;
         let trigger = m.trigger.clone();
         let executor = m.executor_device_id.clone();
+        let notify = (m.notify != 0).then_some(m.notify());
         let rec = space
             .update(id, move |doc| {
+                if let Some(n) = notify {
+                    rules::write_notify(doc, n)?;
+                }
                 if let Some(n) = name {
                     doc.set_field(reserved::NAME, &string_value(n))?;
                 }

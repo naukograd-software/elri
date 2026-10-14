@@ -131,6 +131,8 @@ pub struct Rule {
     pub updated_at_ms: i64,
     #[prost(int64, optional, tag = "10")]
     pub deleted_at_ms: ::core::option::Option<i64>,
+    #[prost(enumeration = "NotifyPolicy", tag = "11")]
+    pub notify: i32,
 }
 /// What a run produced. 
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -189,6 +191,39 @@ impl MissedRuns {
             "MISSED_RUNS_LATEST" => Some(Self::Latest),
             "MISSED_RUNS_CATCH_UP" => Some(Self::CatchUp),
             "MISSED_RUNS_ASK" => Some(Self::Ask),
+            _ => None,
+        }
+    }
+}
+/// When a rule's runs tell the user. Unspecified = ON_ERROR. 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum NotifyPolicy {
+    Unspecified = 0,
+    Never = 1,
+    OnError = 2,
+    Always = 3,
+}
+impl NotifyPolicy {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "NOTIFY_POLICY_UNSPECIFIED",
+            Self::Never => "NOTIFY_POLICY_NEVER",
+            Self::OnError => "NOTIFY_POLICY_ON_ERROR",
+            Self::Always => "NOTIFY_POLICY_ALWAYS",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "NOTIFY_POLICY_UNSPECIFIED" => Some(Self::Unspecified),
+            "NOTIFY_POLICY_NEVER" => Some(Self::Never),
+            "NOTIFY_POLICY_ON_ERROR" => Some(Self::OnError),
+            "NOTIFY_POLICY_ALWAYS" => Some(Self::Always),
             _ => None,
         }
     }
@@ -283,6 +318,15 @@ pub struct CheckScriptRequest {
     #[prost(string, tag = "1")]
     pub source: ::prost::alloc::string::String,
 }
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetSdkRequest {
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetSdkResponse {
+    /// `elri.d.luau`. 
+    #[prost(string, tag = "1")]
+    pub source: ::prost::alloc::string::String,
+}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CheckScriptResponse {
     /// Empty when the source compiles. 
@@ -344,11 +388,17 @@ pub struct GetPolicyRequest {
 pub struct GetPolicyResponse {
     #[prost(bool, tag = "1")]
     pub auto_grant_benign: bool,
+    /// Script runs this device executes at once; the rest wait. 
+    #[prost(int32, tag = "2")]
+    pub max_concurrent_scripts: i32,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SetPolicyRequest {
     #[prost(bool, tag = "1")]
     pub auto_grant_benign: bool,
+    /// 0 keeps the current value. 
+    #[prost(int32, tag = "2")]
+    pub max_concurrent_scripts: i32,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SetPolicyResponse {
@@ -368,6 +418,8 @@ pub struct CreateRuleRequest {
     /// Empty = this device. 
     #[prost(string, tag = "5")]
     pub executor_device_id: ::prost::alloc::string::String,
+    #[prost(enumeration = "NotifyPolicy", tag = "6")]
+    pub notify: i32,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateRuleResponse {
@@ -388,6 +440,8 @@ pub struct UpdateRuleRequest {
     pub trigger: ::core::option::Option<Trigger>,
     #[prost(string, optional, tag = "6")]
     pub executor_device_id: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(enumeration = "NotifyPolicy", tag = "7")]
+    pub notify: i32,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct UpdateRuleResponse {

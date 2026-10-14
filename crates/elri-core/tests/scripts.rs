@@ -272,6 +272,7 @@ async fn scripts_run_within_their_manifest_and_grants() {
         .set_policy(authed(
             &c.endpoint,
             SetPolicyRequest {
+                max_concurrent_scripts: 0,
                 auto_grant_benign: false,
             },
         ))
@@ -294,6 +295,7 @@ async fn scripts_run_within_their_manifest_and_grants() {
         .set_policy(authed(
             &c.endpoint,
             SetPolicyRequest {
+                max_concurrent_scripts: 0,
                 auto_grant_benign: true,
             },
         ))
@@ -335,6 +337,7 @@ async fn rules_fire_on_user_changes_but_not_on_their_own() {
         .create_rule(authed(
             &c.endpoint,
             CreateRuleRequest {
+                notify: 0,
                 space_id: home.clone(),
                 name: "tag tasks".into(),
                 script_id: script.id.clone(),
@@ -475,6 +478,7 @@ async fn scheduled_rules_run_and_record_their_runs() {
         .create_rule(authed(
             &c.endpoint,
             CreateRuleRequest {
+                notify: 0,
                 space_id: home.clone(),
                 name: "every second".into(),
                 script_id: script.id.clone(),

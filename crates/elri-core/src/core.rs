@@ -226,6 +226,14 @@ impl Core {
         let modules = crate::extension::Modules::new(&config.data_dir);
         let scripts =
             crate::script::Host::new(Arc::clone(&store), device_id.as_string(), modules.clone());
+        let saved = store
+            .setting(
+                crate::rules::MAX_CONCURRENT_SCRIPTS,
+                i64::try_from(crate::script::DEFAULT_CONCURRENCY).unwrap_or(4),
+            )
+            .await?;
+        scripts
+            .set_concurrency(usize::try_from(saved).unwrap_or(crate::script::DEFAULT_CONCURRENCY));
         let rules_task =
             crate::rules::spawn_runner(Arc::clone(&store), scripts.clone(), device_id.as_string());
         if let Err(e) = crate::workflows::recover(&store, &scripts).await {
