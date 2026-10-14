@@ -3,6 +3,7 @@
 //! messages are the model, so handlers mostly validate and delegate.
 
 mod attachments;
+mod contexts;
 mod definitions;
 mod extensions;
 mod scripts;
@@ -110,7 +111,8 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     scripts::register(&server, Arc::clone(&services));
     ui::register(&server, Arc::clone(&services));
     transfer::register(&server, Arc::clone(&services));
-    extensions::register(&server, services);
+    extensions::register(&server, Arc::clone(&services));
+    contexts::register(&server, services);
     server
 }
 

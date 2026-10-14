@@ -252,19 +252,61 @@ pub fn extension_of(rec: &ExtensionRecord, granted: bool) -> Extension {
     }
 }
 
+/// What a call runs under.
+pub struct Invocation<'a> {
+    /// The extension.
+    pub rec: &'a ExtensionRecord,
+    /// The function.
+    pub function: &'a str,
+    /// The Space of the call.
+    pub space: SpaceId,
+    /// JSON arguments.
+    pub args: Json,
+    /// The grant the call uses.
+    pub grant_id: String,
+    /// The caller's manifest when a script or rule makes the call: the
+    /// extension then gets the intersection, never more than its parent.
+    pub parent: Option<&'a Manifest>,
+}
+
+/// The capabilities both manifests allow.
+fn intersect(own: &Manifest, parent: &Manifest) -> Manifest {
+    Manifest {
+        reads: own
+            .reads
+            .iter()
+            .filter(|s| parent.reads.contains(s))
+            .cloned()
+            .collect(),
+        writes: own
+            .writes
+            .iter()
+            .filter(|s| parent.writes.contains(s))
+            .cloned()
+            .collect(),
+        http: own.http && parent.http,
+        ai: own.ai && parent.ai,
+        extensions: Vec::new(),
+    }
+}
+
 /// Runs one function of an installed extension.
-pub async fn call(
-    store: Arc<Store>,
-    modules: &Modules,
-    rec: &ExtensionRecord,
-    function: &str,
-    space: SpaceId,
-    args: Json,
-    grant_id: String,
-) -> RunResult {
+pub async fn call(store: Arc<Store>, modules: &Modules, inv: Invocation<'_>) -> RunResult {
+    let Invocation {
+        rec,
+        function,
+        space,
+        args,
+        grant_id,
+        parent,
+    } = inv;
     let started = Instant::now();
     let functions: Vec<String> = serde_json::from_str(&rec.functions).unwrap_or_default();
-    let manifest = script::manifest_from_json(&rec.manifest).unwrap_or_default();
+    let own_manifest = script::manifest_from_json(&rec.manifest).unwrap_or_default();
+    let manifest = match parent {
+        Some(p) => intersect(&own_manifest, p),
+        None => own_manifest,
+    };
     let session = Arc::new(Mutex::new(Session {
         store: Arc::clone(&store),
         own: space,

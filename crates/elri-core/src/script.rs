@@ -779,14 +779,24 @@ impl Host {
                             Some(v) => lua.from_value(v)?,
                             None => serde_json::Value::Null,
                         };
+                        // The script's manifest bounds the extension: a
+                        // child never gets more than its parent.
+                        let parent = a
+                            .lock()
+                            .unwrap_or_else(std::sync::PoisonError::into_inner)
+                            .manifest
+                            .clone();
                         let result = crate::extension::call(
                             Arc::clone(&store),
                             &modules,
-                            &rec,
-                            &func,
-                            own,
-                            args,
-                            grant.id,
+                            crate::extension::Invocation {
+                                rec: &rec,
+                                function: &func,
+                                space: own,
+                                args,
+                                grant_id: grant.id,
+                                parent: Some(&parent),
+                            },
                         )
                         .await;
                         {

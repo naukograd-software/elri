@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package elri.v1.context;
+
+import "elri/v1/object/domain.proto";
+
+/*
+A Context is a selection, not a store: the Spaces, Layers, filters, and
+Views relevant to an activity. One Object can be in several Contexts.
+A Context neither transfers ownership nor grants anything; resolving one
+reads only what the device already has access to.
+*/
+service ContextService {
+    rpc CreateContext(CreateContextRequest) returns (CreateContextResponse);
+    rpc UpdateContext(UpdateContextRequest) returns (UpdateContextResponse);
+    rpc ListContexts(ListContextsRequest) returns (ListContextsResponse);
+    /* The Objects the Context selects right now, across its Spaces. */
+    rpc ResolveContext(ResolveContextRequest) returns (ResolveContextResponse);
+    /* Hides an Object from the Context (or shows it again) without
+       touching the Object. */
+    rpc HideInContext(HideInContextRequest) returns (HideInContextResponse);
+}
+
+/* What a Context selects. */
+message Selection {
+    /* Spaces to read; the Context's own Space when empty. */
+    repeated string space_ids = 1;
+    /* Only these kinds; empty = entities. */
+    repeated elri.v1.object.ObjectKind kinds = 2;
+    /* Only Objects carrying any of these type definition ids, if set. */
+    repeated string type_ids = 3;
+    /* Layers whose values the Views of this Context show and edit. */
+    repeated string layer_ids = 4;
+    /* Interface ids that belong to this Context. */
+    repeated string view_ids = 5;
+    /* Objects hidden from this Context. */
+    repeated string hidden_ids = 6;
+}
+
+message Context {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    Selection selection = 4;
+    int64 created_at_ms = 5;
+    int64 updated_at_ms = 6;
+    optional int64 deleted_at_ms = 7;
+}
+
+message CreateContextRequest {
+    string space_id = 1;
+    string name = 2;
+    Selection selection = 3;
+}
+
+message CreateContextResponse {
+    Context context = 1;
+}
+
+message UpdateContextRequest {
+    string space_id = 1;
+    string id = 2;
+    optional string name = 3;
+    /* Replaces the whole selection when set. */
+    Selection selection = 4;
+}
+
+message UpdateContextResponse {
+    Context context = 1;
+}
+
+message ListContextsRequest {
+    string space_id = 1;
+    bool include_deleted = 2;
+}
+
+message ListContextsResponse {
+    repeated Context contexts = 1;
+}
+
+message ResolveContextRequest {
+    string space_id = 1;
+    string id = 2;
+    /* 0 = default. */
+    int32 limit = 3;
+}
+
+message ResolveContextResponse {
+    repeated elri.v1.object.Object objects = 1;
+    /* Spaces the Context names that this device does not have. */
+    repeated string missing_space_ids = 2;
+}
+
+message HideInContextRequest {
+    string space_id = 1;
+    string id = 2;
+    string object_id = 3;
+    bool hidden = 4;
+}
+
+message HideInContextResponse {
+    Context context = 1;
+}

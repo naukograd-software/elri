@@ -26,6 +26,8 @@ enum ObjectKind {
     OBJECT_KIND_INTERFACE = 10;
     /* An immutable published version of a definition; see elri.v1.definition. */
     OBJECT_KIND_PUBLICATION = 11;
+    /* A selection of Spaces, Layers, filters, and Views; see elri.v1.context. */
+    OBJECT_KIND_CONTEXT = 12;
 }
 
 /* Items of a list value; scalars only. */

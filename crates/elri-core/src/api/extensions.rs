@@ -196,11 +196,14 @@ impl ExtensionServiceHandler for Services {
         let result = extension::call(
             Arc::clone(&self.store),
             &self.modules,
-            &rec,
-            &m.function,
-            space,
-            args,
-            grant.id,
+            extension::Invocation {
+                rec: &rec,
+                function: &m.function,
+                space,
+                args,
+                grant_id: grant.id,
+                parent: None,
+            },
         )
         .await;
         Ok(Response::new(CallExtensionResponse {

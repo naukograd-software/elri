@@ -97,6 +97,7 @@ pub fn is_managed(kind: ObjectKind) -> bool {
                 | ObjectKind::Rule
                 | ObjectKind::Interface
                 | ObjectKind::Publication
+                | ObjectKind::Context
         )
 }
 
