@@ -24,6 +24,8 @@ use elri_proto::elri::v1::remote::{
     AddMemberRequest, ConnectRequest, CreateRemoteSpaceRequest, DisconnectRequest,
     GetStatusRequest, JoinSpaceRequest, ListRemoteSpacesRequest,
 };
+use elri_proto::elri::v1::search::search_service_ws::SearchServiceClient;
+use elri_proto::elri::v1::search::SearchRequest;
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::Role;
 use elri_proto::elri::v1::space::{CreateSpaceRequest, ListSpacesRequest};
@@ -59,6 +61,18 @@ enum Cmd {
     Object {
         #[command(subcommand)]
         cmd: ObjectCmd,
+    },
+    /// Full-text search in a Space.
+    Search {
+        #[arg(long)]
+        space: String,
+        /// Words to find; `AND`, `OR`, quoted phrases, and `-word` work.
+        query: String,
+        /// Kind: entity, relation, layer, field-def, type-def, role-def.
+        #[arg(long, value_parser = parse_kind)]
+        kind: Option<ObjectKind>,
+        #[arg(long, default_value_t = 20)]
+        limit: i32,
     },
     /// Changes recorded in a Space, newest first.
     Change {
@@ -400,6 +414,37 @@ async fn main() -> Result<()> {
         Cmd::Watch { spaces } => return run_watch(&endpoint, conn, spaces).await,
         Cmd::Space { cmd } => run_space(&endpoint, conn, cmd).await?,
         Cmd::Object { cmd } => run_object(&endpoint, conn, cmd).await?,
+        Cmd::Search {
+            space,
+            query,
+            kind,
+            limit,
+        } => {
+            let res = SearchServiceClient::new(conn)
+                .search(authed(
+                    &endpoint,
+                    SearchRequest {
+                        space_id: space,
+                        query,
+                        kind: kind.unwrap_or(ObjectKind::Unspecified).into(),
+                        limit,
+                    },
+                ))
+                .await?;
+            let hits: Vec<_> = res
+                .msg
+                .hits
+                .iter()
+                .map(|h| {
+                    json!({
+                        "score": h.score,
+                        "fields": h.fields,
+                        "object": h.object.as_ref().map(object_json),
+                    })
+                })
+                .collect();
+            json!(hits)
+        }
         Cmd::Change { cmd } => run_change(&endpoint, conn, cmd).await?,
         Cmd::Remote { cmd } => run_remote(&endpoint, conn, cmd).await?,
     };

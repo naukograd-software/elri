@@ -93,8 +93,9 @@ pub struct RemoteConfig {
     pub user_name: String,
 }
 
-/// Opens a database file, creating its schema when the file is new.
-async fn open_db(path: &Path, models: toasty::ModelSet) -> Result<Db, StoreError> {
+/// Opens a database file, creating its schema when the file is new. The
+/// flag says whether it was new.
+async fn open_db(path: &Path, models: toasty::ModelSet) -> Result<(Db, bool), StoreError> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|source| StoreError::Io {
             path: parent.to_path_buf(),
@@ -104,13 +105,13 @@ async fn open_db(path: &Path, models: toasty::ModelSet) -> Result<Db, StoreError
     let fresh = !path.exists();
     let db = Db::builder()
         .models(models)
-        .build(Turso::file(path))
+        .build(Turso::file(path).experimental_index_method(true))
         .await?;
     if fresh {
         db.push_schema().await?;
     }
     restrict_to_owner(path);
-    Ok(db)
+    Ok((db, fresh))
 }
 
 /// Database files hold user data and, in the device database, the server
@@ -189,7 +190,7 @@ impl Store {
     /// Opens `root/device.db` and prepares `root/spaces/` for Space files.
     pub async fn open(root: impl Into<PathBuf>, device_id: DeviceId) -> Result<Self, StoreError> {
         let root = root.into();
-        let db = open_db(
+        let (db, _) = open_db(
             &root.join("device.db"),
             toasty::models!(SpaceRow, RemoteRow),
         )
@@ -404,7 +405,7 @@ impl SpaceStore {
                 what: "file name",
             })?;
         let id = ObjectId::parse(stem)?;
-        let db = open_db(
+        let (mut db, fresh) = open_db(
             path,
             toasty::models!(
                 DocRow,
@@ -423,6 +424,13 @@ impl SpaceStore {
             ),
         )
         .await?;
+        if fresh {
+            // Full-text index over projected string and text values; kept
+            // in step with the table by the engine.
+            toasty::sql::query("CREATE INDEX field_values_fts ON field_values USING fts(v_text)")
+                .exec(&mut db)
+                .await?;
+        }
         Ok(Self {
             id,
             device_id,
@@ -680,6 +688,74 @@ impl SpaceStore {
         let mut out = Vec::with_capacity(ids.len());
         for id in ids {
             out.push(load_doc(&mut db, id).await?.0.read()?);
+        }
+        Ok(out)
+    }
+
+    /// Full-text search over string and text fields of live Objects, best
+    /// first. Each Object appears once, with its best score and the fields
+    /// that matched.
+    pub async fn search(
+        &self,
+        query: &str,
+        kind: Option<ObjectKind>,
+        limit: usize,
+    ) -> Result<Vec<(Object, f64, Vec<String>)>, StoreError> {
+        let query = query.trim();
+        if query.is_empty() {
+            return Ok(Vec::new());
+        }
+        let limit = if limit == 0 { 50 } else { limit };
+        let mut db = self.db.lock().await;
+        // Several fields of one Object may match; fetch more rows than
+        // Objects wanted and fold them.
+        let rows = toasty::sql::query(
+            "SELECT fts_score(v_text, ?1) AS score, object_id, field_id FROM field_values \
+             WHERE fts_match(v_text, ?1) ORDER BY score DESC LIMIT ?2",
+        )
+        .bind(Value::String(query.to_owned()))
+        .bind(Value::I64(i64::try_from(limit * 8).unwrap_or(i64::MAX)))
+        .exec(&mut *db)
+        .await?;
+        let mut order: Vec<Uuid> = Vec::new();
+        let mut best: HashMap<Uuid, (f64, Vec<String>)> = HashMap::new();
+        for row in rows {
+            let Value::Record(rec) = row else {
+                return Err(StoreError::Corrupt {
+                    table: "field_values",
+                    what: "row shape",
+                });
+            };
+            let score = match &rec[0] {
+                Value::F64(f) => *f,
+                _ => 0.0,
+            };
+            let object = uuid_of(&rec[1], "field_values", "object_id")?;
+            let field = match &rec[2] {
+                Value::String(s) => s.clone(),
+                _ => String::new(),
+            };
+            let entry = best.entry(object).or_insert_with(|| {
+                order.push(object);
+                (score, Vec::new())
+            });
+            entry.0 = entry.0.max(score);
+            entry.1.push(field);
+        }
+        let mut out = Vec::with_capacity(order.len().min(limit));
+        for id in order {
+            let (doc, _) = load_doc(&mut db, ObjectId::from_uuid(id)).await?;
+            let rec = doc.read()?;
+            if rec.deleted_at_ms.is_some() || kind.is_some_and(|k| rec.kind() != k) {
+                continue;
+            }
+            let (score, mut fields) = best.remove(&id).unwrap_or_default();
+            fields.sort();
+            fields.dedup();
+            out.push((rec, score, fields));
+            if out.len() == limit {
+                break;
+            }
         }
         Ok(out)
     }

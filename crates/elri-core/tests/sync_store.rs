@@ -1,7 +1,7 @@
 //! Storage-level synchronization: a device's outbox is admitted by an
 //! authority and delivered to another device.
 
-#![allow(clippy::expect_used, clippy::panic)]
+#![allow(clippy::expect_used, clippy::panic, clippy::too_many_lines)]
 
 use elri_core::change::{rejected, Outcome, Reason};
 use elri_core::device::DeviceId;
@@ -333,4 +333,117 @@ async fn rejected_edit_leaves_accepted_state_intact() {
     assert_eq!(outcome, Outcome::AcceptedSeq(2));
     let on_server = s_space.get(id).await.expect("server get");
     assert_eq!(on_server.fields["title"], string_value("repaired"));
+}
+
+#[tokio::test]
+async fn full_text_search_finds_live_text() {
+    let space_id = SpaceId::new();
+    let dir = tmp_dir("search");
+    let device = DeviceId::load_or_create(&dir).expect("device");
+    let a = Store::open(&dir, device).await.expect("store");
+    a.register_space(space_id, "s", Authority::Local)
+        .await
+        .expect("register");
+    let space = a.space(space_id).await.expect("space");
+
+    let make = |title: &str, body: &str, kind: ObjectKind| {
+        let doc = ObjectDoc::create(ObjectId::new(), space_id, kind, 1).expect("doc");
+        doc.set_field("title", &string_value(title)).expect("set");
+        if !body.is_empty() {
+            doc.set_field(
+                "body",
+                &Value {
+                    value: Some(value::Value::Text(body.to_owned())),
+                },
+            )
+            .expect("set");
+        }
+        doc.touch(2).expect("touch");
+        doc
+    };
+    let apples = make(
+        "Apple pie recipe",
+        "peel the apples, add cinnamon",
+        ObjectKind::Entity,
+    );
+    let pears = make("Pear tart", "slice pears thinly", ObjectKind::Entity);
+    let layer = ObjectDoc::create_layer(ObjectId::new(), space_id, apples.id(), 1).expect("layer");
+    layer
+        .set_field("note", &string_value("my apples are green"))
+        .expect("set");
+    layer.touch(2).expect("touch");
+    for d in [&apples, &pears, &layer] {
+        space.insert(d).await.expect("insert");
+    }
+
+    let hits = space.search("apples", None, 0).await.expect("search");
+    let ids: Vec<_> = hits.iter().map(|(o, _, _)| o.id.clone()).collect();
+    assert_eq!(hits.len(), 2);
+    assert!(ids.contains(&apples.id().to_string()));
+    assert!(ids.contains(&layer.id().to_string()));
+    let (_, _, fields) = hits
+        .iter()
+        .find(|(o, _, _)| o.id == apples.id().to_string())
+        .expect("apples hit");
+    // No stemming: "apples" is not "Apple", so only the body matched.
+    assert_eq!(fields, &vec!["body".to_owned()]);
+    let both = space
+        .search("apple OR apples", None, 0)
+        .await
+        .expect("search");
+    let (_, _, fields) = both
+        .iter()
+        .find(|(o, _, _)| o.id == apples.id().to_string())
+        .expect("apples hit");
+    assert_eq!(fields, &vec!["body".to_owned(), "title".to_owned()]);
+
+    // Kind filter; a deleted object drops out; an edit re-indexes.
+    let only_entities = space
+        .search("apples", Some(ObjectKind::Entity), 0)
+        .await
+        .expect("search");
+    assert_eq!(only_entities.len(), 1);
+    space
+        .update(pears.id(), |d| d.mark_deleted(3))
+        .await
+        .expect("delete");
+    assert!(space
+        .search("pears", None, 0)
+        .await
+        .expect("search")
+        .is_empty());
+    space
+        .update(apples.id(), |d| {
+            d.set_field("title", &string_value("Quince jam"))
+        })
+        .await
+        .expect("edit");
+    let quince = space.search("quince", None, 0).await.expect("search");
+    assert_eq!(quince.len(), 1);
+    assert_eq!(quince[0].2, vec!["title".to_owned()]);
+    let apples_now = space.search("apples", None, 0).await.expect("search");
+    assert_eq!(
+        apples_now.len(),
+        2,
+        "body still mentions apples; so does the layer"
+    );
+
+    // The index survives reopening the store.
+    drop(space);
+    drop(a);
+    let b = Store::open(&dir, device).await.expect("store again");
+    let space = b.space(space_id).await.expect("space");
+    assert_eq!(
+        space
+            .search("cinnamon", None, 0)
+            .await
+            .expect("search")
+            .len(),
+        1
+    );
+    assert!(space
+        .search("nothing-here", None, 0)
+        .await
+        .expect("search")
+        .is_empty());
 }

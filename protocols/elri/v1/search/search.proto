@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package elri.v1.search;
+
+import "elri/v1/object/domain.proto";
+
+/* Full-text search over the text of a Space's Objects. */
+service SearchService {
+    /* Best matches first. */
+    rpc Search(SearchRequest) returns (SearchResponse);
+}
+
+message SearchRequest {
+    string space_id = 1;
+    /* Words to find; `AND`, `OR`, quoted phrases, and `-word` are understood. */
+    string query = 2;
+    /* Unspecified searches every kind. */
+    elri.v1.object.ObjectKind kind = 3;
+    /* 0 = server default. */
+    int32 limit = 4;
+}
+
+message Hit {
+    elri.v1.object.Object object = 1;
+    /* Relevance; comparable within one response only. */
+    double score = 2;
+    /* Field-definition ids whose text matched. */
+    repeated string fields = 3;
+}
+
+message SearchResponse {
+    repeated Hit hits = 1;
+}

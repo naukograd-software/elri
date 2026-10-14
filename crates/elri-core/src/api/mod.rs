@@ -36,6 +36,10 @@ use elri_proto::elri::v1::remote::{
     GetStatusResponse, JoinSpaceRequest, JoinSpaceResponse, ListRemoteSpacesRequest,
     ListRemoteSpacesResponse, RemoteSpace, SpaceSyncStatus,
 };
+use elri_proto::elri::v1::search::search_service_ws::{
+    register_search_service_arc, SearchServiceHandler,
+};
+use elri_proto::elri::v1::search::{Hit, SearchRequest, SearchResponse};
 use elri_proto::elri::v1::space::space_service_ws::{
     register_space_service_arc, SpaceServiceHandler,
 };
@@ -85,6 +89,7 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     register_change_service_arc(&server, Arc::clone(&services));
     register_remote_service_arc(&server, Arc::clone(&services));
     register_event_service_arc(&server, Arc::clone(&services));
+    register_search_service_arc(&server, Arc::clone(&services));
     definitions::register(&server, services);
     server
 }
@@ -460,6 +465,44 @@ impl ObjectServiceHandler for Services {
         };
         Ok(Response::new(ListObjectsResponse {
             objects: self.store.space(space_id).await?.list(&filter).await?,
+        }))
+    }
+}
+
+impl SearchServiceHandler for Services {
+    async fn search(
+        &self,
+        req: Request<SearchRequest>,
+    ) -> Result<Response<SearchResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        if m.query.trim().is_empty() {
+            return Err(invalid("query is required"));
+        }
+        let kind = ObjectKind::try_from(m.kind)
+            .ok()
+            .filter(|k| *k != ObjectKind::Unspecified);
+        let limit = usize::try_from(m.limit).unwrap_or(0).min(500);
+        let hits = self
+            .store
+            .space(space_id)
+            .await?
+            .search(&m.query, kind, limit)
+            .await
+            .map_err(|e| match e {
+                // The engine rejects malformed query syntax at execution.
+                StoreError::Db(inner) => invalid(format!("query: {inner}")),
+                other => Status::from(other),
+            })?;
+        Ok(Response::new(SearchResponse {
+            hits: hits
+                .into_iter()
+                .map(|(object, score, fields)| Hit {
+                    object: Some(object),
+                    score,
+                    fields,
+                })
+                .collect(),
         }))
     }
 }
