@@ -18,6 +18,10 @@ enum ObjectKind {
     OBJECT_KIND_ROLE_DEF = 6;
     /* Immutable bytes with display metadata; see elri.v1.attachment. */
     OBJECT_KIND_ATTACHMENT = 7;
+    /* Luau source with a manifest; see elri.v1.script. */
+    OBJECT_KIND_SCRIPT = 8;
+    /* Runs a script when something happens; see elri.v1.script. */
+    OBJECT_KIND_RULE = 9;
 }
 
 /* Items of a list value; scalars only. */

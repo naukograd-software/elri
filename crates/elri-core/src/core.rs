@@ -175,6 +175,7 @@ struct Inner {
     endpoint: Endpoint,
     store: Arc<Store>,
     remote: Arc<Remote>,
+    rules_task: JoinHandle<()>,
 }
 
 impl Core {
@@ -220,6 +221,9 @@ impl Core {
         };
         write_endpoint(&config.data_dir, &endpoint)?;
 
+        let scripts = crate::script::Host::new(Arc::clone(&store), device_id.as_string());
+        let rules_task =
+            crate::rules::spawn_runner(Arc::clone(&store), scripts.clone(), device_id.as_string());
         let server = api::build_server(
             api::Services {
                 build: config.build.clone(),
@@ -227,6 +231,7 @@ impl Core {
                 token: token.clone(),
                 store: Arc::clone(&store),
                 remote: Arc::clone(&remote),
+                scripts,
             },
             config.allowed_origins.clone(),
         );
@@ -249,6 +254,7 @@ impl Core {
                 endpoint,
                 store,
                 remote,
+                rules_task,
             }),
             listener_task,
         })
@@ -284,6 +290,7 @@ impl Core {
         let remote = Arc::clone(&self.inner.remote);
         tokio::spawn(async move { remote.close().await });
         self.listener_task.abort();
+        self.inner.rules_task.abort();
         remove_endpoint(&self.inner.config.data_dir);
         tracing::info!("core stopped");
     }
@@ -292,6 +299,7 @@ impl Core {
 impl Drop for Core {
     fn drop(&mut self) {
         self.listener_task.abort();
+        self.inner.rules_task.abort();
         remove_endpoint(&self.inner.config.data_dir);
     }
 }

@@ -79,6 +79,8 @@ pub struct ChangeRow {
     /// Part of a Change spanning several Spaces: submitted by the
     /// coordinator from its journal, not by this Space's worker.
     pub coordinated: bool,
+    /// Who made it on the device: `user`, `script:<id>`, ...; attribution.
+    pub actor: String,
 }
 
 /// The operations a Change added to one document.
@@ -306,6 +308,39 @@ pub struct JournalRow {
     pub status: i64,
     /// Recording instant.
     pub created_at: i64,
+}
+
+/// A device's consent to run one version of a script.
+#[derive(Debug, toasty::Model)]
+#[table = "grants"]
+#[index(script_id, version)]
+pub struct GrantRow {
+    /// Grant id.
+    #[key]
+    pub id: Uuid,
+    /// Space of the script.
+    pub space_id: Uuid,
+    /// The script.
+    pub script_id: Uuid,
+    /// Hex SHA-256 of source and manifest.
+    pub version: String,
+    /// Every capability stayed within the script's own Space.
+    pub benign: bool,
+    /// Consent instant.
+    pub granted_at: i64,
+    /// Revocation instant, if revoked.
+    pub revoked_at: Option<i64>,
+}
+
+/// Device-wide settings: small named values.
+#[derive(Debug, toasty::Model)]
+#[table = "settings"]
+pub struct SettingRow {
+    /// Setting name.
+    #[key]
+    pub key: String,
+    /// Value.
+    pub value: i64,
 }
 
 /// The server this device synchronizes with; at most one row.

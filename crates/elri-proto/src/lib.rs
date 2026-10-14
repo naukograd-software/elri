@@ -55,6 +55,12 @@ pub mod elri {
             include!("elri/v1/remote/elri.v1.remote.rs");
             // @@protoc_insertion_point(elri.v1.remote)
         }
+        #[cfg(feature = "elri-v1-script")]
+        // @@protoc_insertion_point(attribute:elri.v1.script)
+        pub mod script {
+            include!("elri/v1/script/elri.v1.script.rs");
+            // @@protoc_insertion_point(elri.v1.script)
+        }
         #[cfg(feature = "elri-v1-search")]
         // @@protoc_insertion_point(attribute:elri.v1.search)
         pub mod search {

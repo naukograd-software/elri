@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package elri.v1.script;
+
+import "elri/v1/object/domain.proto";
+
+/*
+What a script asks for. Reads and writes name Spaces; a script's own
+Space is always implied. Everything beyond its own Space, or beyond data,
+is a boundary that needs an explicit grant on each device.
+*/
+message Manifest {
+    /* Spaces the script reads besides its own. */
+    repeated string reads = 1;
+    /* Spaces the script writes besides its own. */
+    repeated string writes = 2;
+    /* Calls out over HTTP (not available in this version; declared for grants). */
+    bool http = 3;
+    /* Uses an AI provider (not available in this version; declared for grants). */
+    bool ai = 4;
+}
+
+/* Luau source kept in a Space. */
+message Script {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    string source = 4;
+    Manifest manifest = 5;
+    /* Hex SHA-256 over source and manifest: what a grant is bound to. */
+    string version = 6;
+    /* Every capability is within the script's own Space: granted without asking. */
+    bool benign = 7;
+    int64 created_at_ms = 8;
+    int64 updated_at_ms = 9;
+    optional int64 deleted_at_ms = 10;
+}
+
+/* A device's consent to run one version of a script. */
+message Grant {
+    string id = 1;
+    string space_id = 2;
+    string script_id = 3;
+    string version = 4;
+    bool benign = 5;
+    int64 granted_at_ms = 6;
+    optional int64 revoked_at_ms = 7;
+}
+
+/* When a rule fires: an Object of the rule's Space changed. */
+message Trigger {
+    /* Only these kinds; empty = any. */
+    repeated elri.v1.object.ObjectKind kinds = 1;
+    /* Only Objects carrying this type, if set. */
+    string type_id = 2;
+    /* Changes made by scripts and rules do not fire rules (depth one). */
+}
+
+/* Runs a script on its executing device when the trigger matches. */
+message Rule {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    string script_id = 4;
+    Trigger trigger = 5;
+    /* The one device that runs it. */
+    string executor_device_id = 6;
+    bool enabled = 7;
+    int64 created_at_ms = 8;
+    int64 updated_at_ms = 9;
+    optional int64 deleted_at_ms = 10;
+}
+
+/* What a run produced. */
+message RunResult {
+    /* The script's return value as JSON; empty for none. */
+    string output_json = 1;
+    repeated string logs = 2;
+    int64 duration_ms = 3;
+    /* Set when the run failed. */
+    string error = 4;
+    /* Spaces read during the run: the labels its writes carried. */
+    repeated string labels = 5;
+    /* The grant the run used. */
+    string grant_id = 6;
+}

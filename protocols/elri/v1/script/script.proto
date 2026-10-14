@@ -1,0 +1,170 @@
+syntax = "proto3";
+
+package elri.v1.script;
+
+import "elri/v1/script/domain.proto";
+
+/* Scripts: Luau source in a Space, run on this device within its grant. */
+service ScriptService {
+    rpc CreateScript(CreateScriptRequest) returns (CreateScriptResponse);
+    rpc UpdateScript(UpdateScriptRequest) returns (UpdateScriptResponse);
+    rpc GetScript(GetScriptRequest) returns (GetScriptResponse);
+    rpc ListScripts(ListScriptsRequest) returns (ListScriptsResponse);
+    /* Compiles without running. */
+    rpc CheckScript(CheckScriptRequest) returns (CheckScriptResponse);
+    /* Runs now with JSON arguments, under the device's grant for this version. */
+    rpc RunScript(RunScriptRequest) returns (RunScriptResponse);
+}
+
+/* Device grants: consent to run code, recorded outside the shared graph. */
+service GrantService {
+    rpc ListGrants(ListGrantsRequest) returns (ListGrantsResponse);
+    /* Consents to the script's current version. */
+    rpc GrantScript(GrantScriptRequest) returns (GrantScriptResponse);
+    rpc RevokeGrant(RevokeGrantRequest) returns (RevokeGrantResponse);
+    /* Whether benign scripts are granted without asking on this device. */
+    rpc GetPolicy(GetPolicyRequest) returns (GetPolicyResponse);
+    rpc SetPolicy(SetPolicyRequest) returns (SetPolicyResponse);
+}
+
+/* Rules: scripts that run when something happens. */
+service RuleService {
+    rpc CreateRule(CreateRuleRequest) returns (CreateRuleResponse);
+    rpc UpdateRule(UpdateRuleRequest) returns (UpdateRuleResponse);
+    rpc ListRules(ListRulesRequest) returns (ListRulesResponse);
+}
+
+message CreateScriptRequest {
+    string space_id = 1;
+    string name = 2;
+    string source = 3;
+    Manifest manifest = 4;
+}
+
+message CreateScriptResponse {
+    Script script = 1;
+}
+
+message UpdateScriptRequest {
+    string space_id = 1;
+    string id = 2;
+    optional string name = 3;
+    optional string source = 4;
+    Manifest manifest = 5;
+}
+
+message UpdateScriptResponse {
+    Script script = 1;
+}
+
+message GetScriptRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message GetScriptResponse {
+    Script script = 1;
+}
+
+message ListScriptsRequest {
+    string space_id = 1;
+    bool include_deleted = 2;
+}
+
+message ListScriptsResponse {
+    repeated Script scripts = 1;
+}
+
+message CheckScriptRequest {
+    string source = 1;
+}
+
+message CheckScriptResponse {
+    /* Empty when the source compiles. */
+    repeated string diagnostics = 1;
+}
+
+message RunScriptRequest {
+    string space_id = 1;
+    string id = 2;
+    /* JSON passed as `elri.args`; empty = null. */
+    string args_json = 3;
+}
+
+message RunScriptResponse {
+    RunResult result = 1;
+}
+
+message ListGrantsRequest {
+    /* Only this Space, if set. */
+    string space_id = 1;
+    bool include_revoked = 2;
+}
+
+message ListGrantsResponse {
+    repeated Grant grants = 1;
+}
+
+message GrantScriptRequest {
+    string space_id = 1;
+    string script_id = 2;
+}
+
+message GrantScriptResponse {
+    Grant grant = 1;
+}
+
+message RevokeGrantRequest {
+    string id = 1;
+}
+
+message RevokeGrantResponse {}
+
+message GetPolicyRequest {}
+
+message GetPolicyResponse {
+    bool auto_grant_benign = 1;
+}
+
+message SetPolicyRequest {
+    bool auto_grant_benign = 1;
+}
+
+message SetPolicyResponse {
+    bool auto_grant_benign = 1;
+}
+
+message CreateRuleRequest {
+    string space_id = 1;
+    string name = 2;
+    string script_id = 3;
+    Trigger trigger = 4;
+    /* Empty = this device. */
+    string executor_device_id = 5;
+}
+
+message CreateRuleResponse {
+    Rule rule = 1;
+}
+
+message UpdateRuleRequest {
+    string space_id = 1;
+    string id = 2;
+    optional string name = 3;
+    optional bool enabled = 4;
+    Trigger trigger = 5;
+    optional string executor_device_id = 6;
+}
+
+message UpdateRuleResponse {
+    Rule rule = 1;
+}
+
+message ListRulesRequest {
+    string space_id = 1;
+    bool include_deleted = 2;
+}
+
+message ListRulesResponse {
+    repeated Rule rules = 1;
+}

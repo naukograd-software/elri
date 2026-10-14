@@ -19,6 +19,7 @@ use elri_proto::elri::v1::events::{
     event, ChangeEvent, Event, ObjectEvent, RemoteEvent, SpaceEvent,
 };
 use elri_proto::elri::v1::object::{value, Object, ObjectKind, Value as PbValue};
+use elri_proto::elri::v1::script::Grant;
 use elri_proto::elri::v1::space::{Authority, Role, Space};
 use elri_proto::elri::v1::sync::{Entry, Envelope, Part};
 use loro::VersionVector;
@@ -33,13 +34,18 @@ use crate::change::{accepted, rejected, Outcome, Reason};
 use crate::device::DeviceId;
 use crate::model::{field_def_kind, now_ms, ModelError, ObjectDoc, ObjectId, SpaceId};
 use models::{
-    BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow,
+    BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, GrantRow,
     GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow, PlacementRow, RemoteRow,
-    SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
+    SettingRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
 };
 
 mod coordinator;
 pub use coordinator::{Edit, Journaled};
+
+/// Actor of a Change the user made directly.
+pub const ACTOR_USER: &str = "user";
+/// Actor of state installed from the authority.
+pub const ACTOR_REMOTE: &str = "remote";
 
 /// Updates folded into a fresh snapshot once this many accumulate per document.
 const COMPACT_AFTER_UPDATES: usize = 64;
@@ -70,6 +76,9 @@ pub enum StoreError {
     /// No such Change in the Space.
     #[error("change {0} not found")]
     ChangeNotFound(String),
+    /// No such grant on this device.
+    #[error("grant {0} not found")]
+    GrantNotFound(String),
     /// The Space's initial download is not finished; it is read-only.
     #[error("space is downloading: {received} of {target} accepted changes received")]
     Downloading {
@@ -218,7 +227,7 @@ impl Store {
         let root = root.into();
         let (db, _) = open_db(
             &root.join("device.db"),
-            toasty::models!(SpaceRow, RemoteRow, JournalRow),
+            toasty::models!(SpaceRow, RemoteRow, JournalRow, GrantRow, SettingRow),
         )
         .await?;
         let blobs = Blobs::new(&root);
@@ -317,6 +326,130 @@ impl Store {
         &self.blobs
     }
 
+    // --- grants and settings ----------------------------------------------
+
+    /// A device setting; `default` when unset.
+    pub async fn setting(&self, key: &str, default: i64) -> Result<i64, StoreError> {
+        let mut db = self.device.lock().await;
+        Ok(SettingRow::filter_by_key(key.to_owned())
+            .first()
+            .exec(&mut *db)
+            .await?
+            .map_or(default, |r| r.value))
+    }
+
+    /// Sets a device setting.
+    pub async fn set_setting(&self, key: &str, value: i64) -> Result<(), StoreError> {
+        let mut db = self.device.lock().await;
+        SettingRow::filter_by_key(key.to_owned())
+            .delete()
+            .exec(&mut *db)
+            .await?;
+        toasty::create!(SettingRow {
+            key: key.to_owned(),
+            value,
+        })
+        .exec(&mut *db)
+        .await?;
+        Ok(())
+    }
+
+    /// The live grant for a script version, if any.
+    pub async fn grant_for(
+        &self,
+        script_id: ObjectId,
+        version: &str,
+    ) -> Result<Option<Grant>, StoreError> {
+        let mut db = self.device.lock().await;
+        let rows = GrantRow::filter(
+            GrantRow::fields()
+                .script_id()
+                .eq(script_id.uuid())
+                .and(GrantRow::fields().version().eq(version.to_owned())),
+        )
+        .exec(&mut *db)
+        .await?;
+        Ok(rows
+            .iter()
+            .filter(|r| r.revoked_at.is_none())
+            .map(grant_of)
+            .next())
+    }
+
+    /// Records consent to run a script version on this device.
+    pub async fn grant(
+        &self,
+        space_id: SpaceId,
+        script_id: ObjectId,
+        version: &str,
+        benign: bool,
+    ) -> Result<Grant, StoreError> {
+        if let Some(existing) = self.grant_for(script_id, version).await? {
+            return Ok(existing);
+        }
+        let mut db = self.device.lock().await;
+        let row = GrantRow {
+            id: Uuid::now_v7(),
+            space_id: space_id.uuid(),
+            script_id: script_id.uuid(),
+            version: version.to_owned(),
+            benign,
+            granted_at: now_ms(),
+            revoked_at: None,
+        };
+        let grant = grant_of(&row);
+        toasty::create!(GrantRow {
+            id: row.id,
+            space_id: row.space_id,
+            script_id: row.script_id,
+            version: row.version,
+            benign: row.benign,
+            granted_at: row.granted_at,
+            revoked_at: None,
+        })
+        .exec(&mut *db)
+        .await?;
+        Ok(grant)
+    }
+
+    /// Revokes a grant; the script stops running at once.
+    pub async fn revoke_grant(&self, id: &str) -> Result<(), StoreError> {
+        let id = uuid_arg(id)?;
+        let mut db = self.device.lock().await;
+        if GrantRow::filter_by_id(id)
+            .first()
+            .exec(&mut *db)
+            .await?
+            .is_none()
+        {
+            return Err(StoreError::GrantNotFound(id.to_string()));
+        }
+        toasty::update!(GrantRow::filter_by_id(id) {
+            revoked_at: Some(now_ms()),
+        })
+        .exec(&mut *db)
+        .await?;
+        Ok(())
+    }
+
+    /// Grants on this device, newest first.
+    pub async fn grants(
+        &self,
+        space: Option<SpaceId>,
+        include_revoked: bool,
+    ) -> Result<Vec<Grant>, StoreError> {
+        let mut db = self.device.lock().await;
+        let rows = GrantRow::all().exec(&mut *db).await?;
+        let mut out: Vec<Grant> = rows
+            .iter()
+            .filter(|r| space.is_none_or(|s| r.space_id == s.uuid()))
+            .filter(|r| include_revoked || r.revoked_at.is_none())
+            .map(grant_of)
+            .collect();
+        out.sort_by_key(|g| std::cmp::Reverse(g.granted_at_ms));
+        Ok(out)
+    }
+
     /// Subscribes to everything that happens in this store from now on.
     pub fn watch(&self) -> broadcast::Receiver<Event> {
         self.events.subscribe()
@@ -325,6 +458,11 @@ impl Store {
     /// Announces a change of the server link.
     pub fn emit_remote(&self) {
         emit(&self.events, event::Event::Remote(RemoteEvent {}));
+    }
+
+    /// Publishes an event to every watcher.
+    pub fn emit(&self, body: event::Event) {
+        emit(&self.events, body);
     }
 
     /// Every Space registered on this device, newest first. The role is the
@@ -467,6 +605,18 @@ impl Store {
             .exec(&mut *db)
             .await?;
         Ok(())
+    }
+}
+
+fn grant_of(r: &GrantRow) -> Grant {
+    Grant {
+        id: r.id.to_string(),
+        space_id: ObjectId::from_uuid(r.space_id).to_string(),
+        script_id: ObjectId::from_uuid(r.script_id).to_string(),
+        version: r.version.clone(),
+        benign: r.benign,
+        granted_at_ms: r.granted_at,
+        revoked_at_ms: r.revoked_at,
     }
 }
 
@@ -681,7 +831,7 @@ impl SpaceStore {
         Ok(out)
     }
 
-    fn emit_object(&self, rec: &Object) {
+    fn emit_object(&self, rec: &Object, actor: &str) {
         emit(
             &self.events,
             event::Event::Object(ObjectEvent {
@@ -689,11 +839,12 @@ impl SpaceStore {
                 object_id: rec.id.clone(),
                 kind: rec.kind,
                 removed: false,
+                actor: actor.to_owned(),
             }),
         );
     }
 
-    fn emit_objects(&self, touched: &[(Uuid, i64, bool)]) {
+    fn emit_objects(&self, touched: &[(Uuid, i64, bool)], actor: &str) {
         for (object, kind, live) in touched {
             emit(
                 &self.events,
@@ -702,6 +853,7 @@ impl SpaceStore {
                     object_id: object.to_string(),
                     kind: i32::try_from(*kind).unwrap_or_default(),
                     removed: !live,
+                    actor: actor.to_owned(),
                 }),
             );
         }
@@ -724,13 +876,14 @@ impl SpaceStore {
         self.dirty.notified().await;
     }
 
-    fn new_envelope(&self, parts: Vec<Part>) -> Envelope {
+    fn new_envelope(&self, parts: Vec<Part>, actor: &str) -> Envelope {
         Envelope {
             id: ObjectId::new().to_string(),
             space_id: self.id.to_string(),
             device_id: self.device_id.as_string(),
             created_at_ms: now_ms(),
             parts,
+            actor: actor.to_owned(),
         }
     }
 
@@ -762,8 +915,14 @@ impl SpaceStore {
         Ok((cursor < target).then_some((cursor, target)))
     }
 
-    /// Stores a freshly created document as one Change with a full snapshot.
+    /// Stores a freshly created document as one Change with a full snapshot,
+    /// attributed to the user.
     pub async fn insert(&self, doc: &ObjectDoc) -> Result<Object, StoreError> {
+        self.insert_as(doc, ACTOR_USER).await
+    }
+
+    /// [`Self::insert`] attributed to `actor`.
+    pub async fn insert_as(&self, doc: &ObjectDoc, actor: &str) -> Result<Object, StoreError> {
         let rec = doc.read()?;
         let empty = VersionVector::default();
         let part = Part {
@@ -774,7 +933,7 @@ impl SpaceStore {
             bytes: doc.updates_since(&empty)?.into(),
             space_id: String::new(),
         };
-        let env = self.new_envelope(vec![part]);
+        let env = self.new_envelope(vec![part], actor);
         let mut db = self.db.lock().await;
         Self::writable(&mut db).await?;
         if is_purged(&mut db, doc.id().uuid()).await? {
@@ -789,7 +948,7 @@ impl SpaceStore {
         tx.commit().await?;
         self.dirty.notify_one();
         self.emit_change(uuid_arg(&env.id)?, ChangeStatus::Local);
-        self.emit_object(&rec);
+        self.emit_object(&rec, actor);
         Ok(rec)
     }
 
@@ -812,6 +971,19 @@ impl SpaceStore {
     where
         F: FnOnce(&ObjectDoc) -> Result<(), ModelError>,
     {
+        self.update_as(id, edit, ACTOR_USER).await
+    }
+
+    /// [`Self::update`] attributed to `actor`.
+    pub async fn update_as<F>(
+        &self,
+        id: ObjectId,
+        edit: F,
+        actor: &str,
+    ) -> Result<Object, StoreError>
+    where
+        F: FnOnce(&ObjectDoc) -> Result<(), ModelError>,
+    {
         let mut db = self.db.lock().await;
         Self::writable(&mut db).await?;
         let (doc, pending) = load_doc(&mut db, id).await?;
@@ -828,7 +1000,7 @@ impl SpaceStore {
             bytes: bytes.clone().into(),
             space_id: String::new(),
         };
-        let env = self.new_envelope(vec![part]);
+        let env = self.new_envelope(vec![part], actor);
         let deps = dependencies(&mut db, &rec).await?;
 
         let mut tx = db.transaction().await?;
@@ -852,7 +1024,7 @@ impl SpaceStore {
         tx.commit().await?;
         self.dirty.notify_one();
         self.emit_change(uuid_arg(&env.id)?, ChangeStatus::Local);
-        self.emit_object(&rec);
+        self.emit_object(&rec, actor);
         Ok(rec)
     }
 
@@ -1092,7 +1264,7 @@ impl SpaceStore {
         for id in &revived {
             self.emit_change(*id, ChangeStatus::Local);
         }
-        self.emit_objects(&rebuilt);
+        self.emit_objects(&rebuilt, ACTOR_USER);
         let row = change_row(&mut db, change_id).await?;
         read_change(&mut db, self.id, &row).await
     }
@@ -1218,7 +1390,7 @@ impl SpaceStore {
         for dep in &paused {
             self.emit_change(*dep, ChangeStatus::Paused);
         }
-        self.emit_objects(&rebuilt);
+        self.emit_objects(&rebuilt, ACTOR_REMOTE);
         Ok(())
     }
 
@@ -1445,7 +1617,7 @@ impl SpaceStore {
         write_state_tx(&mut tx, CURSOR, seq).await?;
         tx.commit().await?;
         self.emit_change(change_id, ChangeStatus::Accepted);
-        self.emit_objects(&installed);
+        self.emit_objects(&installed, ACTOR_REMOTE);
         Ok(())
     }
 
@@ -1472,7 +1644,7 @@ impl SpaceStore {
         write_log(&mut tx, seq, None, Some(id.uuid())).await?;
         tx.commit().await?;
         self.release_blobs();
-        self.emit_objects(&[(id.uuid(), row.kind, false)]);
+        self.emit_objects(&[(id.uuid(), row.kind, false)], ACTOR_USER);
         Ok(seq)
     }
 
@@ -1492,7 +1664,7 @@ impl SpaceStore {
         tx.commit().await?;
         self.release_blobs();
         if let Some(kind) = kind {
-            self.emit_objects(&[(id.uuid(), kind, false)]);
+            self.emit_objects(&[(id.uuid(), kind, false)], ACTOR_REMOTE);
         }
         Ok(())
     }
@@ -1690,6 +1862,7 @@ async fn read_change(db: &mut Db, space: SpaceId, row: &ChangeRow) -> Result<Cha
         accepted_seq: row.accepted_seq,
         rejection: row.rejection.clone().unwrap_or_default(),
         depends_on: deps.iter().map(|d| d.depends_on.to_string()).collect(),
+        actor: row.actor.clone(),
     })
 }
 
@@ -1954,6 +2127,7 @@ async fn read_envelope(
         device_id: row.device_id.clone(),
         created_at_ms: row.created_at,
         parts,
+        actor: row.actor.clone(),
     })
 }
 
@@ -2092,6 +2266,7 @@ async fn write_change_flagged(
         accepted_seq,
         rejection: (!rejection.is_empty()).then(|| rejection.to_owned()),
         coordinated,
+        actor: env.actor.clone(),
     })
     .exec(&mut *tx)
     .await?;

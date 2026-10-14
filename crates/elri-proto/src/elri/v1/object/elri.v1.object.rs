@@ -128,6 +128,10 @@ pub enum ObjectKind {
     RoleDef = 6,
     /// Immutable bytes with display metadata; see elri.v1.attachment. 
     Attachment = 7,
+    /// Luau source with a manifest; see elri.v1.script. 
+    Script = 8,
+    /// Runs a script when something happens; see elri.v1.script. 
+    Rule = 9,
 }
 impl ObjectKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -144,6 +148,8 @@ impl ObjectKind {
             Self::TypeDef => "OBJECT_KIND_TYPE_DEF",
             Self::RoleDef => "OBJECT_KIND_ROLE_DEF",
             Self::Attachment => "OBJECT_KIND_ATTACHMENT",
+            Self::Script => "OBJECT_KIND_SCRIPT",
+            Self::Rule => "OBJECT_KIND_RULE",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -157,6 +163,8 @@ impl ObjectKind {
             "OBJECT_KIND_TYPE_DEF" => Some(Self::TypeDef),
             "OBJECT_KIND_ROLE_DEF" => Some(Self::RoleDef),
             "OBJECT_KIND_ATTACHMENT" => Some(Self::Attachment),
+            "OBJECT_KIND_SCRIPT" => Some(Self::Script),
+            "OBJECT_KIND_RULE" => Some(Self::Rule),
             _ => None,
         }
     }

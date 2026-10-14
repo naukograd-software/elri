@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/events/domain.proto.
  */
 export const file_elri_v1_events_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL2V2ZW50cy9kb21haW4ucHJvdG8SDmVscmkudjEuZXZlbnRzIm0KC09iamVjdEV2ZW50EhAKCHNwYWNlX2lkGAEgASgJEhEKCW9iamVjdF9pZBgCIAEoCRIoCgRraW5kGAMgASgOMhouZWxyaS52MS5vYmplY3QuT2JqZWN0S2luZBIPCgdyZW1vdmVkGAQgASgIImAKC0NoYW5nZUV2ZW50EhAKCHNwYWNlX2lkGAEgASgJEhEKCWNoYW5nZV9pZBgCIAEoCRIsCgZzdGF0dXMYAyABKA4yHC5lbHJpLnYxLmNoYW5nZS5DaGFuZ2VTdGF0dXMiHgoKU3BhY2VFdmVudBIQCghzcGFjZV9pZBgBIAEoCSINCgtSZW1vdGVFdmVudCIICgZMYWdnZWQigwIKBUV2ZW50Eg0KBWF0X21zGAEgASgDEi0KBm9iamVjdBgCIAEoCzIbLmVscmkudjEuZXZlbnRzLk9iamVjdEV2ZW50SAASLQoGY2hhbmdlGAMgASgLMhsuZWxyaS52MS5ldmVudHMuQ2hhbmdlRXZlbnRIABIrCgVzcGFjZRgEIAEoCzIaLmVscmkudjEuZXZlbnRzLlNwYWNlRXZlbnRIABItCgZyZW1vdGUYBSABKAsyGy5lbHJpLnYxLmV2ZW50cy5SZW1vdGVFdmVudEgAEigKBmxhZ2dlZBgGIAEoCzIWLmVscmkudjEuZXZlbnRzLkxhZ2dlZEgAQgcKBWV2ZW50YgZwcm90bzM", [file_elri_v1_change_domain, file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL2V2ZW50cy9kb21haW4ucHJvdG8SDmVscmkudjEuZXZlbnRzInwKC09iamVjdEV2ZW50EhAKCHNwYWNlX2lkGAEgASgJEhEKCW9iamVjdF9pZBgCIAEoCRIoCgRraW5kGAMgASgOMhouZWxyaS52MS5vYmplY3QuT2JqZWN0S2luZBIPCgdyZW1vdmVkGAQgASgIEg0KBWFjdG9yGAUgASgJIj0KC05vdGljZUV2ZW50EhAKCHNwYWNlX2lkGAEgASgJEg4KBnNvdXJjZRgCIAEoCRIMCgR0ZXh0GAMgASgJImAKC0NoYW5nZUV2ZW50EhAKCHNwYWNlX2lkGAEgASgJEhEKCWNoYW5nZV9pZBgCIAEoCRIsCgZzdGF0dXMYAyABKA4yHC5lbHJpLnYxLmNoYW5nZS5DaGFuZ2VTdGF0dXMiHgoKU3BhY2VFdmVudBIQCghzcGFjZV9pZBgBIAEoCSINCgtSZW1vdGVFdmVudCIICgZMYWdnZWQisgIKBUV2ZW50Eg0KBWF0X21zGAEgASgDEi0KBm9iamVjdBgCIAEoCzIbLmVscmkudjEuZXZlbnRzLk9iamVjdEV2ZW50SAASLQoGY2hhbmdlGAMgASgLMhsuZWxyaS52MS5ldmVudHMuQ2hhbmdlRXZlbnRIABIrCgVzcGFjZRgEIAEoCzIaLmVscmkudjEuZXZlbnRzLlNwYWNlRXZlbnRIABItCgZyZW1vdGUYBSABKAsyGy5lbHJpLnYxLmV2ZW50cy5SZW1vdGVFdmVudEgAEigKBmxhZ2dlZBgGIAEoCzIWLmVscmkudjEuZXZlbnRzLkxhZ2dlZEgAEi0KBm5vdGljZRgHIAEoCzIbLmVscmkudjEuZXZlbnRzLk5vdGljZUV2ZW50SABCBwoFZXZlbnRiBnByb3RvMw", [file_elri_v1_change_domain, file_elri_v1_object_domain]);
 
 /**
  * An Object's live state changed on this device, by a local write or an
@@ -43,6 +43,14 @@ export type ObjectEvent = Message<"elri.v1.events.ObjectEvent"> & {
    * @generated from field: bool removed = 4;
    */
   removed: boolean;
+
+  /**
+   * Who caused it on this device: `user`, `script:<id>`, `rule:<id>/script:<id>`,
+   * or `remote` for an installed Change. 
+   *
+   * @generated from field: string actor = 5;
+   */
+  actor: string;
 };
 
 /**
@@ -72,6 +80,14 @@ export type ObjectEventJson = {
    * @generated from field: bool removed = 4;
    */
   removed?: boolean;
+
+  /**
+   * Who caused it on this device: `user`, `script:<id>`, `rule:<id>/script:<id>`,
+   * or `remote` for an installed Change. 
+   *
+   * @generated from field: string actor = 5;
+   */
+  actor?: string;
 };
 
 /**
@@ -80,6 +96,61 @@ export type ObjectEventJson = {
  */
 export const ObjectEventSchema: GenMessage<ObjectEvent, {jsonType: ObjectEventJson}> = /*@__PURE__*/
   messageDesc(file_elri_v1_events_domain, 0);
+
+/**
+ * A script or rule said something to the user. 
+ *
+ * @generated from message elri.v1.events.NoticeEvent
+ */
+export type NoticeEvent = Message<"elri.v1.events.NoticeEvent"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * `script:<id>` or `rule:<id>/script:<id>`. 
+   *
+   * @generated from field: string source = 2;
+   */
+  source: string;
+
+  /**
+   * @generated from field: string text = 3;
+   */
+  text: string;
+};
+
+/**
+ * A script or rule said something to the user. 
+ *
+ * @generated from message elri.v1.events.NoticeEvent
+ */
+export type NoticeEventJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * `script:<id>` or `rule:<id>/script:<id>`. 
+   *
+   * @generated from field: string source = 2;
+   */
+  source?: string;
+
+  /**
+   * @generated from field: string text = 3;
+   */
+  text?: string;
+};
+
+/**
+ * Describes the message elri.v1.events.NoticeEvent.
+ * Use `create(NoticeEventSchema)` to create a new message.
+ */
+export const NoticeEventSchema: GenMessage<NoticeEvent, {jsonType: NoticeEventJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_events_domain, 1);
 
 /**
  * A Change was recorded or moved to another status. 
@@ -130,7 +201,7 @@ export type ChangeEventJson = {
  * Use `create(ChangeEventSchema)` to create a new message.
  */
 export const ChangeEventSchema: GenMessage<ChangeEvent, {jsonType: ChangeEventJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_events_domain, 1);
+  messageDesc(file_elri_v1_events_domain, 2);
 
 /**
  * The set of Spaces on this device changed. 
@@ -161,7 +232,7 @@ export type SpaceEventJson = {
  * Use `create(SpaceEventSchema)` to create a new message.
  */
 export const SpaceEventSchema: GenMessage<SpaceEvent, {jsonType: SpaceEventJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_events_domain, 2);
+  messageDesc(file_elri_v1_events_domain, 3);
 
 /**
  * The server link changed: configured, connected, or dropped. 
@@ -184,7 +255,7 @@ export type RemoteEventJson = {
  * Use `create(RemoteEventSchema)` to create a new message.
  */
 export const RemoteEventSchema: GenMessage<RemoteEvent, {jsonType: RemoteEventJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_events_domain, 3);
+  messageDesc(file_elri_v1_events_domain, 4);
 
 /**
  * The watcher fell behind and missed events; it should reload what it shows. 
@@ -207,7 +278,7 @@ export type LaggedJson = {
  * Use `create(LaggedSchema)` to create a new message.
  */
 export const LaggedSchema: GenMessage<Lagged, {jsonType: LaggedJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_events_domain, 4);
+  messageDesc(file_elri_v1_events_domain, 5);
 
 /**
  * @generated from message elri.v1.events.Event
@@ -251,6 +322,12 @@ export type Event = Message<"elri.v1.events.Event"> & {
      */
     value: Lagged;
     case: "lagged";
+  } | {
+    /**
+     * @generated from field: elri.v1.events.NoticeEvent notice = 7;
+     */
+    value: NoticeEvent;
+    case: "notice";
   } | { case: undefined; value?: undefined };
 };
 
@@ -287,6 +364,11 @@ export type EventJson = {
    * @generated from field: elri.v1.events.Lagged lagged = 6;
    */
   lagged?: LaggedJson;
+
+  /**
+   * @generated from field: elri.v1.events.NoticeEvent notice = 7;
+   */
+  notice?: NoticeEventJson;
 };
 
 /**
@@ -294,5 +376,5 @@ export type EventJson = {
  * Use `create(EventSchema)` to create a new message.
  */
 export const EventSchema: GenMessage<Event, {jsonType: EventJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_events_domain, 5);
+  messageDesc(file_elri_v1_events_domain, 6);
 

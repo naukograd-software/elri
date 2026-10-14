@@ -35,6 +35,10 @@ pub struct Envelope {
     pub created_at_ms: i64,
     #[prost(message, repeated, tag = "5")]
     pub parts: ::prost::alloc::vec::Vec<Part>,
+    /// Who made the Change on the device: `user`, `script:<id>`, or
+    /// `rule:<id>/script:<id>`. Attribution, not authority. 
+    #[prost(string, tag = "6")]
+    pub actor: ::prost::alloc::string::String,
 }
 ///
 /// One position in the Space log: an accepted Change, or the purge of an

@@ -217,6 +217,13 @@ pub fn int_value(i: i64) -> Value {
     }
 }
 
+/// Shorthand for a boolean value.
+pub fn bool_value(b: bool) -> Value {
+    Value {
+        value: Some(value::Value::Bool(b)),
+    }
+}
+
 /// Shorthand for a reference value.
 pub fn ref_value(id: ObjectId) -> Value {
     Value {

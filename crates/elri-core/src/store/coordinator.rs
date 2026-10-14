@@ -79,6 +79,15 @@ impl Store {
         &self,
         edits: Vec<(SpaceId, Edit)>,
     ) -> Result<(String, Vec<Object>), StoreError> {
+        self.commit_as(edits, super::ACTOR_USER).await
+    }
+
+    /// [`Self::commit`] attributed to `actor`.
+    pub async fn commit_as(
+        &self,
+        edits: Vec<(SpaceId, Edit)>,
+        actor: &str,
+    ) -> Result<(String, Vec<Object>), StoreError> {
         if edits.is_empty() {
             return Err(StoreError::Model(ModelError::Malformed("no writes")));
         }
@@ -131,6 +140,7 @@ impl Store {
                 .iter()
                 .flat_map(|docs| docs.iter().map(|d| d.part.clone()))
                 .collect(),
+            actor: actor.to_owned(),
         };
 
         if multi {
@@ -149,7 +159,7 @@ impl Store {
             s.dirty.notify_one();
             s.emit_change(env_id.uuid(), ChangeStatus::Local);
             for d in docs {
-                s.emit_object(&d.rec);
+                s.emit_object(&d.rec, actor);
             }
         }
         if multi {
@@ -381,7 +391,7 @@ impl Store {
         for (s, docs) in stores.iter().zip(&staged) {
             s.emit_change(change_id, ChangeStatus::Accepted);
             for d in docs {
-                s.emit_object(&d.rec);
+                s.emit_object(&d.rec, super::ACTOR_REMOTE);
             }
         }
         Ok(Ok(spaces.into_iter().zip(seqs).collect()))

@@ -27,6 +27,9 @@ message Envelope {
     string device_id = 3;
     int64 created_at_ms = 4;
     repeated Part parts = 5;
+    /* Who made the Change on the device: `user`, `script:<id>`, or
+       `rule:<id>/script:<id>`. Attribution, not authority. */
+    string actor = 6;
 }
 
 /*

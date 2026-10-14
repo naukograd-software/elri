@@ -13,6 +13,17 @@ message ObjectEvent {
     string object_id = 2;
     elri.v1.object.ObjectKind kind = 3;
     bool removed = 4;
+    /* Who caused it on this device: `user`, `script:<id>`, `rule:<id>/script:<id>`,
+       or `remote` for an installed Change. */
+    string actor = 5;
+}
+
+/* A script or rule said something to the user. */
+message NoticeEvent {
+    string space_id = 1;
+    /* `script:<id>` or `rule:<id>/script:<id>`. */
+    string source = 2;
+    string text = 3;
 }
 
 /* A Change was recorded or moved to another status. */
@@ -41,5 +52,6 @@ message Event {
         SpaceEvent space = 4;
         RemoteEvent remote = 5;
         Lagged lagged = 6;
+        NoticeEvent notice = 7;
     }
 }

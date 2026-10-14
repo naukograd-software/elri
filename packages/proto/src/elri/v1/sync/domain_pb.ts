@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/sync/domain.proto.
  */
 export const file_elri_v1_sync_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChllbHJpL3YxL3N5bmMvZG9tYWluLnByb3RvEgxlbHJpLnYxLnN5bmMijgEKBFBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEhQKDGZyb21fdmVyc2lvbhgDIAEoDBISCgp0b192ZXJzaW9uGAQgASgMEg0KBWJ5dGVzGAUgASgMEhAKCHNwYWNlX2lkGAYgASgJInUKCEVudmVsb3BlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIVCg1jcmVhdGVkX2F0X21zGAQgASgDEiEKBXBhcnRzGAUgAygLMhIuZWxyaS52MS5zeW5jLlBhcnQibgoFRW50cnkSCwoDc2VxGAEgASgDEiYKBmNoYW5nZRgCIAEoCzIWLmVscmkudjEuc3luYy5FbnZlbG9wZRIWCg5hY2NlcHRlZF9hdF9tcxgDIAEoAxIYChBwdXJnZWRfb2JqZWN0X2lkGAQgASgJYgZwcm90bzM", [file_elri_v1_object_domain]);
+  fileDesc("ChllbHJpL3YxL3N5bmMvZG9tYWluLnByb3RvEgxlbHJpLnYxLnN5bmMijgEKBFBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEhQKDGZyb21fdmVyc2lvbhgDIAEoDBISCgp0b192ZXJzaW9uGAQgASgMEg0KBWJ5dGVzGAUgASgMEhAKCHNwYWNlX2lkGAYgASgJIoQBCghFbnZlbG9wZRIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkSFQoNY3JlYXRlZF9hdF9tcxgEIAEoAxIhCgVwYXJ0cxgFIAMoCzISLmVscmkudjEuc3luYy5QYXJ0Eg0KBWFjdG9yGAYgASgJIm4KBUVudHJ5EgsKA3NlcRgBIAEoAxImCgZjaGFuZ2UYAiABKAsyFi5lbHJpLnYxLnN5bmMuRW52ZWxvcGUSFgoOYWNjZXB0ZWRfYXRfbXMYAyABKAMSGAoQcHVyZ2VkX29iamVjdF9pZBgEIAEoCWIGcHJvdG8z", [file_elri_v1_object_domain]);
 
 /**
  * The operations a Change added to one document. 
@@ -145,6 +145,14 @@ export type Envelope = Message<"elri.v1.sync.Envelope"> & {
    * @generated from field: repeated elri.v1.sync.Part parts = 5;
    */
   parts: Part[];
+
+  /**
+   * Who made the Change on the device: `user`, `script:<id>`, or
+   * `rule:<id>/script:<id>`. Attribution, not authority. 
+   *
+   * @generated from field: string actor = 6;
+   */
+  actor: string;
 };
 
 /**
@@ -179,6 +187,14 @@ export type EnvelopeJson = {
    * @generated from field: repeated elri.v1.sync.Part parts = 5;
    */
   parts?: PartJson[];
+
+  /**
+   * Who made the Change on the device: `user`, `script:<id>`, or
+   * `rule:<id>/script:<id>`. Attribution, not authority. 
+   *
+   * @generated from field: string actor = 6;
+   */
+  actor?: string;
 };
 
 /**

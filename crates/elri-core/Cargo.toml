@@ -25,6 +25,7 @@ thiserror.workspace = true
 tracing.workspace = true
 rand.workspace = true
 sha2.workspace = true
+mlua.workspace = true
 keyring = { workspace = true, optional = true }
 
 [features]

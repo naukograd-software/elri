@@ -31,6 +31,15 @@ use elri_proto::elri::v1::remote::{
     AddMemberRequest, ConnectRequest, CreateRemoteSpaceRequest, DisconnectRequest,
     GetStatusRequest, JoinSpaceRequest, ListRemoteSpacesRequest,
 };
+use elri_proto::elri::v1::script::grant_service_ws::GrantServiceClient;
+use elri_proto::elri::v1::script::rule_service_ws::RuleServiceClient;
+use elri_proto::elri::v1::script::script_service_ws::ScriptServiceClient;
+use elri_proto::elri::v1::script::{
+    CheckScriptRequest, CreateRuleRequest, CreateScriptRequest, GetPolicyRequest,
+    GrantScriptRequest, ListGrantsRequest, ListRulesRequest, ListScriptsRequest, Manifest,
+    RevokeGrantRequest, Rule, RunScriptRequest, Script, SetPolicyRequest, Trigger,
+    UpdateRuleRequest,
+};
 use elri_proto::elri::v1::search::search_service_ws::SearchServiceClient;
 use elri_proto::elri::v1::search::SearchRequest;
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
@@ -81,6 +90,21 @@ enum Cmd {
         #[arg(long, default_value_t = 20)]
         limit: i32,
     },
+    /// Luau scripts kept in a Space, run on this device.
+    Script {
+        #[command(subcommand)]
+        cmd: ScriptCmd,
+    },
+    /// Device grants: consent to run scripts.
+    Grant {
+        #[command(subcommand)]
+        cmd: GrantCmd,
+    },
+    /// Rules: scripts that run when something happens.
+    Rule {
+        #[command(subcommand)]
+        cmd: RuleCmd,
+    },
     /// Attachments: files kept beside a Space.
     Attachment {
         #[command(subcommand)]
@@ -130,6 +154,92 @@ enum RemoteCmd {
         /// Role: admin, editor, or viewer.
         #[arg(long, default_value = "editor", value_parser = parse_role)]
         role: Role,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum ScriptCmd {
+    /// Create a script from a Luau source file.
+    Create {
+        #[arg(long)]
+        space: String,
+        name: String,
+        /// Luau source file.
+        file: PathBuf,
+        /// Spaces read besides its own.
+        #[arg(long = "read")]
+        reads: Vec<String>,
+        /// Spaces written besides its own.
+        #[arg(long = "write")]
+        writes: Vec<String>,
+    },
+    /// List scripts of a Space.
+    List {
+        #[arg(long)]
+        space: String,
+    },
+    /// Compile a source file without running it.
+    Check { file: PathBuf },
+    /// Run a script now; ARGS is JSON for `elri.args`.
+    Run {
+        #[arg(long)]
+        space: String,
+        id: String,
+        #[arg(default_value = "null")]
+        args: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum GrantCmd {
+    /// Grants on this device.
+    List {
+        #[arg(long)]
+        include_revoked: bool,
+    },
+    /// Consent to a script's current version.
+    Add {
+        #[arg(long)]
+        space: String,
+        script: String,
+    },
+    /// Revoke a grant by id.
+    Revoke { id: String },
+    /// Show or set whether benign scripts run without asking.
+    Policy {
+        #[arg(long)]
+        auto_benign: Option<bool>,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum RuleCmd {
+    /// Create a rule that runs a script when an Object of the Space changes.
+    Create {
+        #[arg(long)]
+        space: String,
+        name: String,
+        /// The script to run.
+        script: String,
+        /// Only these kinds: entity, relation, layer.
+        #[arg(long = "kind", value_parser = parse_kind)]
+        kinds: Vec<ObjectKind>,
+        /// Only Objects of this type.
+        #[arg(long = "type")]
+        type_id: Option<String>,
+    },
+    /// List rules of a Space.
+    List {
+        #[arg(long)]
+        space: String,
+    },
+    /// Enable or disable a rule.
+    Enable {
+        #[arg(long)]
+        space: String,
+        id: String,
+        #[arg(long)]
+        off: bool,
     },
 }
 
@@ -481,6 +591,267 @@ fn object_json(o: &Object) -> serde_json::Value {
     })
 }
 
+fn script_json(s: &Script) -> serde_json::Value {
+    json!({
+        "id": s.id,
+        "space_id": s.space_id,
+        "name": s.name,
+        "version": s.version,
+        "benign": s.benign,
+        "manifest": s.manifest.as_ref().map(|m| json!({
+            "reads": m.reads, "writes": m.writes, "http": m.http, "ai": m.ai,
+        })),
+        "source_bytes": s.source.len(),
+        "created_at_ms": s.created_at_ms,
+        "updated_at_ms": s.updated_at_ms,
+    })
+}
+
+fn rule_json(r: &Rule) -> serde_json::Value {
+    json!({
+        "id": r.id,
+        "space_id": r.space_id,
+        "name": r.name,
+        "script_id": r.script_id,
+        "trigger": r.trigger.as_ref().map(|t| json!({
+            "kinds": t.kinds.iter().map(|k| ObjectKind::try_from(*k).map(|k| k.as_str_name().to_lowercase()).unwrap_or_default()).collect::<Vec<_>>(),
+            "type_id": t.type_id,
+        })),
+        "executor_device_id": r.executor_device_id,
+        "enabled": r.enabled,
+    })
+}
+
+async fn run_script(
+    endpoint: &Endpoint,
+    conn: Client,
+    cmd: ScriptCmd,
+) -> Result<serde_json::Value> {
+    let client = ScriptServiceClient::new(conn);
+    match cmd {
+        ScriptCmd::Create {
+            space,
+            name,
+            file,
+            reads,
+            writes,
+        } => {
+            let source = std::fs::read_to_string(&file)?;
+            let res = client
+                .create_script(authed(
+                    endpoint,
+                    CreateScriptRequest {
+                        space_id: space,
+                        name,
+                        source,
+                        manifest: Some(Manifest {
+                            reads,
+                            writes,
+                            http: false,
+                            ai: false,
+                        }),
+                    },
+                ))
+                .await?;
+            let Some(s) = res.msg.script else {
+                bail!("core returned no script");
+            };
+            Ok(script_json(&s))
+        }
+        ScriptCmd::List { space } => {
+            let res = client
+                .list_scripts(authed(
+                    endpoint,
+                    ListScriptsRequest {
+                        space_id: space,
+                        include_deleted: false,
+                    },
+                ))
+                .await?;
+            Ok(json!(res
+                .msg
+                .scripts
+                .iter()
+                .map(script_json)
+                .collect::<Vec<_>>()))
+        }
+        ScriptCmd::Check { file } => {
+            let source = std::fs::read_to_string(&file)?;
+            let res = client
+                .check_script(authed(endpoint, CheckScriptRequest { source }))
+                .await?;
+            Ok(json!({ "ok": res.msg.diagnostics.is_empty(), "diagnostics": res.msg.diagnostics }))
+        }
+        ScriptCmd::Run { space, id, args } => {
+            let res = client
+                .run_script(authed(
+                    endpoint,
+                    RunScriptRequest {
+                        space_id: space,
+                        id,
+                        args_json: args,
+                    },
+                ))
+                .await?;
+            let Some(r) = res.msg.result else {
+                bail!("core returned no result");
+            };
+            let output: serde_json::Value = if r.output_json.is_empty() {
+                serde_json::Value::Null
+            } else {
+                serde_json::from_str(&r.output_json).unwrap_or(json!(r.output_json))
+            };
+            Ok(json!({
+                "output": output,
+                "logs": r.logs,
+                "duration_ms": r.duration_ms,
+                "error": r.error,
+                "labels": r.labels,
+                "grant_id": r.grant_id,
+            }))
+        }
+    }
+}
+
+async fn run_grant(endpoint: &Endpoint, conn: Client, cmd: GrantCmd) -> Result<serde_json::Value> {
+    let client = GrantServiceClient::new(conn);
+    match cmd {
+        GrantCmd::List { include_revoked } => {
+            let res = client
+                .list_grants(authed(
+                    endpoint,
+                    ListGrantsRequest {
+                        space_id: String::new(),
+                        include_revoked,
+                    },
+                ))
+                .await?;
+            Ok(json!(res
+                .msg
+                .grants
+                .iter()
+                .map(|g| json!({
+                    "id": g.id, "space_id": g.space_id, "script_id": g.script_id,
+                    "version": g.version, "benign": g.benign,
+                    "granted_at_ms": g.granted_at_ms, "revoked_at_ms": g.revoked_at_ms,
+                }))
+                .collect::<Vec<_>>()))
+        }
+        GrantCmd::Add { space, script } => {
+            let res = client
+                .grant_script(authed(
+                    endpoint,
+                    GrantScriptRequest {
+                        space_id: space,
+                        script_id: script,
+                    },
+                ))
+                .await?;
+            let Some(g) = res.msg.grant else {
+                bail!("core returned no grant");
+            };
+            Ok(json!({ "id": g.id, "version": g.version, "benign": g.benign }))
+        }
+        GrantCmd::Revoke { id } => {
+            client
+                .revoke_grant(authed(endpoint, RevokeGrantRequest { id: id.clone() }))
+                .await?;
+            Ok(json!({ "revoked": id }))
+        }
+        GrantCmd::Policy { auto_benign } => {
+            let value = match auto_benign {
+                Some(v) => {
+                    client
+                        .set_policy(authed(
+                            endpoint,
+                            SetPolicyRequest {
+                                auto_grant_benign: v,
+                            },
+                        ))
+                        .await?
+                        .msg
+                        .auto_grant_benign
+                }
+                None => {
+                    client
+                        .get_policy(authed(endpoint, GetPolicyRequest {}))
+                        .await?
+                        .msg
+                        .auto_grant_benign
+                }
+            };
+            Ok(json!({ "auto_grant_benign": value }))
+        }
+    }
+}
+
+async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<serde_json::Value> {
+    let client = RuleServiceClient::new(conn);
+    match cmd {
+        RuleCmd::Create {
+            space,
+            name,
+            script,
+            kinds,
+            type_id,
+        } => {
+            let res = client
+                .create_rule(authed(
+                    endpoint,
+                    CreateRuleRequest {
+                        space_id: space,
+                        name,
+                        script_id: script,
+                        trigger: Some(Trigger {
+                            kinds: kinds.into_iter().map(i32::from).collect(),
+                            type_id: type_id.unwrap_or_default(),
+                        }),
+                        executor_device_id: String::new(),
+                    },
+                ))
+                .await?;
+            let Some(r) = res.msg.rule else {
+                bail!("core returned no rule");
+            };
+            Ok(rule_json(&r))
+        }
+        RuleCmd::List { space } => {
+            let res = client
+                .list_rules(authed(
+                    endpoint,
+                    ListRulesRequest {
+                        space_id: space,
+                        include_deleted: false,
+                    },
+                ))
+                .await?;
+            Ok(json!(res
+                .msg
+                .rules
+                .iter()
+                .map(rule_json)
+                .collect::<Vec<_>>()))
+        }
+        RuleCmd::Enable { space, id, off } => {
+            let res = client
+                .update_rule(authed(
+                    endpoint,
+                    UpdateRuleRequest {
+                        space_id: space,
+                        id,
+                        enabled: Some(!off),
+                        ..Default::default()
+                    },
+                ))
+                .await?;
+            let Some(r) = res.msg.rule else {
+                bail!("core returned no rule");
+            };
+            Ok(rule_json(&r))
+        }
+    }
+}
+
 fn attachment_json(a: &Attachment) -> serde_json::Value {
     json!({
         "id": a.id,
@@ -719,6 +1090,9 @@ async fn main() -> Result<()> {
         }
         Cmd::Change { cmd } => run_change(&endpoint, conn, cmd).await?,
         Cmd::Attachment { cmd } => run_attachment(&endpoint, conn, cmd).await?,
+        Cmd::Script { cmd } => run_script(&endpoint, conn, cmd).await?,
+        Cmd::Grant { cmd } => run_grant(&endpoint, conn, cmd).await?,
+        Cmd::Rule { cmd } => run_rule(&endpoint, conn, cmd).await?,
         Cmd::Backup {
             cmd: BackupCmd::Create { dest },
         } => {
@@ -760,6 +1134,9 @@ async fn run_watch(endpoint: &Endpoint, conn: Client, spaces: Vec<String>) -> Re
             }),
             Some(event::Event::Space(s)) => json!({ "space": { "space_id": s.space_id } }),
             Some(event::Event::Remote(_)) => json!({ "remote": {} }),
+            Some(event::Event::Notice(n)) => json!({
+                "notice": { "space_id": n.space_id, "source": n.source, "text": n.text }
+            }),
             Some(event::Event::Lagged(_)) => json!({ "lagged": {} }),
             None => continue,
         };

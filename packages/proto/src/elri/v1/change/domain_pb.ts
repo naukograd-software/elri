@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/change/domain.proto.
  */
 export const file_elri_v1_change_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL2NoYW5nZS9kb21haW4ucHJvdG8SDmVscmkudjEuY2hhbmdlIjIKCkNoYW5nZVBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEhEKCWJ5dGVzX2xlbhgCIAEoDSL8AQoGQ2hhbmdlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIVCg1jcmVhdGVkX2F0X21zGAQgASgDEiwKBnN0YXR1cxgFIAEoDjIcLmVscmkudjEuY2hhbmdlLkNoYW5nZVN0YXR1cxIpCgVwYXJ0cxgGIAMoCzIaLmVscmkudjEuY2hhbmdlLkNoYW5nZVBhcnQSGQoMYWNjZXB0ZWRfc2VxGAcgASgDSACIAQESEQoJcmVqZWN0aW9uGAggASgJEhIKCmRlcGVuZHNfb24YCSADKAlCDwoNX2FjY2VwdGVkX3NlcSrNAQoMQ2hhbmdlU3RhdHVzEh0KGUNIQU5HRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIXChNDSEFOR0VfU1RBVFVTX0xPQ0FMEAESGAoUQ0hBTkdFX1NUQVRVU19RVUVVRUQQAhIZChVDSEFOR0VfU1RBVFVTX1dBSVRJTkcQAxIaChZDSEFOR0VfU1RBVFVTX0FDQ0VQVEVEEAQSGgoWQ0hBTkdFX1NUQVRVU19SRUpFQ1RFRBAFEhgKFENIQU5HRV9TVEFUVVNfUEFVU0VEEAZiBnByb3RvMw");
+  fileDesc("ChtlbHJpL3YxL2NoYW5nZS9kb21haW4ucHJvdG8SDmVscmkudjEuY2hhbmdlIjIKCkNoYW5nZVBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEhEKCWJ5dGVzX2xlbhgCIAEoDSKLAgoGQ2hhbmdlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIVCg1jcmVhdGVkX2F0X21zGAQgASgDEiwKBnN0YXR1cxgFIAEoDjIcLmVscmkudjEuY2hhbmdlLkNoYW5nZVN0YXR1cxIpCgVwYXJ0cxgGIAMoCzIaLmVscmkudjEuY2hhbmdlLkNoYW5nZVBhcnQSGQoMYWNjZXB0ZWRfc2VxGAcgASgDSACIAQESEQoJcmVqZWN0aW9uGAggASgJEhIKCmRlcGVuZHNfb24YCSADKAkSDQoFYWN0b3IYCiABKAlCDwoNX2FjY2VwdGVkX3NlcSrNAQoMQ2hhbmdlU3RhdHVzEh0KGUNIQU5HRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIXChNDSEFOR0VfU1RBVFVTX0xPQ0FMEAESGAoUQ0hBTkdFX1NUQVRVU19RVUVVRUQQAhIZChVDSEFOR0VfU1RBVFVTX1dBSVRJTkcQAxIaChZDSEFOR0VfU1RBVFVTX0FDQ0VQVEVEEAQSGgoWQ0hBTkdFX1NUQVRVU19SRUpFQ1RFRBAFEhgKFENIQU5HRV9TVEFUVVNfUEFVU0VEEAZiBnByb3RvMw");
 
 /**
  * One document touched by a Change. 
@@ -117,6 +117,13 @@ export type Change = Message<"elri.v1.change.Change"> & {
    * @generated from field: repeated string depends_on = 9;
    */
   dependsOn: string[];
+
+  /**
+   * Who made it on the device: `user`, `script:<id>`, or `rule:<id>/script:<id>`. 
+   *
+   * @generated from field: string actor = 10;
+   */
+  actor: string;
 };
 
 /**
@@ -179,6 +186,13 @@ export type ChangeJson = {
    * @generated from field: repeated string depends_on = 9;
    */
   dependsOn?: string[];
+
+  /**
+   * Who made it on the device: `user`, `script:<id>`, or `rule:<id>/script:<id>`. 
+   *
+   * @generated from field: string actor = 10;
+   */
+  actor?: string;
 };
 
 /**

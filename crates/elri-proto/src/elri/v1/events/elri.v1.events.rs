@@ -13,6 +13,21 @@ pub struct ObjectEvent {
     pub kind: i32,
     #[prost(bool, tag = "4")]
     pub removed: bool,
+    /// Who caused it on this device: `user`, `script:<id>`, `rule:<id>/script:<id>`,
+    /// or `remote` for an installed Change. 
+    #[prost(string, tag = "5")]
+    pub actor: ::prost::alloc::string::String,
+}
+/// A script or rule said something to the user. 
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct NoticeEvent {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    /// `script:<id>` or `rule:<id>/script:<id>`. 
+    #[prost(string, tag = "2")]
+    pub source: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub text: ::prost::alloc::string::String,
 }
 /// A Change was recorded or moved to another status. 
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -42,7 +57,7 @@ pub struct Lagged {
 pub struct Event {
     #[prost(int64, tag = "1")]
     pub at_ms: i64,
-    #[prost(oneof = "event::Event", tags = "2, 3, 4, 5, 6")]
+    #[prost(oneof = "event::Event", tags = "2, 3, 4, 5, 6, 7")]
     pub event: ::core::option::Option<event::Event>,
 }
 /// Nested message and enum types in `Event`.
@@ -59,6 +74,8 @@ pub mod event {
         Remote(super::RemoteEvent),
         #[prost(message, tag = "6")]
         Lagged(super::Lagged),
+        #[prost(message, tag = "7")]
+        Notice(super::NoticeEvent),
     }
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]

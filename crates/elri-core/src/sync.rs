@@ -56,6 +56,7 @@ pub fn envelope_for(env: &Envelope, space: SpaceId) -> Envelope {
         space_id: space.to_string(),
         device_id: env.device_id.clone(),
         created_at_ms: env.created_at_ms,
+        actor: env.actor.clone(),
         parts: env
             .parts
             .iter()

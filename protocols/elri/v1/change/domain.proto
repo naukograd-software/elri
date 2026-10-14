@@ -41,4 +41,6 @@ message Change {
     /* Changes this one builds on: earlier unaccepted writes to the same
        documents, and the creators of the Objects it refers to. */
     repeated string depends_on = 9;
+    /* Who made it on the device: `user`, `script:<id>`, or `rule:<id>/script:<id>`. */
+    string actor = 10;
 }

@@ -21,6 +21,7 @@ pub mod change;
 pub mod device;
 pub mod model;
 pub mod remote;
+pub mod rules;
 pub mod script;
 pub mod search;
 pub mod secrets;

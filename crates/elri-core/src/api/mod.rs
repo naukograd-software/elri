@@ -4,6 +4,7 @@
 
 mod attachments;
 mod definitions;
+mod scripts;
 
 use std::sync::Arc;
 
@@ -74,6 +75,8 @@ pub struct Services {
     pub store: Arc<Store>,
     /// Server link.
     pub remote: Arc<Remote>,
+    /// Script runtime.
+    pub scripts: crate::script::Host,
 }
 
 /// Builds the loopback server: origin policy, bearer-token middleware, all
@@ -97,7 +100,8 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     register_search_service_arc(&server, Arc::clone(&services));
     register_backup_service_arc(&server, Arc::clone(&services));
     definitions::register(&server, Arc::clone(&services));
-    attachments::register(&server, services);
+    attachments::register(&server, Arc::clone(&services));
+    scripts::register(&server, services);
     server
 }
 

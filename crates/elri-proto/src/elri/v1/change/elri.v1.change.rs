@@ -36,6 +36,9 @@ pub struct Change {
     /// documents, and the creators of the Objects it refers to. 
     #[prost(string, repeated, tag = "9")]
     pub depends_on: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Who made it on the device: `user`, `script:<id>`, or `rule:<id>/script:<id>`. 
+    #[prost(string, tag = "10")]
+    pub actor: ::prost::alloc::string::String,
 }
 /// Where a Change is on its way from this device to acceptance. 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
