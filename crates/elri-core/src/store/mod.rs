@@ -38,13 +38,14 @@ use crate::model::{
     constraint_of, field_def_kind, now_ms, publication_of, ModelError, ObjectDoc, ObjectId, SpaceId,
 };
 use models::{
-    BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, ExtensionRow,
-    FieldValueRow, GrantRow, GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow,
-    PeerRow, PinRow, PlacementRow, PrefRow, RemoteRow, RuleRunRow, SettingRow, SpaceLogRow,
-    SpaceRow, SyncStateRow, TypeFieldRow, WorkflowRunRow, WorkflowStepRow,
+    BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, EmbedQueueRow,
+    EmbeddingRow, ExtensionRow, FieldValueRow, GrantRow, GraveyardRow, JournalRow, ObjectRow,
+    ObjectTypeRow, ParticipantRow, PeerRow, PinRow, PlacementRow, PrefRow, RemoteRow, RuleRunRow,
+    SettingRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow, WorkflowRunRow, WorkflowStepRow,
 };
 
 mod coordinator;
+pub mod semantic;
 pub mod workflows;
 pub use coordinator::{Edit, Journaled};
 
@@ -991,7 +992,9 @@ impl SpaceStore {
                 PinRow,
                 PeerRow,
                 SpaceLogRow,
-                SyncStateRow
+                SyncStateRow,
+                EmbedQueueRow,
+                EmbeddingRow
             ),
         )
         .await?;
@@ -2585,6 +2588,14 @@ async fn delete_projections(tx: &mut toasty::Transaction<'_>, id: Uuid) -> Resul
         .delete()
         .exec(&mut *tx)
         .await?;
+    EmbeddingRow::filter_by_object_id(id)
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    EmbedQueueRow::filter_by_object_id(id)
+        .delete()
+        .exec(&mut *tx)
+        .await?;
     ObjectTypeRow::filter(ObjectTypeRow::fields().object_id().eq(id))
         .delete()
         .exec(&mut *tx)
@@ -3351,7 +3362,19 @@ async fn write_projections(
         .await?;
     }
 
-    write_links(tx, id, rec).await
+    write_links(tx, id, rec).await?;
+    // The text may have changed: the semantic index looks at it again.
+    EmbedQueueRow::filter_by_object_id(id)
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    toasty::create!(EmbedQueueRow {
+        object_id: id,
+        queued_at: now_ms(),
+    })
+    .exec(&mut *tx)
+    .await?;
+    Ok(())
 }
 
 /// Projections that point at other Objects: participants and placements.

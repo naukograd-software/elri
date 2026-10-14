@@ -494,3 +494,29 @@ pub struct PrefRow {
     /// Encoded message.
     pub value: Vec<u8>,
 }
+
+/// An Object waiting for its semantic embedding.
+#[derive(Debug, toasty::Model)]
+#[table = "embed_queue"]
+pub struct EmbedQueueRow {
+    /// The Object.
+    #[key]
+    pub object_id: Uuid,
+    /// When it was queued.
+    pub queued_at: i64,
+}
+
+/// The semantic embedding of an Object's text.
+#[derive(Debug, toasty::Model)]
+#[table = "embeddings"]
+pub struct EmbeddingRow {
+    /// The Object.
+    #[key]
+    pub object_id: Uuid,
+    /// Model and revision that computed it.
+    pub model: String,
+    /// The Object's `updated_at` the text was taken at.
+    pub revision: i64,
+    /// Unit-length vector, little-endian f32.
+    pub vector: Vec<u8>,
+}

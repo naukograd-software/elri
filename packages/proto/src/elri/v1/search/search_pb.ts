@@ -2,8 +2,8 @@
 // @generated from file elri/v1/search/search.proto (package elri.v1.search, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Object$, ObjectJson, ObjectKind, ObjectKindJson } from "../object/domain_pb.ts";
 import { file_elri_v1_object_domain } from "../object/domain_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +12,184 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/search/search.proto.
  */
 export const file_elri_v1_search_search: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL3NlYXJjaC9zZWFyY2gucHJvdG8SDmVscmkudjEuc2VhcmNoIn0KDVNlYXJjaFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDQoFcXVlcnkYAiABKAkSKAoEa2luZBgDIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDQoFbGltaXQYBCABKAUSEgoKbWFwcGluZ19pZBgFIAEoCSJMCgNIaXQSJgoGb2JqZWN0GAEgASgLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0Eg0KBXNjb3JlGAIgASgBEg4KBmZpZWxkcxgDIAMoCSJhCg5TZWFyY2hSZXNwb25zZRIhCgRoaXRzGAEgAygLMhMuZWxyaS52MS5zZWFyY2guSGl0EiwKCXdhdGVybWFyaxgCIAEoCzIZLmVscmkudjEuc2VhcmNoLldhdGVybWFyayJVCglXYXRlcm1hcmsSEAoIZGF0YV9zZXEYASABKAMSEQoJaW5kZXhfc2VxGAIgASgDEg8KB3BhcnRpYWwYAyABKAgSEgoKdGFyZ2V0X3NlcRgEIAEoAzJYCg1TZWFyY2hTZXJ2aWNlEkcKBlNlYXJjaBIdLmVscmkudjEuc2VhcmNoLlNlYXJjaFJlcXVlc3QaHi5lbHJpLnYxLnNlYXJjaC5TZWFyY2hSZXNwb25zZWIGcHJvdG8z", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL3NlYXJjaC9zZWFyY2gucHJvdG8SDmVscmkudjEuc2VhcmNoIpYBCg5TZW1hbnRpY1N0YXR1cxIsCgVzdGF0ZRgBIAEoDjIdLmVscmkudjEuc2VhcmNoLlNlbWFudGljU3RhdGUSDQoFbW9kZWwYAiABKAkSEgoKYnl0ZXNfZG9uZRgDIAEoAxITCgtieXRlc190b3RhbBgEIAEoAxINCgVlcnJvchgFIAEoCRIPCgdwZW5kaW5nGAYgASgDIhoKGEdldFNlbWFudGljU3RhdHVzUmVxdWVzdCJLChlHZXRTZW1hbnRpY1N0YXR1c1Jlc3BvbnNlEi4KBnN0YXR1cxgBIAEoCzIeLmVscmkudjEuc2VhcmNoLlNlbWFudGljU3RhdHVzIhgKFlByZXBhcmVTZW1hbnRpY1JlcXVlc3QiSQoXUHJlcGFyZVNlbWFudGljUmVzcG9uc2USLgoGc3RhdHVzGAEgASgLMh4uZWxyaS52MS5zZWFyY2guU2VtYW50aWNTdGF0dXMipwEKDVNlYXJjaFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDQoFcXVlcnkYAiABKAkSKAoEa2luZBgDIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDQoFbGltaXQYBCABKAUSEgoKbWFwcGluZ19pZBgFIAEoCRIoCgRtb2RlGAYgASgOMhouZWxyaS52MS5zZWFyY2guU2VhcmNoTW9kZSJxCgNIaXQSJgoGb2JqZWN0GAEgASgLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0Eg0KBXNjb3JlGAIgASgBEg4KBmZpZWxkcxgDIAMoCRIPCgdyZWFzb25zGAQgAygJEhIKCnNpbWlsYXJpdHkYBSABKAEiYQoOU2VhcmNoUmVzcG9uc2USIQoEaGl0cxgBIAMoCzITLmVscmkudjEuc2VhcmNoLkhpdBIsCgl3YXRlcm1hcmsYAiABKAsyGS5lbHJpLnYxLnNlYXJjaC5XYXRlcm1hcmsipgEKCVdhdGVybWFyaxIQCghkYXRhX3NlcRgBIAEoAxIRCglpbmRleF9zZXEYAiABKAMSDwoHcGFydGlhbBgDIAEoCBISCgp0YXJnZXRfc2VxGAQgASgDEhgKEHNlbWFudGljX3BlbmRpbmcYBSABKAMSNQoOc2VtYW50aWNfc3RhdGUYBiABKA4yHS5lbHJpLnYxLnNlYXJjaC5TZW1hbnRpY1N0YXRlKnQKClNlYXJjaE1vZGUSGwoXU0VBUkNIX01PREVfVU5TUEVDSUZJRUQQABIXChNTRUFSQ0hfTU9ERV9MRVhJQ0FMEAESGAoUU0VBUkNIX01PREVfU0VNQU5USUMQAhIWChJTRUFSQ0hfTU9ERV9IWUJSSUQQAyrUAQoNU2VtYW50aWNTdGF0ZRIeChpTRU1BTlRJQ19TVEFURV9VTlNQRUNJRklFRBAAEhYKElNFTUFOVElDX1NUQVRFX09GRhABEhoKFlNFTUFOVElDX1NUQVRFX01JU1NJTkcQAhIeChpTRU1BTlRJQ19TVEFURV9ET1dOTE9BRElORxADEhoKFlNFTUFOVElDX1NUQVRFX0xPQURJTkcQBBIYChRTRU1BTlRJQ19TVEFURV9SRUFEWRAFEhkKFVNFTUFOVElDX1NUQVRFX0ZBSUxFRBAGMqYCCg1TZWFyY2hTZXJ2aWNlEkcKBlNlYXJjaBIdLmVscmkudjEuc2VhcmNoLlNlYXJjaFJlcXVlc3QaHi5lbHJpLnYxLnNlYXJjaC5TZWFyY2hSZXNwb25zZRJoChFHZXRTZW1hbnRpY1N0YXR1cxIoLmVscmkudjEuc2VhcmNoLkdldFNlbWFudGljU3RhdHVzUmVxdWVzdBopLmVscmkudjEuc2VhcmNoLkdldFNlbWFudGljU3RhdHVzUmVzcG9uc2USYgoPUHJlcGFyZVNlbWFudGljEiYuZWxyaS52MS5zZWFyY2guUHJlcGFyZVNlbWFudGljUmVxdWVzdBonLmVscmkudjEuc2VhcmNoLlByZXBhcmVTZW1hbnRpY1Jlc3BvbnNlYgZwcm90bzM", [file_elri_v1_object_domain]);
+
+/**
+ * @generated from message elri.v1.search.SemanticStatus
+ */
+export type SemanticStatus = Message<"elri.v1.search.SemanticStatus"> & {
+  /**
+   * @generated from field: elri.v1.search.SemanticState state = 1;
+   */
+  state: SemanticState;
+
+  /**
+   * Model and revision, e.g. `intfloat/multilingual-e5-small@614241f`. 
+   *
+   * @generated from field: string model = 2;
+   */
+  model: string;
+
+  /**
+   * @generated from field: int64 bytes_done = 3;
+   */
+  bytesDone: bigint;
+
+  /**
+   * @generated from field: int64 bytes_total = 4;
+   */
+  bytesTotal: bigint;
+
+  /**
+   * @generated from field: string error = 5;
+   */
+  error: string;
+
+  /**
+   * Objects waiting to be indexed, over every Space. 
+   *
+   * @generated from field: int64 pending = 6;
+   */
+  pending: bigint;
+};
+
+/**
+ * @generated from message elri.v1.search.SemanticStatus
+ */
+export type SemanticStatusJson = {
+  /**
+   * @generated from field: elri.v1.search.SemanticState state = 1;
+   */
+  state?: SemanticStateJson;
+
+  /**
+   * Model and revision, e.g. `intfloat/multilingual-e5-small@614241f`. 
+   *
+   * @generated from field: string model = 2;
+   */
+  model?: string;
+
+  /**
+   * @generated from field: int64 bytes_done = 3;
+   */
+  bytesDone?: string;
+
+  /**
+   * @generated from field: int64 bytes_total = 4;
+   */
+  bytesTotal?: string;
+
+  /**
+   * @generated from field: string error = 5;
+   */
+  error?: string;
+
+  /**
+   * Objects waiting to be indexed, over every Space. 
+   *
+   * @generated from field: int64 pending = 6;
+   */
+  pending?: string;
+};
+
+/**
+ * Describes the message elri.v1.search.SemanticStatus.
+ * Use `create(SemanticStatusSchema)` to create a new message.
+ */
+export const SemanticStatusSchema: GenMessage<SemanticStatus, {jsonType: SemanticStatusJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_search_search, 0);
+
+/**
+ * @generated from message elri.v1.search.GetSemanticStatusRequest
+ */
+export type GetSemanticStatusRequest = Message<"elri.v1.search.GetSemanticStatusRequest"> & {
+};
+
+/**
+ * @generated from message elri.v1.search.GetSemanticStatusRequest
+ */
+export type GetSemanticStatusRequestJson = {
+};
+
+/**
+ * Describes the message elri.v1.search.GetSemanticStatusRequest.
+ * Use `create(GetSemanticStatusRequestSchema)` to create a new message.
+ */
+export const GetSemanticStatusRequestSchema: GenMessage<GetSemanticStatusRequest, {jsonType: GetSemanticStatusRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_search_search, 1);
+
+/**
+ * @generated from message elri.v1.search.GetSemanticStatusResponse
+ */
+export type GetSemanticStatusResponse = Message<"elri.v1.search.GetSemanticStatusResponse"> & {
+  /**
+   * @generated from field: elri.v1.search.SemanticStatus status = 1;
+   */
+  status?: SemanticStatus | undefined;
+};
+
+/**
+ * @generated from message elri.v1.search.GetSemanticStatusResponse
+ */
+export type GetSemanticStatusResponseJson = {
+  /**
+   * @generated from field: elri.v1.search.SemanticStatus status = 1;
+   */
+  status?: SemanticStatusJson;
+};
+
+/**
+ * Describes the message elri.v1.search.GetSemanticStatusResponse.
+ * Use `create(GetSemanticStatusResponseSchema)` to create a new message.
+ */
+export const GetSemanticStatusResponseSchema: GenMessage<GetSemanticStatusResponse, {jsonType: GetSemanticStatusResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_search_search, 2);
+
+/**
+ * @generated from message elri.v1.search.PrepareSemanticRequest
+ */
+export type PrepareSemanticRequest = Message<"elri.v1.search.PrepareSemanticRequest"> & {
+};
+
+/**
+ * @generated from message elri.v1.search.PrepareSemanticRequest
+ */
+export type PrepareSemanticRequestJson = {
+};
+
+/**
+ * Describes the message elri.v1.search.PrepareSemanticRequest.
+ * Use `create(PrepareSemanticRequestSchema)` to create a new message.
+ */
+export const PrepareSemanticRequestSchema: GenMessage<PrepareSemanticRequest, {jsonType: PrepareSemanticRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_search_search, 3);
+
+/**
+ * @generated from message elri.v1.search.PrepareSemanticResponse
+ */
+export type PrepareSemanticResponse = Message<"elri.v1.search.PrepareSemanticResponse"> & {
+  /**
+   * @generated from field: elri.v1.search.SemanticStatus status = 1;
+   */
+  status?: SemanticStatus | undefined;
+};
+
+/**
+ * @generated from message elri.v1.search.PrepareSemanticResponse
+ */
+export type PrepareSemanticResponseJson = {
+  /**
+   * @generated from field: elri.v1.search.SemanticStatus status = 1;
+   */
+  status?: SemanticStatusJson;
+};
+
+/**
+ * Describes the message elri.v1.search.PrepareSemanticResponse.
+ * Use `create(PrepareSemanticResponseSchema)` to create a new message.
+ */
+export const PrepareSemanticResponseSchema: GenMessage<PrepareSemanticResponse, {jsonType: PrepareSemanticResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_search_search, 4);
 
 /**
  * @generated from message elri.v1.search.SearchRequest
@@ -46,11 +223,16 @@ export type SearchRequest = Message<"elri.v1.search.SearchRequest"> & {
 
   /**
    * Only hits in the fields an approved mapping of this Space names for
-   * it, if set. 
+   * it, if set. Lexical matching only. 
    *
    * @generated from field: string mapping_id = 5;
    */
   mappingId: string;
+
+  /**
+   * @generated from field: elri.v1.search.SearchMode mode = 6;
+   */
+  mode: SearchMode;
 };
 
 /**
@@ -85,11 +267,16 @@ export type SearchRequestJson = {
 
   /**
    * Only hits in the fields an approved mapping of this Space names for
-   * it, if set. 
+   * it, if set. Lexical matching only. 
    *
    * @generated from field: string mapping_id = 5;
    */
   mappingId?: string;
+
+  /**
+   * @generated from field: elri.v1.search.SearchMode mode = 6;
+   */
+  mode?: SearchModeJson;
 };
 
 /**
@@ -97,7 +284,7 @@ export type SearchRequestJson = {
  * Use `create(SearchRequestSchema)` to create a new message.
  */
 export const SearchRequestSchema: GenMessage<SearchRequest, {jsonType: SearchRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_search_search, 0);
+  messageDesc(file_elri_v1_search_search, 5);
 
 /**
  * @generated from message elri.v1.search.Hit
@@ -121,6 +308,20 @@ export type Hit = Message<"elri.v1.search.Hit"> & {
    * @generated from field: repeated string fields = 3;
    */
   fields: string[];
+
+  /**
+   * Why it matched: `words` (lexical) and/or `meaning` (semantic). 
+   *
+   * @generated from field: repeated string reasons = 4;
+   */
+  reasons: string[];
+
+  /**
+   * Cosine similarity of the meaning match, when there is one. 
+   *
+   * @generated from field: double similarity = 5;
+   */
+  similarity: number;
 };
 
 /**
@@ -145,6 +346,20 @@ export type HitJson = {
    * @generated from field: repeated string fields = 3;
    */
   fields?: string[];
+
+  /**
+   * Why it matched: `words` (lexical) and/or `meaning` (semantic). 
+   *
+   * @generated from field: repeated string reasons = 4;
+   */
+  reasons?: string[];
+
+  /**
+   * Cosine similarity of the meaning match, when there is one. 
+   *
+   * @generated from field: double similarity = 5;
+   */
+  similarity?: number | "NaN" | "Infinity" | "-Infinity";
 };
 
 /**
@@ -152,7 +367,7 @@ export type HitJson = {
  * Use `create(HitSchema)` to create a new message.
  */
 export const HitSchema: GenMessage<Hit, {jsonType: HitJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_search_search, 1);
+  messageDesc(file_elri_v1_search_search, 6);
 
 /**
  * @generated from message elri.v1.search.SearchResponse
@@ -189,7 +404,7 @@ export type SearchResponseJson = {
  * Use `create(SearchResponseSchema)` to create a new message.
  */
 export const SearchResponseSchema: GenMessage<SearchResponse, {jsonType: SearchResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_search_search, 2);
+  messageDesc(file_elri_v1_search_search, 7);
 
 /**
  * How complete the answer is. The text index is written with the data,
@@ -228,6 +443,20 @@ export type Watermark = Message<"elri.v1.search.Watermark"> & {
    * @generated from field: int64 target_seq = 4;
    */
   targetSeq: bigint;
+
+  /**
+   * Semantic index of this Space: objects still waiting to be indexed,
+   * and the model's state. Meaning results are partial while either is
+   * not settled. 
+   *
+   * @generated from field: int64 semantic_pending = 5;
+   */
+  semanticPending: bigint;
+
+  /**
+   * @generated from field: elri.v1.search.SemanticState semantic_state = 6;
+   */
+  semanticState: SemanticState;
 };
 
 /**
@@ -267,6 +496,20 @@ export type WatermarkJson = {
    * @generated from field: int64 target_seq = 4;
    */
   targetSeq?: string;
+
+  /**
+   * Semantic index of this Space: objects still waiting to be indexed,
+   * and the model's state. Meaning results are partial while either is
+   * not settled. 
+   *
+   * @generated from field: int64 semantic_pending = 5;
+   */
+  semanticPending?: string;
+
+  /**
+   * @generated from field: elri.v1.search.SemanticState semantic_state = 6;
+   */
+  semanticState?: SemanticStateJson;
 };
 
 /**
@@ -274,7 +517,108 @@ export type WatermarkJson = {
  * Use `create(WatermarkSchema)` to create a new message.
  */
 export const WatermarkSchema: GenMessage<Watermark, {jsonType: WatermarkJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_search_search, 3);
+  messageDesc(file_elri_v1_search_search, 8);
+
+/**
+ * How to match. Unspecified = LEXICAL. 
+ *
+ * @generated from enum elri.v1.search.SearchMode
+ */
+export enum SearchMode {
+  /**
+   * @generated from enum value: SEARCH_MODE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Words in text fields. 
+   *
+   * @generated from enum value: SEARCH_MODE_LEXICAL = 1;
+   */
+  LEXICAL = 1,
+
+  /**
+   * Meaning, by the local embedding model. 
+   *
+   * @generated from enum value: SEARCH_MODE_SEMANTIC = 2;
+   */
+  SEMANTIC = 2,
+
+  /**
+   * Both, fused by rank. 
+   *
+   * @generated from enum value: SEARCH_MODE_HYBRID = 3;
+   */
+  HYBRID = 3,
+}
+
+/**
+ * How to match. Unspecified = LEXICAL. 
+ *
+ * @generated from enum elri.v1.search.SearchMode
+ */
+export type SearchModeJson = "SEARCH_MODE_UNSPECIFIED" | "SEARCH_MODE_LEXICAL" | "SEARCH_MODE_SEMANTIC" | "SEARCH_MODE_HYBRID";
+
+/**
+ * Describes the enum elri.v1.search.SearchMode.
+ */
+export const SearchModeSchema: GenEnum<SearchMode, SearchModeJson> = /*@__PURE__*/
+  enumDesc(file_elri_v1_search_search, 0);
+
+/**
+ * @generated from enum elri.v1.search.SemanticState
+ */
+export enum SemanticState {
+  /**
+   * @generated from enum value: SEMANTIC_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Switched off in the settings. 
+   *
+   * @generated from enum value: SEMANTIC_STATE_OFF = 1;
+   */
+  OFF = 1,
+
+  /**
+   * The model is not on this device. 
+   *
+   * @generated from enum value: SEMANTIC_STATE_MISSING = 2;
+   */
+  MISSING = 2,
+
+  /**
+   * @generated from enum value: SEMANTIC_STATE_DOWNLOADING = 3;
+   */
+  DOWNLOADING = 3,
+
+  /**
+   * @generated from enum value: SEMANTIC_STATE_LOADING = 4;
+   */
+  LOADING = 4,
+
+  /**
+   * @generated from enum value: SEMANTIC_STATE_READY = 5;
+   */
+  READY = 5,
+
+  /**
+   * @generated from enum value: SEMANTIC_STATE_FAILED = 6;
+   */
+  FAILED = 6,
+}
+
+/**
+ * @generated from enum elri.v1.search.SemanticState
+ */
+export type SemanticStateJson = "SEMANTIC_STATE_UNSPECIFIED" | "SEMANTIC_STATE_OFF" | "SEMANTIC_STATE_MISSING" | "SEMANTIC_STATE_DOWNLOADING" | "SEMANTIC_STATE_LOADING" | "SEMANTIC_STATE_READY" | "SEMANTIC_STATE_FAILED";
+
+/**
+ * Describes the enum elri.v1.search.SemanticState.
+ */
+export const SemanticStateSchema: GenEnum<SemanticState, SemanticStateJson> = /*@__PURE__*/
+  enumDesc(file_elri_v1_search_search, 1);
 
 /**
  * Full-text search over the text of a Space's Objects. 
@@ -291,6 +635,27 @@ export const SearchService: GenService<{
     methodKind: "unary";
     input: typeof SearchRequestSchema;
     output: typeof SearchResponseSchema;
+  },
+  /**
+   * The semantic index on this device: model, readiness, backlog. 
+   *
+   * @generated from rpc elri.v1.search.SearchService.GetSemanticStatus
+   */
+  getSemanticStatus: {
+    methodKind: "unary";
+    input: typeof GetSemanticStatusRequestSchema;
+    output: typeof GetSemanticStatusResponseSchema;
+  },
+  /**
+   * Downloads the pinned model if missing (through the device's proxy)
+   * and loads it. Returns at once; the status tells the progress. 
+   *
+   * @generated from rpc elri.v1.search.SearchService.PrepareSemantic
+   */
+  prepareSemantic: {
+    methodKind: "unary";
+    input: typeof PrepareSemanticRequestSchema;
+    output: typeof PrepareSemanticResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_search_search, 0);

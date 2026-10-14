@@ -40,6 +40,8 @@ pub struct Config {
     pub allowed_origins: Vec<String>,
     /// Where the server token is kept.
     pub secrets: SecretsBackend,
+    /// Which embedder semantic search uses.
+    pub semantic: crate::semantic::Backend,
 }
 
 impl Config {
@@ -57,6 +59,7 @@ impl Config {
                 "127.0.0.1:*".to_owned(),
             ],
             secrets: SecretsBackend::File,
+            semantic: crate::semantic::Backend::Model,
         }
     }
 }
@@ -200,6 +203,7 @@ struct Inner {
     remote: Arc<Remote>,
     rules_task: JoinHandle<()>,
     retention_task: JoinHandle<()>,
+    semantic_task: JoinHandle<()>,
 }
 
 impl Core {
@@ -248,6 +252,13 @@ impl Core {
         write_endpoint(&config.data_dir, &endpoint)?;
 
         let retention_task = spawn_retention(Arc::clone(&store));
+        let semantic = crate::semantic::Semantic::new(
+            Arc::clone(&store),
+            Arc::clone(&net),
+            &config.data_dir,
+            config.semantic,
+        );
+        let semantic_task = semantic.spawn();
         let modules = crate::extension::Modules::new(&config.data_dir);
         let scripts =
             crate::script::Host::new(Arc::clone(&store), device_id.as_string(), modules.clone());
@@ -275,6 +286,7 @@ impl Core {
                 modules,
                 net: Arc::clone(&net),
                 secrets,
+                semantic,
             },
             config.allowed_origins.clone(),
         );
@@ -299,6 +311,7 @@ impl Core {
                 remote,
                 rules_task,
                 retention_task,
+                semantic_task,
             }),
             listener_task,
         })
@@ -336,6 +349,7 @@ impl Core {
         self.listener_task.abort();
         self.inner.rules_task.abort();
         self.inner.retention_task.abort();
+        self.inner.semantic_task.abort();
         remove_endpoint(&self.inner.config.data_dir);
         tracing::info!("core stopped");
     }
@@ -346,6 +360,7 @@ impl Drop for Core {
         self.listener_task.abort();
         self.inner.rules_task.abort();
         self.inner.retention_task.abort();
+        self.inner.semantic_task.abort();
         remove_endpoint(&self.inner.config.data_dir);
     }
 }

@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { SearchRequest, SearchResponse } from "./search_pb.ts";
-import { SearchRequestSchema, SearchResponseSchema } from "./search_pb.ts";
+import type { GetSemanticStatusRequest, GetSemanticStatusResponse, PrepareSemanticRequest, PrepareSemanticResponse, SearchRequest, SearchResponse } from "./search_pb.ts";
+import { GetSemanticStatusRequestSchema, GetSemanticStatusResponseSchema, PrepareSemanticRequestSchema, PrepareSemanticResponseSchema, SearchRequestSchema, SearchResponseSchema } from "./search_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -27,6 +27,22 @@ const SearchService_Search: MethodInfo<SearchRequest, SearchResponse> = {
   output: SearchResponseSchema,
 };
 
+const SearchService_GetSemanticStatus: MethodInfo<GetSemanticStatusRequest, GetSemanticStatusResponse> = {
+  typeName: "elri.v1.search.SearchService",
+  name: "GetSemanticStatus",
+  kind: "unary",
+  input: GetSemanticStatusRequestSchema,
+  output: GetSemanticStatusResponseSchema,
+};
+
+const SearchService_PrepareSemantic: MethodInfo<PrepareSemanticRequest, PrepareSemanticResponse> = {
+  typeName: "elri.v1.search.SearchService",
+  name: "PrepareSemantic",
+  kind: "unary",
+  input: PrepareSemanticRequestSchema,
+  output: PrepareSemanticResponseSchema,
+};
+
 /**
  * Full-text search over the text of a Space's Objects. 
  *
@@ -42,6 +58,27 @@ export class SearchServiceClient {
    */
   async search(req: SearchRequest, options?: CallOptions): Promise<SearchResponse> {
     const res = await this.transport.unary(SearchService_Search, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * The semantic index on this device: model, readiness, backlog. 
+   *
+   * @generated from rpc elri.v1.search.SearchService.GetSemanticStatus
+   */
+  async getSemanticStatus(req: GetSemanticStatusRequest, options?: CallOptions): Promise<GetSemanticStatusResponse> {
+    const res = await this.transport.unary(SearchService_GetSemanticStatus, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Downloads the pinned model if missing (through the device's proxy)
+   * and loads it. Returns at once; the status tells the progress. 
+   *
+   * @generated from rpc elri.v1.search.SearchService.PrepareSemantic
+   */
+  async prepareSemantic(req: PrepareSemanticRequest, options?: CallOptions): Promise<PrepareSemanticResponse> {
+    const res = await this.transport.unary(SearchService_PrepareSemantic, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

@@ -63,7 +63,9 @@ use elri_proto::elri::v1::script::{
     RunRuleRequest, RunScriptRequest, Script, SetPolicyRequest, Trigger, UpdateRuleRequest,
 };
 use elri_proto::elri::v1::search::search_service_ws::SearchServiceClient;
-use elri_proto::elri::v1::search::SearchRequest;
+use elri_proto::elri::v1::search::{
+    GetSemanticStatusRequest, PrepareSemanticRequest, SearchMode, SearchRequest, SemanticStatus,
+};
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::Role;
 use elri_proto::elri::v1::space::{
@@ -133,6 +135,15 @@ enum Cmd {
         /// Only hits in the fields this approved mapping names for the Space.
         #[arg(long)]
         mapping: Option<String>,
+        /// lexical, semantic, or hybrid.
+        #[arg(long, default_value = "lexical", value_parser = parse_search_mode)]
+        mode: SearchMode,
+    },
+    /// The semantic index: its state, or download and load the model.
+    Semantic {
+        /// Download the pinned model if missing, then load it.
+        #[arg(long)]
+        prepare: bool,
     },
     /// Mappings: fields of several Spaces that mean the same thing.
     Mapping {
@@ -1059,6 +1070,24 @@ enum SpaceCmd {
         #[arg(long)]
         clear: bool,
     },
+}
+
+fn parse_search_mode(s: &str) -> Result<SearchMode, String> {
+    match parse_enum("SEARCH_MODE", s, SearchMode::from_str_name)? {
+        SearchMode::Unspecified => Err("mode is required".to_owned()),
+        m => Ok(m),
+    }
+}
+
+fn semantic_json(s: &SemanticStatus) -> serde_json::Value {
+    json!({
+        "state": s.state().as_str_name().trim_start_matches("SEMANTIC_STATE_").to_lowercase(),
+        "model": s.model,
+        "bytes_done": s.bytes_done,
+        "bytes_total": s.bytes_total,
+        "pending": s.pending,
+        "error": s.error,
+    })
 }
 
 fn parse_rule(s: &str) -> Result<TransferRule, String> {
@@ -2632,6 +2661,38 @@ fn print(v: &serde_json::Value) -> Result<()> {
     Ok(())
 }
 
+async fn run_search(
+    endpoint: &Endpoint,
+    conn: Client,
+    req: SearchRequest,
+) -> Result<serde_json::Value> {
+    let res = SearchServiceClient::new(conn)
+        .search(authed(endpoint, req))
+        .await?
+        .msg;
+    let hits: Vec<_> = res
+        .hits
+        .iter()
+        .map(|h| {
+            json!({
+                "score": h.score,
+                "reasons": h.reasons,
+                "similarity": h.similarity,
+                "fields": h.fields,
+                "object": h.object.as_ref().map(object_json),
+            })
+        })
+        .collect();
+    Ok(json!({
+        "hits": hits,
+        "watermark": res.watermark.as_ref().map(|w| json!({
+            "partial": w.partial,
+            "semantic_pending": w.semantic_pending,
+            "semantic_state": w.semantic_state().as_str_name().trim_start_matches("SEMANTIC_STATE_").to_lowercase(),
+        })),
+    }))
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
@@ -2662,32 +2723,17 @@ async fn main() -> Result<()> {
             kind,
             limit,
             mapping,
+            mode,
         } => {
-            let res = SearchServiceClient::new(conn)
-                .search(authed(
-                    &endpoint,
-                    SearchRequest {
-                        space_id: space,
-                        query,
-                        kind: kind.unwrap_or(ObjectKind::Unspecified).into(),
-                        limit,
-                        mapping_id: mapping.unwrap_or_default(),
-                    },
-                ))
-                .await?;
-            let hits: Vec<_> = res
-                .msg
-                .hits
-                .iter()
-                .map(|h| {
-                    json!({
-                        "score": h.score,
-                        "fields": h.fields,
-                        "object": h.object.as_ref().map(object_json),
-                    })
-                })
-                .collect();
-            json!(hits)
+            let req = SearchRequest {
+                space_id: space,
+                query,
+                kind: kind.unwrap_or(ObjectKind::Unspecified).into(),
+                limit,
+                mapping_id: mapping.unwrap_or_default(),
+                mode: mode.into(),
+            };
+            run_search(&endpoint, conn, req).await?
         }
         Cmd::Change { cmd } => run_change(&endpoint, conn, cmd).await?,
         Cmd::Attachment { cmd } => run_attachment(&endpoint, conn, cmd).await?,
@@ -2697,6 +2743,25 @@ async fn main() -> Result<()> {
         Cmd::Workflow { cmd } => run_workflow(&endpoint, conn, cmd).await?,
         Cmd::Document { cmd } => run_document(&endpoint, conn, cmd).await?,
         Cmd::Mapping { cmd } => run_mapping(&endpoint, conn, cmd).await?,
+        Cmd::Semantic { prepare } => {
+            let client = SearchServiceClient::new(conn);
+            let status = if prepare {
+                client
+                    .prepare_semantic(authed(&endpoint, PrepareSemanticRequest {}))
+                    .await?
+                    .msg
+                    .status
+            } else {
+                client
+                    .get_semantic_status(authed(&endpoint, GetSemanticStatusRequest {}))
+                    .await?
+                    .msg
+                    .status
+            };
+            status
+                .as_ref()
+                .map_or(serde_json::Value::Null, semantic_json)
+        }
         Cmd::Rule { cmd } => run_rule(&endpoint, conn, cmd).await?,
         Cmd::Ui { cmd } => run_ui(&endpoint, conn, cmd).await?,
         Cmd::Transfer { cmd } => run_transfer(&endpoint, conn, cmd).await?,

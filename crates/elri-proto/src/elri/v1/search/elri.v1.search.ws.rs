@@ -15,6 +15,14 @@ pub mod search_service_ws {
         route: "/elri.v1.search.SearchService/Search",
         kind: StreamKind::Unary,
     };
+    pub const GET_SEMANTIC_STATUS: MethodSpec = MethodSpec {
+        route: "/elri.v1.search.SearchService/GetSemanticStatus",
+        kind: StreamKind::Unary,
+    };
+    pub const PREPARE_SEMANTIC: MethodSpec = MethodSpec {
+        route: "/elri.v1.search.SearchService/PrepareSemantic",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `SearchService` service. Implement with `async fn`.
     pub trait SearchServiceHandler: Send + Sync + 'static {
         ///  Best matches first.
@@ -23,6 +31,21 @@ pub mod search_service_ws {
             req: Request<super::SearchRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::SearchResponse>, Status>,
+        > + Send;
+        ///  The semantic index on this device: model, readiness, backlog.
+        fn get_semantic_status(
+            &self,
+            req: Request<super::GetSemanticStatusRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::GetSemanticStatusResponse>, Status>,
+        > + Send;
+        ///  Downloads the pinned model if missing (through the device's proxy)
+        /// and loads it. Returns at once; the status tells the progress.
+        fn prepare_semantic(
+            &self,
+            req: Request<super::PrepareSemanticRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::PrepareSemanticResponse>, Status>,
         > + Send;
     }
     /// Registers `handler` on `server` for every `SearchService` method.
@@ -48,6 +71,28 @@ pub mod search_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    GET_SEMANTIC_STATUS.route,
+                    move |req: Request<super::GetSemanticStatusRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.get_semantic_status(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    PREPARE_SEMANTIC.route,
+                    move |req: Request<super::PrepareSemanticRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.prepare_semantic(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `SearchService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -68,6 +113,21 @@ pub mod search_service_ws {
             req: impl Into<Request<super::SearchRequest>>,
         ) -> Result<Response<super::SearchResponse>, Status> {
             self.conn.invoke_unary(SEARCH, req.into()).await
+        }
+        ///  The semantic index on this device: model, readiness, backlog.
+        pub async fn get_semantic_status(
+            &self,
+            req: impl Into<Request<super::GetSemanticStatusRequest>>,
+        ) -> Result<Response<super::GetSemanticStatusResponse>, Status> {
+            self.conn.invoke_unary(GET_SEMANTIC_STATUS, req.into()).await
+        }
+        ///  Downloads the pinned model if missing (through the device's proxy)
+        /// and loads it. Returns at once; the status tells the progress.
+        pub async fn prepare_semantic(
+            &self,
+            req: impl Into<Request<super::PrepareSemanticRequest>>,
+        ) -> Result<Response<super::PrepareSemanticResponse>, Status> {
+            self.conn.invoke_unary(PREPARE_SEMANTIC, req.into()).await
         }
     }
 }

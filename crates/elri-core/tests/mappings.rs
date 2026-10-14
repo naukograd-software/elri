@@ -186,6 +186,7 @@ async fn mappings_are_proposed_approved_and_used() {
                 kind: 0,
                 limit: 10,
                 mapping_id: mapping.id.clone(),
+                mode: 0,
             },
         ))
         .await
@@ -204,6 +205,7 @@ async fn mappings_are_proposed_approved_and_used() {
                 kind: 0,
                 limit: 10,
                 mapping_id: String::new(),
+                mode: 0,
             },
         ))
         .await
@@ -287,6 +289,7 @@ async fn mappings_are_proposed_approved_and_used() {
                 kind: 0,
                 limit: 10,
                 mapping_id: proposed_id.clone(),
+                mode: 0,
             },
         ))
         .await

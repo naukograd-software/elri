@@ -8,6 +8,57 @@ import "elri/v1/object/domain.proto";
 service SearchService {
     /* Best matches first. */
     rpc Search(SearchRequest) returns (SearchResponse);
+    /* The semantic index on this device: model, readiness, backlog. */
+    rpc GetSemanticStatus(GetSemanticStatusRequest) returns (GetSemanticStatusResponse);
+    /* Downloads the pinned model if missing (through the device's proxy)
+       and loads it. Returns at once; the status tells the progress. */
+    rpc PrepareSemantic(PrepareSemanticRequest) returns (PrepareSemanticResponse);
+}
+
+/* How to match. Unspecified = LEXICAL. */
+enum SearchMode {
+    SEARCH_MODE_UNSPECIFIED = 0;
+    /* Words in text fields. */
+    SEARCH_MODE_LEXICAL = 1;
+    /* Meaning, by the local embedding model. */
+    SEARCH_MODE_SEMANTIC = 2;
+    /* Both, fused by rank. */
+    SEARCH_MODE_HYBRID = 3;
+}
+
+enum SemanticState {
+    SEMANTIC_STATE_UNSPECIFIED = 0;
+    /* Switched off in the settings. */
+    SEMANTIC_STATE_OFF = 1;
+    /* The model is not on this device. */
+    SEMANTIC_STATE_MISSING = 2;
+    SEMANTIC_STATE_DOWNLOADING = 3;
+    SEMANTIC_STATE_LOADING = 4;
+    SEMANTIC_STATE_READY = 5;
+    SEMANTIC_STATE_FAILED = 6;
+}
+
+message SemanticStatus {
+    SemanticState state = 1;
+    /* Model and revision, e.g. `intfloat/multilingual-e5-small@614241f`. */
+    string model = 2;
+    int64 bytes_done = 3;
+    int64 bytes_total = 4;
+    string error = 5;
+    /* Objects waiting to be indexed, over every Space. */
+    int64 pending = 6;
+}
+
+message GetSemanticStatusRequest {}
+
+message GetSemanticStatusResponse {
+    SemanticStatus status = 1;
+}
+
+message PrepareSemanticRequest {}
+
+message PrepareSemanticResponse {
+    SemanticStatus status = 1;
 }
 
 message SearchRequest {
@@ -19,8 +70,9 @@ message SearchRequest {
     /* 0 = server default. */
     int32 limit = 4;
     /* Only hits in the fields an approved mapping of this Space names for
-       it, if set. */
+       it, if set. Lexical matching only. */
     string mapping_id = 5;
+    SearchMode mode = 6;
 }
 
 message Hit {
@@ -29,6 +81,10 @@ message Hit {
     double score = 2;
     /* Field-definition ids whose text matched. */
     repeated string fields = 3;
+    /* Why it matched: `words` (lexical) and/or `meaning` (semantic). */
+    repeated string reasons = 4;
+    /* Cosine similarity of the meaning match, when there is one. */
+    double similarity = 5;
 }
 
 message SearchResponse {
@@ -50,4 +106,9 @@ message Watermark {
     bool partial = 3;
     /* Sequence the initial download must reach, when partial. */
     int64 target_seq = 4;
+    /* Semantic index of this Space: objects still waiting to be indexed,
+       and the model's state. Meaning results are partial while either is
+       not settled. */
+    int64 semantic_pending = 5;
+    SemanticState semantic_state = 6;
 }

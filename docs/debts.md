@@ -57,7 +57,9 @@ fixed: Russian/English retrieval tests and resource measurements on
 physical Android devices.
 
 **Today.** One multilingual embedding model is pinned by digest and used
-on every platform.
+on every platform. It loads into memory whole: about 1.2 GB at peak while
+loading on desktop, which is too much for small phones; memory-mapping the
+weights and a smaller quantized model are part of this choice.
 
 **Closing it.** A retrieval test set in both languages, measurements of
 memory, latency and battery on baseline devices, and a model choice per

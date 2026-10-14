@@ -32,6 +32,7 @@ pub mod rules;
 pub mod script;
 pub mod search;
 pub mod secrets;
+pub mod semantic;
 pub mod store;
 pub mod sync;
 pub mod transfer;

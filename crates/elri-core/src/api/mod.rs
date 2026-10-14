@@ -8,6 +8,7 @@ mod definitions;
 mod document;
 mod extensions;
 mod scripts;
+mod search;
 mod settings;
 mod transfer;
 mod ui;
@@ -50,10 +51,6 @@ use elri_proto::elri::v1::remote::{
     GetStatusResponse, JoinSpaceRequest, JoinSpaceResponse, ListRemoteSpacesRequest,
     ListRemoteSpacesResponse, RemoteSpace, SpaceSyncStatus,
 };
-use elri_proto::elri::v1::search::search_service_ws::{
-    register_search_service_arc, SearchServiceHandler,
-};
-use elri_proto::elri::v1::search::{Hit, SearchRequest, SearchResponse, Watermark};
 use elri_proto::elri::v1::space::space_service_ws::{
     register_space_service_arc, SpaceServiceHandler,
 };
@@ -98,6 +95,8 @@ pub struct Services {
     pub net: Arc<crate::net::Net>,
     /// The device's credential store.
     pub secrets: crate::secrets::Secrets,
+    /// Semantic search on this device.
+    pub semantic: Arc<crate::semantic::Semantic>,
 }
 
 /// Builds the loopback server: origin policy, bearer-token middleware, all
@@ -118,7 +117,7 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     register_change_service_arc(&server, Arc::clone(&services));
     register_remote_service_arc(&server, Arc::clone(&services));
     register_event_service_arc(&server, Arc::clone(&services));
-    register_search_service_arc(&server, Arc::clone(&services));
+    search::register(&server, Arc::clone(&services));
     register_backup_service_arc(&server, Arc::clone(&services));
     definitions::register(&server, Arc::clone(&services));
     attachments::register(&server, Arc::clone(&services));
@@ -840,73 +839,6 @@ impl BackupServiceHandler for Services {
                 })
                 .collect(),
             omissions: manifest.omissions,
-        }))
-    }
-}
-
-impl SearchServiceHandler for Services {
-    async fn search(
-        &self,
-        req: Request<SearchRequest>,
-    ) -> Result<Response<SearchResponse>, Status> {
-        let m = &req.msg;
-        let space_id = parse_id(&m.space_id, "space_id")?;
-        if m.query.trim().is_empty() {
-            return Err(invalid("query is required"));
-        }
-        let kind = ObjectKind::try_from(m.kind)
-            .ok()
-            .filter(|k| *k != ObjectKind::Unspecified);
-        let limit = usize::try_from(m.limit).unwrap_or(0).min(500);
-        let space = self.store.space(space_id).await?;
-        let hits = space
-            .search(&m.query, kind, limit)
-            .await
-            .map_err(|e| match e {
-                // The engine rejects malformed query syntax at execution.
-                StoreError::Db(inner) => invalid(format!("query: {inner}")),
-                other => Status::from(other),
-            })?;
-        // The text index is written in the data's transaction, so it
-        // covers exactly what the Space holds; what the Space holds may
-        // still be a partial initial copy.
-        let data_seq = space.cursor().await?;
-        let downloading = space.downloading().await?;
-        // A mapping narrows the hits to the fields it names for this Space.
-        let mapped: Option<Vec<String>> = if m.mapping_id.is_empty() {
-            None
-        } else {
-            let mapping = parse_id(&m.mapping_id, "mapping_id")?;
-            Some(crate::mapping::fields_for(&self.store, space_id, mapping, space_id).await?)
-        };
-        Ok(Response::new(SearchResponse {
-            hits: hits
-                .into_iter()
-                .filter_map(|(object, score, fields)| {
-                    let fields = match &mapped {
-                        Some(wanted) => {
-                            let kept: Vec<String> =
-                                fields.into_iter().filter(|f| wanted.contains(f)).collect();
-                            if kept.is_empty() {
-                                return None;
-                            }
-                            kept
-                        }
-                        None => fields,
-                    };
-                    Some(Hit {
-                        object: Some(object),
-                        score,
-                        fields,
-                    })
-                })
-                .collect(),
-            watermark: Some(Watermark {
-                data_seq,
-                index_seq: data_seq,
-                partial: downloading.is_some(),
-                target_seq: downloading.map_or(0, |(_, target)| target),
-            }),
         }))
     }
 }
