@@ -1,7 +1,7 @@
 //! Storage-level synchronization: a device's outbox is admitted by an
 //! authority and delivered to another device.
 
-#![allow(clippy::expect_used)]
+#![allow(clippy::expect_used, clippy::panic)]
 
 use elri_core::change::{Admission, RejectReason};
 use elri_core::device::DeviceId;
