@@ -44,4 +44,7 @@ message Entry {
     int64 accepted_at_ms = 3;
     string purged_object_id = 4;
     elri.v1.definition.Pin pin = 5;
+    /* Set when `change` was left out because it is too large for a Pull
+       response: its encoded size. FetchEntry delivers it in chunks. */
+    int64 large_bytes = 6;
 }

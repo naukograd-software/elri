@@ -56,6 +56,10 @@ pub struct Entry {
     pub purged_object_id: ::prost::alloc::string::String,
     #[prost(message, optional, tag = "5")]
     pub pin: ::core::option::Option<super::definition::Pin>,
+    /// Set when `change` was left out because it is too large for a Pull
+    /// response: its encoded size. FetchEntry delivers it in chunks. 
+    #[prost(int64, tag = "6")]
+    pub large_bytes: i64,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PinDefinitionRequest {
@@ -177,6 +181,34 @@ pub struct AddMemberResponse {
 pub struct SubmitRequest {
     #[prost(message, optional, tag = "1")]
     pub change: ::core::option::Option<Envelope>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SubmitChunkedRequest {
+    #[prost(oneof = "submit_chunked_request::Chunk", tags = "1, 2")]
+    pub chunk: ::core::option::Option<submit_chunked_request::Chunk>,
+}
+/// Nested message and enum types in `SubmitChunkedRequest`.
+pub mod submit_chunked_request {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Chunk {
+        /// First message: how many bytes follow. 
+        #[prost(int64, tag = "1")]
+        TotalBytes(i64),
+        #[prost(bytes, tag = "2")]
+        Data(::prost::bytes::Bytes),
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct FetchEntryRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(int64, tag = "2")]
+    pub seq: i64,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct EntryChunk {
+    #[prost(bytes = "bytes", tag = "1")]
+    pub data: ::prost::bytes::Bytes,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Rejection {

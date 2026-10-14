@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, firstResponse, iterateStream, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { AddMemberRequest, AddMemberResponse, BlobChunk, CreateSpaceRequest, CreateSpaceResponse, DownloadBlobRequest, HelloRequest, HelloResponse, ListSpacesRequest, ListSpacesResponse, PinDefinitionRequest, PinDefinitionResponse, PullRequest, PullResponse, PurgeObjectRequest, PurgeObjectResponse, SubmitRequest, SubmitResponse, SubscribeEvent, SubscribeRequest, UploadBlobRequest, UploadBlobResponse } from "./sync_pb.ts";
-import { AddMemberRequestSchema, AddMemberResponseSchema, BlobChunkSchema, CreateSpaceRequestSchema, CreateSpaceResponseSchema, DownloadBlobRequestSchema, HelloRequestSchema, HelloResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, PinDefinitionRequestSchema, PinDefinitionResponseSchema, PullRequestSchema, PullResponseSchema, PurgeObjectRequestSchema, PurgeObjectResponseSchema, SubmitRequestSchema, SubmitResponseSchema, SubscribeEventSchema, SubscribeRequestSchema, UploadBlobRequestSchema, UploadBlobResponseSchema } from "./sync_pb.ts";
+import type { AddMemberRequest, AddMemberResponse, BlobChunk, CreateSpaceRequest, CreateSpaceResponse, DownloadBlobRequest, EntryChunk, FetchEntryRequest, HelloRequest, HelloResponse, ListSpacesRequest, ListSpacesResponse, PinDefinitionRequest, PinDefinitionResponse, PullRequest, PullResponse, PurgeObjectRequest, PurgeObjectResponse, SubmitChunkedRequest, SubmitRequest, SubmitResponse, SubscribeEvent, SubscribeRequest, UploadBlobRequest, UploadBlobResponse } from "./sync_pb.ts";
+import { AddMemberRequestSchema, AddMemberResponseSchema, BlobChunkSchema, CreateSpaceRequestSchema, CreateSpaceResponseSchema, DownloadBlobRequestSchema, EntryChunkSchema, FetchEntryRequestSchema, HelloRequestSchema, HelloResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, PinDefinitionRequestSchema, PinDefinitionResponseSchema, PullRequestSchema, PullResponseSchema, PurgeObjectRequestSchema, PurgeObjectResponseSchema, SubmitChunkedRequestSchema, SubmitRequestSchema, SubmitResponseSchema, SubscribeEventSchema, SubscribeRequestSchema, UploadBlobRequestSchema, UploadBlobResponseSchema } from "./sync_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -57,6 +57,22 @@ const SyncService_Submit: MethodInfo<SubmitRequest, SubmitResponse> = {
   kind: "unary",
   input: SubmitRequestSchema,
   output: SubmitResponseSchema,
+};
+
+const SyncService_SubmitChunked: MethodInfo<SubmitChunkedRequest, SubmitResponse> = {
+  typeName: "elri.v1.sync.SyncService",
+  name: "SubmitChunked",
+  kind: "client_streaming",
+  input: SubmitChunkedRequestSchema,
+  output: SubmitResponseSchema,
+};
+
+const SyncService_FetchEntry: MethodInfo<FetchEntryRequest, EntryChunk> = {
+  typeName: "elri.v1.sync.SyncService",
+  name: "FetchEntry",
+  kind: "server_streaming",
+  input: FetchEntryRequestSchema,
+  output: EntryChunkSchema,
 };
 
 const SyncService_Pull: MethodInfo<PullRequest, PullResponse> = {
@@ -166,6 +182,27 @@ export class SyncServiceClient {
   async submit(req: SubmitRequest, options?: CallOptions): Promise<SubmitResponse> {
     const res = await this.transport.unary(SyncService_Submit, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Submit for a Change too large for one message: the encoded Envelope
+   * in chunks after its total size. Admitted exactly like Submit. 
+   *
+   * @generated from rpc elri.v1.sync.SyncService.SubmitChunked
+   */
+  async submitChunked(reqs: AsyncIterable<SubmitChunkedRequest>, options?: CallOptions): Promise<SubmitResponse> {
+    const res = await this.transport.stream(SyncService_SubmitChunked, reqs, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return firstResponse(res, "elri.v1.sync.SyncService.SubmitChunked", options);
+  }
+
+  /**
+   * The encoded Envelope of a log entry Pull marked large, in chunks. 
+   *
+   * @generated from rpc elri.v1.sync.SyncService.FetchEntry
+   */
+  async *fetchEntry(req: FetchEntryRequest, options?: CallOptions): AsyncIterable<EntryChunk> {
+    const res = await this.transport.stream(SyncService_FetchEntry, (async function* () { yield req; })(), { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    yield* iterateStream(res, options);
   }
 
   /**

@@ -2022,6 +2022,7 @@ dependencies = [
  "clap",
  "elri-core",
  "elri-proto",
+ "prost",
  "rand 0.9.5",
  "rcgen",
  "serde_json",

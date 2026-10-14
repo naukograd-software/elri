@@ -22,6 +22,11 @@ service SyncService {
     /* Submits one Change; accepted or rejected as a whole. Resubmitting the
        same id returns the recorded outcome. */
     rpc Submit(SubmitRequest) returns (SubmitResponse);
+    /* Submit for a Change too large for one message: the encoded Envelope
+       in chunks after its total size. Admitted exactly like Submit. */
+    rpc SubmitChunked(stream SubmitChunkedRequest) returns (SubmitResponse);
+    /* The encoded Envelope of a log entry Pull marked large, in chunks. */
+    rpc FetchEntry(FetchEntryRequest) returns (stream EntryChunk);
     /* Accepted Changes after a sequence number, oldest first. */
     rpc Pull(PullRequest) returns (PullResponse);
     /* Announces new sequence numbers for the given Spaces. */
@@ -120,6 +125,23 @@ message AddMemberResponse {}
 
 message SubmitRequest {
     Envelope change = 1;
+}
+
+message SubmitChunkedRequest {
+    oneof chunk {
+        /* First message: how many bytes follow. */
+        int64 total_bytes = 1;
+        bytes data = 2;
+    }
+}
+
+message FetchEntryRequest {
+    string space_id = 1;
+    int64 seq = 2;
+}
+
+message EntryChunk {
+    bytes data = 1;
 }
 
 message Rejection {

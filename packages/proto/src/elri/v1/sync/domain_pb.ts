@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/sync/domain.proto.
  */
 export const file_elri_v1_sync_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChllbHJpL3YxL3N5bmMvZG9tYWluLnByb3RvEgxlbHJpLnYxLnN5bmMijgEKBFBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEhQKDGZyb21fdmVyc2lvbhgDIAEoDBISCgp0b192ZXJzaW9uGAQgASgMEg0KBWJ5dGVzGAUgASgMEhAKCHNwYWNlX2lkGAYgASgJIoQBCghFbnZlbG9wZRIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkSFQoNY3JlYXRlZF9hdF9tcxgEIAEoAxIhCgVwYXJ0cxgFIAMoCzISLmVscmkudjEuc3luYy5QYXJ0Eg0KBWFjdG9yGAYgASgJIpQBCgVFbnRyeRILCgNzZXEYASABKAMSJgoGY2hhbmdlGAIgASgLMhYuZWxyaS52MS5zeW5jLkVudmVsb3BlEhYKDmFjY2VwdGVkX2F0X21zGAMgASgDEhgKEHB1cmdlZF9vYmplY3RfaWQYBCABKAkSJAoDcGluGAUgASgLMhcuZWxyaS52MS5kZWZpbml0aW9uLlBpbmIGcHJvdG8z", [file_elri_v1_definition_domain, file_elri_v1_object_domain]);
+  fileDesc("ChllbHJpL3YxL3N5bmMvZG9tYWluLnByb3RvEgxlbHJpLnYxLnN5bmMijgEKBFBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEhQKDGZyb21fdmVyc2lvbhgDIAEoDBISCgp0b192ZXJzaW9uGAQgASgMEg0KBWJ5dGVzGAUgASgMEhAKCHNwYWNlX2lkGAYgASgJIoQBCghFbnZlbG9wZRIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIRCglkZXZpY2VfaWQYAyABKAkSFQoNY3JlYXRlZF9hdF9tcxgEIAEoAxIhCgVwYXJ0cxgFIAMoCzISLmVscmkudjEuc3luYy5QYXJ0Eg0KBWFjdG9yGAYgASgJIqkBCgVFbnRyeRILCgNzZXEYASABKAMSJgoGY2hhbmdlGAIgASgLMhYuZWxyaS52MS5zeW5jLkVudmVsb3BlEhYKDmFjY2VwdGVkX2F0X21zGAMgASgDEhgKEHB1cmdlZF9vYmplY3RfaWQYBCABKAkSJAoDcGluGAUgASgLMhcuZWxyaS52MS5kZWZpbml0aW9uLlBpbhITCgtsYXJnZV9ieXRlcxgGIAEoA2IGcHJvdG8z", [file_elri_v1_definition_domain, file_elri_v1_object_domain]);
 
 /**
  * The operations a Change added to one document. 
@@ -239,6 +239,14 @@ export type Entry = Message<"elri.v1.sync.Entry"> & {
    * @generated from field: elri.v1.definition.Pin pin = 5;
    */
   pin?: Pin | undefined;
+
+  /**
+   * Set when `change` was left out because it is too large for a Pull
+   * response: its encoded size. FetchEntry delivers it in chunks. 
+   *
+   * @generated from field: int64 large_bytes = 6;
+   */
+  largeBytes: bigint;
 };
 
 /**
@@ -274,6 +282,14 @@ export type EntryJson = {
    * @generated from field: elri.v1.definition.Pin pin = 5;
    */
   pin?: PinJson;
+
+  /**
+   * Set when `change` was left out because it is too large for a Pull
+   * response: its encoded size. FetchEntry delivers it in chunks. 
+   *
+   * @generated from field: int64 large_bytes = 6;
+   */
+  largeBytes?: string;
 };
 
 /**

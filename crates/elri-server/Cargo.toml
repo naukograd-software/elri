@@ -18,6 +18,7 @@ path = "src/main.rs"
 workspace = true
 
 [dependencies]
+prost.workspace = true
 elri-core = { workspace = true, features = ["keyring"] }
 elri-proto.workspace = true
 ws-proto.workspace = true

@@ -762,6 +762,65 @@ async fn changes_flow_between_devices_through_the_server() {
     .expect("one rejection");
     assert!(rejected_text.contains("CONSTRAINT"), "{rejected_text}");
 
+    // A Change too large for one message: a five-megabyte text goes to the
+    // server in chunks and reaches Bob the same way.
+    let big = "x".repeat(5 * 1024 * 1024);
+    let mut fields = HashMap::new();
+    fields.insert(
+        "body".to_owned(),
+        elri_proto::elri::v1::object::Value {
+            value: Some(elri_proto::elri::v1::object::value::Value::Text(
+                big.clone(),
+            )),
+        },
+    );
+    let large = a
+        .objects
+        .create_object(a.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: ObjectKind::Entity.into(),
+            fields,
+            ..Default::default()
+        }))
+        .await
+        .expect("large object")
+        .msg
+        .object
+        .expect("object");
+    eventually("the large change to be accepted", || async {
+        a.changes
+            .list_changes(a.authed(ListChangesRequest {
+                space_id: space.id.clone(),
+                limit: 20,
+                object_id: large.id.clone(),
+            }))
+            .await
+            .is_ok_and(|r| {
+                r.msg
+                    .changes
+                    .iter()
+                    .any(|c| c.status() == ChangeStatus::Accepted)
+            })
+    })
+    .await;
+    eventually("bob to receive the large object whole", || async {
+        b.objects
+            .get_object(b.authed(GetObjectRequest {
+                space_id: space.id.clone(),
+                id: large.id.clone(),
+            }))
+            .await
+            .is_ok_and(|r| {
+                r.msg.object.is_some_and(|o| {
+                    matches!(
+                        o.fields.get("body").and_then(|v| v.value.as_ref()),
+                        Some(elri_proto::elri::v1::object::value::Value::Text(t)) if t.len() == big.len()
+                    )
+                })
+            })
+    })
+    .await;
+
     eventually("alice's coordinated change to be accepted", || async {
         a.changes
             .list_changes(a.authed(ListChangesRequest {

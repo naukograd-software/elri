@@ -1886,6 +1886,7 @@ impl SpaceStore {
         for e in &entries {
             if let Some(object) = e.purged_object_id {
                 out.push(Entry {
+                    large_bytes: 0,
                     seq: e.seq,
                     change: None,
                     accepted_at_ms: e.accepted_at,
@@ -1896,6 +1897,7 @@ impl SpaceStore {
             }
             if let Some(json) = &e.pin_json {
                 out.push(Entry {
+                    large_bytes: 0,
                     seq: e.seq,
                     change: None,
                     accepted_at_ms: e.accepted_at,
@@ -1920,6 +1922,7 @@ impl SpaceStore {
                 });
             };
             out.push(Entry {
+                large_bytes: 0,
                 seq: e.seq,
                 change: Some(read_envelope(&mut db, self.id, &row).await?),
                 accepted_at_ms: e.accepted_at,

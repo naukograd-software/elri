@@ -33,6 +33,14 @@ pub mod sync_service_ws {
         route: "/elri.v1.sync.SyncService/Submit",
         kind: StreamKind::Unary,
     };
+    pub const SUBMIT_CHUNKED: MethodSpec = MethodSpec {
+        route: "/elri.v1.sync.SyncService/SubmitChunked",
+        kind: StreamKind::ClientStream,
+    };
+    pub const FETCH_ENTRY: MethodSpec = MethodSpec {
+        route: "/elri.v1.sync.SyncService/FetchEntry",
+        kind: StreamKind::ServerStream,
+    };
     pub const PULL: MethodSpec = MethodSpec {
         route: "/elri.v1.sync.SyncService/Pull",
         kind: StreamKind::Unary,
@@ -95,6 +103,20 @@ pub mod sync_service_ws {
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::SubmitResponse>, Status>,
         > + Send;
+        ///  Submit for a Change too large for one message: the encoded Envelope
+        /// in chunks after its total size. Admitted exactly like Submit.
+        fn submit_chunked(
+            &self,
+            stream: SubmitChunkedServerStream,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::SubmitResponse>, Status>,
+        > + Send;
+        ///  The encoded Envelope of a log entry Pull marked large, in chunks.
+        fn fetch_entry(
+            &self,
+            req: Request<super::FetchEntryRequest>,
+            stream: FetchEntryServerStream,
+        ) -> impl ::core::future::Future<Output = Result<(), Status>> + Send;
         ///  Accepted Changes after a sequence number, oldest first.
         fn pull(
             &self,
@@ -136,6 +158,76 @@ pub mod sync_service_ws {
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::PinDefinitionResponse>, Status>,
         > + Send;
+    }
+    /// Typed server-side stream for `SyncService.SubmitChunked`.
+    #[derive(Clone, Debug)]
+    pub struct SubmitChunkedServerStream {
+        inner: Stream,
+    }
+    impl SubmitChunkedServerStream {
+        /// Request headers from the OPEN frame.
+        pub fn header(&self) -> Metadata {
+            self.inner.header()
+        }
+        /// Caller deadline budget (`ws-timeout-ms`), if any.
+        pub fn timeout(&self) -> Option<::core::time::Duration> {
+            self.inner.timeout()
+        }
+        /// Sends one leading HEADER frame; must precede the first `send`.
+        pub async fn send_header(&self, md: Metadata) -> Result<(), Status> {
+            self.inner.send_header(md).await
+        }
+        /// Merges trailers flushed with the END frame.
+        pub fn set_trailer(&self, md: Metadata) {
+            self.inner.set_trailer(md)
+        }
+        /// Sends one response message (awaits flow-control credit).
+        pub async fn send(&self, msg: &super::SubmitResponse) -> Result<(), Status> {
+            self.inner.send(msg).await
+        }
+        /// Receives the next request; `Ok(None)` once the client half-closes.
+        pub async fn recv(&self) -> Result<Option<super::SubmitChunkedRequest>, Status> {
+            self.inner.recv().await
+        }
+        /// The underlying untyped stream.
+        pub fn raw(&self) -> &Stream {
+            &self.inner
+        }
+    }
+    /// Typed server-side stream for `SyncService.FetchEntry`.
+    #[derive(Clone, Debug)]
+    pub struct FetchEntryServerStream {
+        inner: Stream,
+    }
+    impl FetchEntryServerStream {
+        /// Request headers from the OPEN frame.
+        pub fn header(&self) -> Metadata {
+            self.inner.header()
+        }
+        /// Caller deadline budget (`ws-timeout-ms`), if any.
+        pub fn timeout(&self) -> Option<::core::time::Duration> {
+            self.inner.timeout()
+        }
+        /// Sends one leading HEADER frame; must precede the first `send`.
+        pub async fn send_header(&self, md: Metadata) -> Result<(), Status> {
+            self.inner.send_header(md).await
+        }
+        /// Merges trailers flushed with the END frame.
+        pub fn set_trailer(&self, md: Metadata) {
+            self.inner.set_trailer(md)
+        }
+        /// Sends one response message (awaits flow-control credit).
+        pub async fn send(&self, msg: &super::EntryChunk) -> Result<(), Status> {
+            self.inner.send(msg).await
+        }
+        /// Receives the next request; `Ok(None)` once the client half-closes.
+        pub async fn recv(&self) -> Result<Option<super::FetchEntryRequest>, Status> {
+            self.inner.recv().await
+        }
+        /// The underlying untyped stream.
+        pub fn raw(&self) -> &Stream {
+            &self.inner
+        }
     }
     /// Typed server-side stream for `SyncService.Subscribe`.
     #[derive(Clone, Debug)]
@@ -309,6 +401,50 @@ pub mod sync_service_ws {
         {
             let h = ::std::sync::Arc::clone(&handler);
             server
+                .register(
+                    SUBMIT_CHUNKED.route,
+                    move |s: Stream| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move {
+                            let resp = h
+                                .submit_chunked(SubmitChunkedServerStream {
+                                    inner: s.clone(),
+                                })
+                                .await?;
+                            if !resp.header.is_empty() {
+                                let _ = s.send_header(resp.header).await;
+                            }
+                            s.set_trailer(resp.trailer);
+                            s.send(&resp.msg).await
+                        }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register(
+                    FETCH_ENTRY.route,
+                    move |s: Stream| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move {
+                            let msg = s
+                                .recv::<super::FetchEntryRequest>()
+                                .await?
+                                .unwrap_or_default();
+                            let req = Request {
+                                msg,
+                                header: s.header(),
+                                timeout: s.timeout(),
+                            };
+                            h.fetch_entry(req, FetchEntryServerStream { inner: s }).await
+                        }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
                 .register_unary(
                     PULL.route,
                     move |req: Request<super::PullRequest>| {
@@ -461,6 +597,36 @@ pub mod sync_service_ws {
         ) -> Result<Response<super::SubmitResponse>, Status> {
             self.conn.invoke_unary(SUBMIT, req.into()).await
         }
+        ///  Submit for a Change too large for one message: the encoded Envelope
+        /// in chunks after its total size. Admitted exactly like Submit.
+        pub async fn submit_chunked(
+            &self,
+            opts: CallOptions,
+        ) -> Result<SubmitChunkedClientStream, Status> {
+            let conn = self
+                .conn
+                .open_streaming(SUBMIT_CHUNKED, opts.header, opts.timeout)
+                .await?;
+            Ok(SubmitChunkedClientStream {
+                inner: conn,
+            })
+        }
+        ///  The encoded Envelope of a log entry Pull marked large, in chunks.
+        pub async fn fetch_entry(
+            &self,
+            req: impl Into<Request<super::FetchEntryRequest>>,
+        ) -> Result<FetchEntryClientStream, Status> {
+            let req = req.into();
+            let conn = self
+                .conn
+                .open_streaming(FETCH_ENTRY, req.header, req.timeout)
+                .await?;
+            send_msg(&conn, &req.msg).await?;
+            conn.close_request().await?;
+            Ok(FetchEntryClientStream {
+                inner: conn,
+            })
+        }
         ///  Accepted Changes after a sequence number, oldest first.
         pub async fn pull(
             &self,
@@ -527,6 +693,91 @@ pub mod sync_service_ws {
             req: impl Into<Request<super::PinDefinitionRequest>>,
         ) -> Result<Response<super::PinDefinitionResponse>, Status> {
             self.conn.invoke_unary(PIN_DEFINITION, req.into()).await
+        }
+    }
+    /// Typed client-side stream for `SyncService.SubmitChunked`.
+    #[derive(Clone)]
+    pub struct SubmitChunkedClientStream {
+        inner: StreamingConn,
+    }
+    impl SubmitChunkedClientStream {
+        /// Sends one request message (awaits flow-control credit).
+        pub async fn send(
+            &self,
+            msg: &super::SubmitChunkedRequest,
+        ) -> Result<(), Status> {
+            send_msg(&self.inner, msg).await
+        }
+        /// Signals that no more requests follow (HALF_CLOSE).
+        pub async fn close_send(&self) -> Result<(), Status> {
+            self.inner.close_request().await
+        }
+        /// Half-closes, receives the single response and drains the END so a
+        /// trailing error status is surfaced.
+        pub async fn close_and_recv(
+            &self,
+        ) -> Result<Response<super::SubmitResponse>, Status> {
+            self.inner.close_request().await?;
+            let msg = match recv_msg::<super::SubmitResponse>(&self.inner).await? {
+                Some(m) => m,
+                None => {
+                    return Err(
+                        Status::new(
+                            ::ws_proto::Code::Internal,
+                            "wsrpc: call ended without a response message",
+                        ),
+                    );
+                }
+            };
+            if self.inner.receive().await?.is_some() {
+                return Err(
+                    Status::new(
+                        ::ws_proto::Code::Internal,
+                        "wsrpc: received more than one response message",
+                    ),
+                );
+            }
+            Ok(Response {
+                msg,
+                header: self.inner.response_header(),
+                trailer: self.inner.response_trailer(),
+            })
+        }
+        /// Leading response metadata (HEADER frame), if the server sent one.
+        pub fn header(&self) -> Metadata {
+            self.inner.response_header()
+        }
+        /// Trailers from the END frame; empty until the stream has ended.
+        pub fn trailer(&self) -> Metadata {
+            self.inner.response_trailer()
+        }
+        /// The underlying (interceptor-wrapped) streaming connection.
+        pub fn raw(&self) -> &StreamingConn {
+            &self.inner
+        }
+    }
+    /// Typed client-side stream for `SyncService.FetchEntry`.
+    #[derive(Clone)]
+    pub struct FetchEntryClientStream {
+        inner: StreamingConn,
+    }
+    impl FetchEntryClientStream {
+        /// Receives the next response; `Ok(None)` on a clean END, `Err` on a
+        /// non-OK status.
+        pub async fn recv(&self) -> Result<Option<super::EntryChunk>, Status> {
+            recv_msg(&self.inner).await
+        }
+        /// Leading response metadata (HEADER frame), if the server sent one.
+        pub fn header(&self) -> Metadata {
+            self.inner.response_header()
+        }
+        /// Trailers from the END frame; empty until the stream has ended.
+        pub fn trailer(&self) -> Metadata {
+            self.inner.response_trailer()
+        }
+        /// The underlying (interceptor-wrapped) streaming connection.
+        pub fn raw(&self) -> &StreamingConn {
+            &self.inner
         }
     }
     /// Typed client-side stream for `SyncService.Subscribe`.

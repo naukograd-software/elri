@@ -571,6 +571,12 @@ impl ObjectServiceHandler for Services {
         &self,
         req: Request<CommitRequest>,
     ) -> Result<Response<CommitResponse>, Status> {
+        if req.msg.writes.len() > crate::sync::MAX_PARTS {
+            return Err(invalid(format!(
+                "a change carries at most {} writes",
+                crate::sync::MAX_PARTS
+            )));
+        }
         if req.msg.writes.is_empty() {
             return Err(invalid("writes are required"));
         }

@@ -10,9 +10,10 @@ use elri_proto::elri::v1::object::ObjectKind;
 use elri_proto::elri::v1::space::{Authority, Space as PbSpace};
 use elri_proto::elri::v1::sync::sync_service_ws::{SubscribeClientStream, SyncServiceClient};
 use elri_proto::elri::v1::sync::{
-    upload_blob_request, AddMemberRequest, BlobHeader, CreateSpaceRequest, DownloadBlobRequest,
-    HelloRequest, ListSpacesRequest, PinDefinitionRequest, PullRequest, PurgeObjectRequest,
-    SubmitRequest, SubscribeRequest, UploadBlobRequest,
+    submit_chunked_request, upload_blob_request, AddMemberRequest, BlobHeader, CreateSpaceRequest,
+    DownloadBlobRequest, FetchEntryRequest, HelloRequest, ListSpacesRequest, PinDefinitionRequest,
+    PullRequest, PurgeObjectRequest, SubmitChunkedRequest, SubmitRequest, SubmitResponse,
+    SubscribeRequest, UploadBlobRequest,
 };
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -519,15 +520,7 @@ async fn submit_coordinated(
             )
             .await?;
         }
-        let res = sync
-            .submit(authed(
-                token,
-                SubmitRequest {
-                    change: Some(env.clone()),
-                },
-            ))
-            .await?
-            .msg;
+        let res = submit_envelope(&sync, token, &env).await?;
         match res.outcome {
             Some(Outcome::Rejected(r)) if r.reason() == Reason::MissingPredecessors => break,
             Some(outcome) => store.record_coordinated_outcome(&env, &outcome).await?,
@@ -685,6 +678,77 @@ async fn upload_attachments(
     Ok(())
 }
 
+/// Submits one envelope, in chunks when it is large.
+async fn submit_envelope(
+    sync: &SyncServiceClient,
+    token: &str,
+    env: &elri_proto::elri::v1::sync::Envelope,
+) -> Result<SubmitResponse, RemoteError> {
+    let size = prost::Message::encoded_len(env);
+    if size <= crate::sync::LARGE_BYTES {
+        return Ok(sync
+            .submit(authed(
+                token,
+                SubmitRequest {
+                    change: Some(env.clone()),
+                },
+            ))
+            .await?
+            .msg);
+    }
+    let bytes = prost::Message::encode_to_vec(env);
+    let stream = sync
+        .submit_chunked(CallOptions::new().with_header("authorization", format!("Bearer {token}")))
+        .await?;
+    stream
+        .send(&SubmitChunkedRequest {
+            chunk: Some(submit_chunked_request::Chunk::TotalBytes(
+                i64::try_from(bytes.len()).unwrap_or(i64::MAX),
+            )),
+        })
+        .await?;
+    for piece in bytes.chunks(crate::sync::CHUNK_BYTES) {
+        stream
+            .send(&SubmitChunkedRequest {
+                chunk: Some(submit_chunked_request::Chunk::Data(piece.to_vec().into())),
+            })
+            .await?;
+    }
+    Ok(stream.close_and_recv().await?.msg)
+}
+
+/// Fetches an entry's envelope that Pull left out for its size.
+async fn fetch_large_entry(
+    sync: &SyncServiceClient,
+    token: &str,
+    space_id: SpaceId,
+    seq: i64,
+    expected: i64,
+) -> Result<elri_proto::elri::v1::sync::Envelope, RemoteError> {
+    let expected = usize::try_from(expected).unwrap_or(0);
+    if expected > crate::sync::MAX_CHANGE_BYTES {
+        return Err(RemoteError::BadReply("entry larger than the limit"));
+    }
+    let stream = sync
+        .fetch_entry(authed(
+            token,
+            FetchEntryRequest {
+                space_id: space_id.to_string(),
+                seq,
+            },
+        ))
+        .await?;
+    let mut buf: Vec<u8> = Vec::with_capacity(expected);
+    while let Some(chunk) = stream.recv().await? {
+        if buf.len() + chunk.data.len() > crate::sync::MAX_CHANGE_BYTES {
+            return Err(RemoteError::BadReply("entry larger than the limit"));
+        }
+        buf.extend_from_slice(&chunk.data);
+    }
+    <elri_proto::elri::v1::sync::Envelope as prost::Message>::decode(buf.as_slice())
+        .map_err(|_| RemoteError::BadReply("entry envelope"))
+}
+
 /// Pushes the outbox, then pulls everything after the cursor.
 async fn replicate_once(
     space_id: SpaceId,
@@ -696,15 +760,7 @@ async fn replicate_once(
 
     for env in space.outbox(0).await? {
         upload_attachments(client, token, space, &env).await?;
-        let res = sync
-            .submit(authed(
-                token,
-                SubmitRequest {
-                    change: Some(env.clone()),
-                },
-            ))
-            .await?
-            .msg;
+        let res = submit_envelope(&sync, token, &env).await?;
         match res.outcome {
             Some(Outcome::Rejected(r)) if r.reason() == Reason::MissingPredecessors => {
                 // Transient: the server lacks history we have not pushed yet.
@@ -739,6 +795,10 @@ async fn replicate_once(
         for entry in &res.entries {
             if let Some(env) = entry.change.as_ref() {
                 space.apply_accepted(entry.seq, env).await?;
+            } else if entry.large_bytes > 0 {
+                let env =
+                    fetch_large_entry(&sync, token, space_id, entry.seq, entry.large_bytes).await?;
+                space.apply_accepted(entry.seq, &env).await?;
             } else if !entry.purged_object_id.is_empty() {
                 let id = ObjectId::parse(&entry.purged_object_id)
                     .map_err(|_| RemoteError::BadReply("purged object id"))?;

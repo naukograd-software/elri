@@ -22,14 +22,15 @@ use elri_proto::elri::v1::account::{
 };
 use elri_proto::elri::v1::space::{self as spb, Authority};
 use elri_proto::elri::v1::sync::sync_service_ws::{
-    register_sync_service_arc, DownloadBlobServerStream, SubscribeServerStream, SyncServiceHandler,
-    UploadBlobServerStream,
+    register_sync_service_arc, DownloadBlobServerStream, FetchEntryServerStream,
+    SubmitChunkedServerStream, SubscribeServerStream, SyncServiceHandler, UploadBlobServerStream,
 };
 use elri_proto::elri::v1::sync::{
-    upload_blob_request, AddMemberRequest, AddMemberResponse, BlobChunk, CreateSpaceRequest,
-    CreateSpaceResponse, DownloadBlobRequest, HelloRequest, HelloResponse, ListSpacesRequest,
-    ListSpacesResponse, PinDefinitionRequest, PinDefinitionResponse, PullRequest, PullResponse,
-    PurgeObjectRequest, PurgeObjectResponse, SubmitRequest, SubmitResponse, SubscribeEvent,
+    submit_chunked_request, upload_blob_request, AddMemberRequest, AddMemberResponse, BlobChunk,
+    CreateSpaceRequest, CreateSpaceResponse, DownloadBlobRequest, Entry, EntryChunk, Envelope,
+    FetchEntryRequest, HelloRequest, HelloResponse, ListSpacesRequest, ListSpacesResponse,
+    PinDefinitionRequest, PinDefinitionResponse, PullRequest, PullResponse, PurgeObjectRequest,
+    PurgeObjectResponse, SubmitChunkedRequest, SubmitRequest, SubmitResponse, SubscribeEvent,
     SubscribeRequest, UploadBlobRequest, UploadBlobResponse,
 };
 use uuid::Uuid;
@@ -321,6 +322,105 @@ fn role_to_pb(r: Role) -> spb::Role {
     }
 }
 
+impl State {
+    /// Admits a Change for `user`: authority comes from the token; the
+    /// device id inside the envelope is a label the client chose, recorded
+    /// for attribution, never trusted for authorization.
+    async fn admit(&self, user_id: Uuid, env: Envelope) -> Result<Outcome, Status> {
+        if let Err(e) = validate_envelope(&env) {
+            return Ok(rejected(Reason::Invalid, e.to_string()));
+        }
+        if let Err(e) = elri_core::sync::check_limits(&env) {
+            return Ok(rejected(Reason::Invalid, e));
+        }
+        let spaces = envelope_spaces(&env).map_err(|e| invalid(e.to_string()))?;
+        for space_id in &spaces {
+            let Some(role) = self.registry.role(space_id.uuid(), user_id).await? else {
+                return Ok(rejected(
+                    Reason::PermissionDenied,
+                    format!("not a member of space {space_id}"),
+                ));
+            };
+            if !role.can_write() {
+                return Ok(rejected(
+                    Reason::PermissionDenied,
+                    format!("viewer cannot write to space {space_id}"),
+                ));
+            }
+        }
+        // An accepted attachment must name bytes this server holds; a strict
+        // constraint or a transfer policy may only be set by an Owner or
+        // Admin of its Space.
+        let blobs = self.blobs.clone();
+        let mut managers: Vec<Uuid> = Vec::new();
+        for space_id in &spaces {
+            if self
+                .registry
+                .role(space_id.uuid(), user_id)
+                .await?
+                .is_some_and(Role::can_manage)
+            {
+                managers.push(space_id.uuid());
+            }
+        }
+        // Editing peers are owned by the authenticated user, whatever the
+        // envelope says about its device.
+        let owner = user_id.to_string();
+        let check = move |o: &elri_proto::elri::v1::object::Object| -> Result<(), String> {
+            if o.kind() == elri_proto::elri::v1::object::ObjectKind::TransferPolicy {
+                let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
+                if !managers.contains(&space.uuid()) {
+                    return Err("a transfer policy needs an owner or admin".to_owned());
+                }
+            }
+            if let Some(c) = elri_core::model::constraint_of(o) {
+                let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
+                if c.strict && !managers.contains(&space.uuid()) {
+                    return Err("a strict constraint needs an owner or admin".to_owned());
+                }
+            }
+            if let Some(sha) = attachment_sha256(o) {
+                let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
+                if !blobs.exists(space, sha) {
+                    return Err(format!("attachment {} bytes were not uploaded", o.id));
+                }
+            }
+            Ok(())
+        };
+        if spaces.len() > 1 {
+            // Whole or nothing across Spaces: the coordinator admits it.
+            return match self
+                .spaces
+                .admit_coordinated_as(&env, &owner, &check)
+                .await
+                .map_err(storage)?
+            {
+                Ok(seqs) => {
+                    let mut first = 0;
+                    for (space_id, seq) in &seqs {
+                        let _ = self.events.send((space_id.uuid(), *seq));
+                        if *space_id == envelope_space(&env).map_err(|e| invalid(e.to_string()))? {
+                            first = *seq;
+                        }
+                    }
+                    Ok(Outcome::AcceptedSeq(first))
+                }
+                Err(outcome) => Ok(outcome),
+            };
+        }
+        let space_id = spaces[0];
+        let space = self.spaces.space(space_id).await.map_err(storage)?;
+        let outcome = space
+            .admit_as(&env, &owner, &check)
+            .await
+            .map_err(storage)?;
+        if let Outcome::AcceptedSeq(seq) = outcome {
+            let _ = self.events.send((space_id.uuid(), seq));
+        }
+        Ok(outcome)
+    }
+}
+
 impl SyncServiceHandler for State {
     async fn hello(&self, req: Request<HelloRequest>) -> Result<Response<HelloResponse>, Status> {
         let auth = self.auth(&req.header).await?;
@@ -429,107 +529,93 @@ impl SyncServiceHandler for State {
         &self,
         req: Request<SubmitRequest>,
     ) -> Result<Response<SubmitResponse>, Status> {
-        // Authority comes from the token. The device id inside the envelope is
-        // a label the client chose; it is recorded for attribution, never
-        // trusted for authorization.
         let user = self.user(&req.header).await?;
         let env = req
             .msg
             .change
             .ok_or_else(|| invalid("change is required"))?;
-        let reply = |outcome: Outcome| {
-            Ok(Response::new(SubmitResponse {
-                outcome: Some(outcome),
-            }))
+        let outcome = self.admit(user.id, env).await?;
+        Ok(Response::new(SubmitResponse {
+            outcome: Some(outcome),
+        }))
+    }
+
+    async fn submit_chunked(
+        &self,
+        stream: SubmitChunkedServerStream,
+    ) -> Result<Response<SubmitResponse>, Status> {
+        let user = self.user(&stream.header()).await?;
+        let Some(SubmitChunkedRequest {
+            chunk: Some(submit_chunked_request::Chunk::TotalBytes(total)),
+        }) = stream.recv().await?
+        else {
+            return Err(invalid("the first message must give the total size"));
         };
-        if let Err(e) = validate_envelope(&env) {
-            return reply(rejected(Reason::Invalid, e.to_string()));
+        let total = usize::try_from(total).map_err(|_| invalid("total_bytes"))?;
+        if total == 0 || total > elri_core::sync::MAX_CHANGE_BYTES {
+            return Err(invalid(format!(
+                "a change is at most {} bytes",
+                elri_core::sync::MAX_CHANGE_BYTES
+            )));
         }
-        let spaces = envelope_spaces(&env).map_err(|e| invalid(e.to_string()))?;
-        for space_id in &spaces {
-            let Some(role) = self.registry.role(space_id.uuid(), user.id).await? else {
-                return reply(rejected(
-                    Reason::PermissionDenied,
-                    format!("not a member of space {space_id}"),
-                ));
-            };
-            if !role.can_write() {
-                return reply(rejected(
-                    Reason::PermissionDenied,
-                    format!("viewer cannot write to space {space_id}"),
-                ));
-            }
-        }
-        // An accepted attachment must name bytes this server holds; a strict
-        // constraint or a transfer policy may only be set by an Owner or
-        // Admin of its Space.
-        let blobs = self.blobs.clone();
-        let mut managers: Vec<Uuid> = Vec::new();
-        for space_id in &spaces {
-            if self
-                .registry
-                .role(space_id.uuid(), user.id)
-                .await?
-                .is_some_and(Role::can_manage)
-            {
-                managers.push(space_id.uuid());
-            }
-        }
-        // Editing peers are owned by the authenticated user, whatever the
-        // envelope says about its device.
-        let owner = user.id.to_string();
-        let check = move |o: &elri_proto::elri::v1::object::Object| -> Result<(), String> {
-            if o.kind() == elri_proto::elri::v1::object::ObjectKind::TransferPolicy {
-                let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
-                if !managers.contains(&space.uuid()) {
-                    return Err("a transfer policy needs an owner or admin".to_owned());
-                }
-            }
-            if let Some(c) = elri_core::model::constraint_of(o) {
-                let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
-                if c.strict && !managers.contains(&space.uuid()) {
-                    return Err("a strict constraint needs an owner or admin".to_owned());
-                }
-            }
-            if let Some(sha) = attachment_sha256(o) {
-                let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
-                if !blobs.exists(space, sha) {
-                    return Err(format!("attachment {} bytes were not uploaded", o.id));
-                }
-            }
-            Ok(())
-        };
-        if spaces.len() > 1 {
-            // Whole or nothing across Spaces: the coordinator admits it.
-            return match self
-                .spaces
-                .admit_coordinated_as(&env, &owner, &check)
-                .await
-                .map_err(storage)?
-            {
-                Ok(seqs) => {
-                    let mut first = 0;
-                    for (space_id, seq) in &seqs {
-                        let _ = self.events.send((space_id.uuid(), *seq));
-                        if *space_id == envelope_space(&env).map_err(|e| invalid(e.to_string()))? {
-                            first = *seq;
-                        }
+        let mut buf: Vec<u8> = Vec::with_capacity(total.min(elri_core::sync::CHUNK_BYTES * 8));
+        while let Some(m) = stream.recv().await? {
+            match m.chunk {
+                Some(submit_chunked_request::Chunk::Data(d)) => {
+                    if buf.len() + d.len() > total {
+                        return Err(invalid("more bytes than announced"));
                     }
-                    reply(Outcome::AcceptedSeq(first))
+                    buf.extend_from_slice(&d);
                 }
-                Err(outcome) => reply(outcome),
-            };
+                Some(submit_chunked_request::Chunk::TotalBytes(_)) => {
+                    return Err(invalid("a second size"))
+                }
+                None => {}
+            }
         }
-        let space_id = spaces[0];
-        let space = self.spaces.space(space_id).await.map_err(storage)?;
-        let outcome = space
-            .admit_as(&env, &owner, &check)
+        if buf.len() != total {
+            return Err(invalid("fewer bytes than announced"));
+        }
+        let env = <Envelope as prost::Message>::decode(buf.as_slice())
+            .map_err(|e| invalid(format!("envelope: {e}")))?;
+        let outcome = self.admit(user.id, env).await?;
+        Ok(Response::new(SubmitResponse {
+            outcome: Some(outcome),
+        }))
+    }
+
+    async fn fetch_entry(
+        &self,
+        req: Request<FetchEntryRequest>,
+        stream: FetchEntryServerStream,
+    ) -> Result<(), Status> {
+        let user = self.user(&req.header).await?;
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        self.role(space_id, &user).await?;
+        let space = self
+            .spaces
+            .space(ObjectId::from_uuid(space_id))
             .await
             .map_err(storage)?;
-        if let Outcome::AcceptedSeq(seq) = outcome {
-            let _ = self.events.send((space_id.uuid(), seq));
+        let entry = space
+            .log_after(req.msg.seq - 1, 1)
+            .await
+            .map_err(storage)?
+            .into_iter()
+            .find(|e| e.seq == req.msg.seq)
+            .ok_or_else(|| Status::new(Code::NotFound, "no such entry"))?;
+        let Some(env) = entry.change else {
+            return Err(Status::new(Code::NotFound, "the entry carries no change"));
+        };
+        let bytes = prost::Message::encode_to_vec(&env);
+        for piece in bytes.chunks(elri_core::sync::CHUNK_BYTES) {
+            stream
+                .send(&EntryChunk {
+                    data: piece.to_vec().into(),
+                })
+                .await?;
         }
-        reply(outcome)
+        Ok(())
     }
 
     async fn pull(&self, req: Request<PullRequest>) -> Result<Response<PullResponse>, Status> {
@@ -547,9 +633,27 @@ impl SyncServiceHandler for State {
             .log_after(req.msg.after_seq, limit + 1)
             .await
             .map_err(storage)?;
-        let has_more = entries.len() > limit;
-        let entries = entries.into_iter().take(limit).collect();
-        Ok(Response::new(PullResponse { entries, has_more }))
+        let mut has_more = entries.len() > limit;
+        // A response stays within a byte budget; an entry too large to
+        // travel in one message is marked and fetched in chunks.
+        let mut out: Vec<Entry> = Vec::new();
+        let mut budget = 0usize;
+        for mut entry in entries.into_iter().take(limit) {
+            let size = entry.change.as_ref().map_or(0, prost::Message::encoded_len);
+            if size > elri_core::sync::LARGE_BYTES {
+                entry.change = None;
+                entry.large_bytes = i64::try_from(size).unwrap_or(i64::MAX);
+            } else if !out.is_empty() && budget + size > elri_core::sync::PULL_BUDGET_BYTES {
+                has_more = true;
+                break;
+            }
+            budget += size.min(elri_core::sync::LARGE_BYTES);
+            out.push(entry);
+        }
+        Ok(Response::new(PullResponse {
+            entries: out,
+            has_more,
+        }))
     }
 
     async fn pin_definition(

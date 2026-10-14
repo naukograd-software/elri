@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/sync/sync.proto.
  */
 export const file_elri_v1_sync_sync: GenFile = /*@__PURE__*/
-  fileDesc("ChdlbHJpL3YxL3N5bmMvc3luYy5wcm90bxIMZWxyaS52MS5zeW5jIlgKFFBpbkRlZmluaXRpb25SZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhYKDnB1YmxpY2F0aW9uX2lkGAIgASgJEhYKDmV4cGVjdGVkX2Vwb2NoGAMgASgDIj0KFVBpbkRlZmluaXRpb25SZXNwb25zZRIkCgNwaW4YASABKAsyFy5lbHJpLnYxLmRlZmluaXRpb24uUGluIjwKCkJsb2JIZWFkZXISEAoIc3BhY2VfaWQYASABKAkSDgoGc2hhMjU2GAIgASgJEgwKBHNpemUYAyABKAMiWAoRVXBsb2FkQmxvYlJlcXVlc3QSKgoGaGVhZGVyGAEgASgLMhguZWxyaS52MS5zeW5jLkJsb2JIZWFkZXJIABIOCgRkYXRhGAIgASgMSABCBwoFY2h1bmsiGQoJQmxvYkNodW5rEgwKBGRhdGEYASABKAwiJQoSVXBsb2FkQmxvYlJlc3BvbnNlEg8KB2V4aXN0ZWQYASABKAgiNwoTRG93bmxvYWRCbG9iUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIOCgZzaGEyNTYYAiABKAkiOQoSUHVyZ2VPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCW9iamVjdF9pZBgCIAEoCSIiChNQdXJnZU9iamVjdFJlc3BvbnNlEgsKA3NlcRgBIAEoAyI7CgxIZWxsb1JlcXVlc3QSEQoJZGV2aWNlX2lkGAEgASgJEhgKEHByb3RvY29sX3ZlcnNpb24YAiABKA0iTQoNSGVsbG9SZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCXVzZXJfbmFtZRgCIAEoCRIYChBwcm90b2NvbF92ZXJzaW9uGAMgASgNIhMKEUxpc3RTcGFjZXNSZXF1ZXN0IjoKEkxpc3RTcGFjZXNSZXNwb25zZRIkCgZzcGFjZXMYASADKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIiIKEkNyZWF0ZVNwYWNlUmVxdWVzdBIMCgRuYW1lGAEgASgJIjoKE0NyZWF0ZVNwYWNlUmVzcG9uc2USIwoFc3BhY2UYASABKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIloKEEFkZE1lbWJlclJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSEQoJdXNlcl9uYW1lGAIgASgJEiEKBHJvbGUYAyABKA4yEy5lbHJpLnYxLnNwYWNlLlJvbGUiEwoRQWRkTWVtYmVyUmVzcG9uc2UiNwoNU3VibWl0UmVxdWVzdBImCgZjaGFuZ2UYASABKAsyFi5lbHJpLnYxLnN5bmMuRW52ZWxvcGUiggIKCVJlamVjdGlvbhIuCgZyZWFzb24YASABKA4yHi5lbHJpLnYxLnN5bmMuUmVqZWN0aW9uLlJlYXNvbhIPCgdtZXNzYWdlGAIgASgJIrMBCgZSZWFzb24SFgoSUkVBU09OX1VOU1BFQ0lGSUVEEAASHAoYUkVBU09OX1BFUk1JU1NJT05fREVOSUVEEAESHwobUkVBU09OX01JU1NJTkdfUFJFREVDRVNTT1JTEAISEgoOUkVBU09OX0lOVkFMSUQQAxIUChBSRUFTT05fUFJPVEVDVEVEEAQSEQoNUkVBU09OX1BVUkdFRBAFEhUKEVJFQVNPTl9DT05TVFJBSU5UEAYiYAoOU3VibWl0UmVzcG9uc2USFgoMYWNjZXB0ZWRfc2VxGAEgASgDSAASKwoIcmVqZWN0ZWQYAiABKAsyFy5lbHJpLnYxLnN5bmMuUmVqZWN0aW9uSABCCQoHb3V0Y29tZSJBCgtQdWxsUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIRCglhZnRlcl9zZXEYAiABKAMSDQoFbGltaXQYAyABKAUiRgoMUHVsbFJlc3BvbnNlEiQKB2VudHJpZXMYASADKAsyEy5lbHJpLnYxLnN5bmMuRW50cnkSEAoIaGFzX21vcmUYAiABKAgiJQoQU3Vic2NyaWJlUmVxdWVzdBIRCglzcGFjZV9pZHMYASADKAkiLwoOU3Vic2NyaWJlRXZlbnQSEAoIc3BhY2VfaWQYASABKAkSCwoDc2VxGAIgASgDMuIGCgtTeW5jU2VydmljZRJACgVIZWxsbxIaLmVscmkudjEuc3luYy5IZWxsb1JlcXVlc3QaGy5lbHJpLnYxLnN5bmMuSGVsbG9SZXNwb25zZRJPCgpMaXN0U3BhY2VzEh8uZWxyaS52MS5zeW5jLkxpc3RTcGFjZXNSZXF1ZXN0GiAuZWxyaS52MS5zeW5jLkxpc3RTcGFjZXNSZXNwb25zZRJSCgtDcmVhdGVTcGFjZRIgLmVscmkudjEuc3luYy5DcmVhdGVTcGFjZVJlcXVlc3QaIS5lbHJpLnYxLnN5bmMuQ3JlYXRlU3BhY2VSZXNwb25zZRJMCglBZGRNZW1iZXISHi5lbHJpLnYxLnN5bmMuQWRkTWVtYmVyUmVxdWVzdBofLmVscmkudjEuc3luYy5BZGRNZW1iZXJSZXNwb25zZRJDCgZTdWJtaXQSGy5lbHJpLnYxLnN5bmMuU3VibWl0UmVxdWVzdBocLmVscmkudjEuc3luYy5TdWJtaXRSZXNwb25zZRI9CgRQdWxsEhkuZWxyaS52MS5zeW5jLlB1bGxSZXF1ZXN0GhouZWxyaS52MS5zeW5jLlB1bGxSZXNwb25zZRJLCglTdWJzY3JpYmUSHi5lbHJpLnYxLnN5bmMuU3Vic2NyaWJlUmVxdWVzdBocLmVscmkudjEuc3luYy5TdWJzY3JpYmVFdmVudDABElIKC1B1cmdlT2JqZWN0EiAuZWxyaS52MS5zeW5jLlB1cmdlT2JqZWN0UmVxdWVzdBohLmVscmkudjEuc3luYy5QdXJnZU9iamVjdFJlc3BvbnNlElEKClVwbG9hZEJsb2ISHy5lbHJpLnYxLnN5bmMuVXBsb2FkQmxvYlJlcXVlc3QaIC5lbHJpLnYxLnN5bmMuVXBsb2FkQmxvYlJlc3BvbnNlKAESTAoMRG93bmxvYWRCbG9iEiEuZWxyaS52MS5zeW5jLkRvd25sb2FkQmxvYlJlcXVlc3QaFy5lbHJpLnYxLnN5bmMuQmxvYkNodW5rMAESWAoNUGluRGVmaW5pdGlvbhIiLmVscmkudjEuc3luYy5QaW5EZWZpbml0aW9uUmVxdWVzdBojLmVscmkudjEuc3luYy5QaW5EZWZpbml0aW9uUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_definition_domain, file_elri_v1_space_domain, file_elri_v1_sync_domain]);
+  fileDesc("ChdlbHJpL3YxL3N5bmMvc3luYy5wcm90bxIMZWxyaS52MS5zeW5jIlgKFFBpbkRlZmluaXRpb25SZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhYKDnB1YmxpY2F0aW9uX2lkGAIgASgJEhYKDmV4cGVjdGVkX2Vwb2NoGAMgASgDIj0KFVBpbkRlZmluaXRpb25SZXNwb25zZRIkCgNwaW4YASABKAsyFy5lbHJpLnYxLmRlZmluaXRpb24uUGluIjwKCkJsb2JIZWFkZXISEAoIc3BhY2VfaWQYASABKAkSDgoGc2hhMjU2GAIgASgJEgwKBHNpemUYAyABKAMiWAoRVXBsb2FkQmxvYlJlcXVlc3QSKgoGaGVhZGVyGAEgASgLMhguZWxyaS52MS5zeW5jLkJsb2JIZWFkZXJIABIOCgRkYXRhGAIgASgMSABCBwoFY2h1bmsiGQoJQmxvYkNodW5rEgwKBGRhdGEYASABKAwiJQoSVXBsb2FkQmxvYlJlc3BvbnNlEg8KB2V4aXN0ZWQYASABKAgiNwoTRG93bmxvYWRCbG9iUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIOCgZzaGEyNTYYAiABKAkiOQoSUHVyZ2VPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCW9iamVjdF9pZBgCIAEoCSIiChNQdXJnZU9iamVjdFJlc3BvbnNlEgsKA3NlcRgBIAEoAyI7CgxIZWxsb1JlcXVlc3QSEQoJZGV2aWNlX2lkGAEgASgJEhgKEHByb3RvY29sX3ZlcnNpb24YAiABKA0iTQoNSGVsbG9SZXNwb25zZRIPCgd1c2VyX2lkGAEgASgJEhEKCXVzZXJfbmFtZRgCIAEoCRIYChBwcm90b2NvbF92ZXJzaW9uGAMgASgNIhMKEUxpc3RTcGFjZXNSZXF1ZXN0IjoKEkxpc3RTcGFjZXNSZXNwb25zZRIkCgZzcGFjZXMYASADKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIiIKEkNyZWF0ZVNwYWNlUmVxdWVzdBIMCgRuYW1lGAEgASgJIjoKE0NyZWF0ZVNwYWNlUmVzcG9uc2USIwoFc3BhY2UYASABKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIloKEEFkZE1lbWJlclJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSEQoJdXNlcl9uYW1lGAIgASgJEiEKBHJvbGUYAyABKA4yEy5lbHJpLnYxLnNwYWNlLlJvbGUiEwoRQWRkTWVtYmVyUmVzcG9uc2UiNwoNU3VibWl0UmVxdWVzdBImCgZjaGFuZ2UYASABKAsyFi5lbHJpLnYxLnN5bmMuRW52ZWxvcGUiRgoUU3VibWl0Q2h1bmtlZFJlcXVlc3QSFQoLdG90YWxfYnl0ZXMYASABKANIABIOCgRkYXRhGAIgASgMSABCBwoFY2h1bmsiMgoRRmV0Y2hFbnRyeVJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCwoDc2VxGAIgASgDIhoKCkVudHJ5Q2h1bmsSDAoEZGF0YRgBIAEoDCKCAgoJUmVqZWN0aW9uEi4KBnJlYXNvbhgBIAEoDjIeLmVscmkudjEuc3luYy5SZWplY3Rpb24uUmVhc29uEg8KB21lc3NhZ2UYAiABKAkiswEKBlJlYXNvbhIWChJSRUFTT05fVU5TUEVDSUZJRUQQABIcChhSRUFTT05fUEVSTUlTU0lPTl9ERU5JRUQQARIfChtSRUFTT05fTUlTU0lOR19QUkVERUNFU1NPUlMQAhISCg5SRUFTT05fSU5WQUxJRBADEhQKEFJFQVNPTl9QUk9URUNURUQQBBIRCg1SRUFTT05fUFVSR0VEEAUSFQoRUkVBU09OX0NPTlNUUkFJTlQQBiJgCg5TdWJtaXRSZXNwb25zZRIWCgxhY2NlcHRlZF9zZXEYASABKANIABIrCghyZWplY3RlZBgCIAEoCzIXLmVscmkudjEuc3luYy5SZWplY3Rpb25IAEIJCgdvdXRjb21lIkEKC1B1bGxSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCWFmdGVyX3NlcRgCIAEoAxINCgVsaW1pdBgDIAEoBSJGCgxQdWxsUmVzcG9uc2USJAoHZW50cmllcxgBIAMoCzITLmVscmkudjEuc3luYy5FbnRyeRIQCghoYXNfbW9yZRgCIAEoCCIlChBTdWJzY3JpYmVSZXF1ZXN0EhEKCXNwYWNlX2lkcxgBIAMoCSIvCg5TdWJzY3JpYmVFdmVudBIQCghzcGFjZV9pZBgBIAEoCRILCgNzZXEYAiABKAMygggKC1N5bmNTZXJ2aWNlEkAKBUhlbGxvEhouZWxyaS52MS5zeW5jLkhlbGxvUmVxdWVzdBobLmVscmkudjEuc3luYy5IZWxsb1Jlc3BvbnNlEk8KCkxpc3RTcGFjZXMSHy5lbHJpLnYxLnN5bmMuTGlzdFNwYWNlc1JlcXVlc3QaIC5lbHJpLnYxLnN5bmMuTGlzdFNwYWNlc1Jlc3BvbnNlElIKC0NyZWF0ZVNwYWNlEiAuZWxyaS52MS5zeW5jLkNyZWF0ZVNwYWNlUmVxdWVzdBohLmVscmkudjEuc3luYy5DcmVhdGVTcGFjZVJlc3BvbnNlEkwKCUFkZE1lbWJlchIeLmVscmkudjEuc3luYy5BZGRNZW1iZXJSZXF1ZXN0Gh8uZWxyaS52MS5zeW5jLkFkZE1lbWJlclJlc3BvbnNlEkMKBlN1Ym1pdBIbLmVscmkudjEuc3luYy5TdWJtaXRSZXF1ZXN0GhwuZWxyaS52MS5zeW5jLlN1Ym1pdFJlc3BvbnNlElMKDVN1Ym1pdENodW5rZWQSIi5lbHJpLnYxLnN5bmMuU3VibWl0Q2h1bmtlZFJlcXVlc3QaHC5lbHJpLnYxLnN5bmMuU3VibWl0UmVzcG9uc2UoARJJCgpGZXRjaEVudHJ5Eh8uZWxyaS52MS5zeW5jLkZldGNoRW50cnlSZXF1ZXN0GhguZWxyaS52MS5zeW5jLkVudHJ5Q2h1bmswARI9CgRQdWxsEhkuZWxyaS52MS5zeW5jLlB1bGxSZXF1ZXN0GhouZWxyaS52MS5zeW5jLlB1bGxSZXNwb25zZRJLCglTdWJzY3JpYmUSHi5lbHJpLnYxLnN5bmMuU3Vic2NyaWJlUmVxdWVzdBocLmVscmkudjEuc3luYy5TdWJzY3JpYmVFdmVudDABElIKC1B1cmdlT2JqZWN0EiAuZWxyaS52MS5zeW5jLlB1cmdlT2JqZWN0UmVxdWVzdBohLmVscmkudjEuc3luYy5QdXJnZU9iamVjdFJlc3BvbnNlElEKClVwbG9hZEJsb2ISHy5lbHJpLnYxLnN5bmMuVXBsb2FkQmxvYlJlcXVlc3QaIC5lbHJpLnYxLnN5bmMuVXBsb2FkQmxvYlJlc3BvbnNlKAESTAoMRG93bmxvYWRCbG9iEiEuZWxyaS52MS5zeW5jLkRvd25sb2FkQmxvYlJlcXVlc3QaFy5lbHJpLnYxLnN5bmMuQmxvYkNodW5rMAESWAoNUGluRGVmaW5pdGlvbhIiLmVscmkudjEuc3luYy5QaW5EZWZpbml0aW9uUmVxdWVzdBojLmVscmkudjEuc3luYy5QaW5EZWZpbml0aW9uUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_definition_domain, file_elri_v1_space_domain, file_elri_v1_sync_domain]);
 
 /**
  * @generated from message elri.v1.sync.PinDefinitionRequest
@@ -628,6 +628,118 @@ export const SubmitRequestSchema: GenMessage<SubmitRequest, {jsonType: SubmitReq
   messageDesc(file_elri_v1_sync_sync, 17);
 
 /**
+ * @generated from message elri.v1.sync.SubmitChunkedRequest
+ */
+export type SubmitChunkedRequest = Message<"elri.v1.sync.SubmitChunkedRequest"> & {
+  /**
+   * @generated from oneof elri.v1.sync.SubmitChunkedRequest.chunk
+   */
+  chunk: {
+    /**
+     * First message: how many bytes follow. 
+     *
+     * @generated from field: int64 total_bytes = 1;
+     */
+    value: bigint;
+    case: "totalBytes";
+  } | {
+    /**
+     * @generated from field: bytes data = 2;
+     */
+    value: Uint8Array;
+    case: "data";
+  } | { case: undefined; value?: undefined };
+};
+
+/**
+ * @generated from message elri.v1.sync.SubmitChunkedRequest
+ */
+export type SubmitChunkedRequestJson = {
+  /**
+   * First message: how many bytes follow. 
+   *
+   * @generated from field: int64 total_bytes = 1;
+   */
+  totalBytes?: string;
+
+  /**
+   * @generated from field: bytes data = 2;
+   */
+  data?: string;
+};
+
+/**
+ * Describes the message elri.v1.sync.SubmitChunkedRequest.
+ * Use `create(SubmitChunkedRequestSchema)` to create a new message.
+ */
+export const SubmitChunkedRequestSchema: GenMessage<SubmitChunkedRequest, {jsonType: SubmitChunkedRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_sync_sync, 18);
+
+/**
+ * @generated from message elri.v1.sync.FetchEntryRequest
+ */
+export type FetchEntryRequest = Message<"elri.v1.sync.FetchEntryRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: int64 seq = 2;
+   */
+  seq: bigint;
+};
+
+/**
+ * @generated from message elri.v1.sync.FetchEntryRequest
+ */
+export type FetchEntryRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: int64 seq = 2;
+   */
+  seq?: string;
+};
+
+/**
+ * Describes the message elri.v1.sync.FetchEntryRequest.
+ * Use `create(FetchEntryRequestSchema)` to create a new message.
+ */
+export const FetchEntryRequestSchema: GenMessage<FetchEntryRequest, {jsonType: FetchEntryRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_sync_sync, 19);
+
+/**
+ * @generated from message elri.v1.sync.EntryChunk
+ */
+export type EntryChunk = Message<"elri.v1.sync.EntryChunk"> & {
+  /**
+   * @generated from field: bytes data = 1;
+   */
+  data: Uint8Array;
+};
+
+/**
+ * @generated from message elri.v1.sync.EntryChunk
+ */
+export type EntryChunkJson = {
+  /**
+   * @generated from field: bytes data = 1;
+   */
+  data?: string;
+};
+
+/**
+ * Describes the message elri.v1.sync.EntryChunk.
+ * Use `create(EntryChunkSchema)` to create a new message.
+ */
+export const EntryChunkSchema: GenMessage<EntryChunk, {jsonType: EntryChunkJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_sync_sync, 20);
+
+/**
  * @generated from message elri.v1.sync.Rejection
  */
 export type Rejection = Message<"elri.v1.sync.Rejection"> & {
@@ -662,7 +774,7 @@ export type RejectionJson = {
  * Use `create(RejectionSchema)` to create a new message.
  */
 export const RejectionSchema: GenMessage<Rejection, {jsonType: RejectionJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 18);
+  messageDesc(file_elri_v1_sync_sync, 21);
 
 /**
  * @generated from enum elri.v1.sync.Rejection.Reason
@@ -725,7 +837,7 @@ export type Rejection_ReasonJson = "REASON_UNSPECIFIED" | "REASON_PERMISSION_DEN
  * Describes the enum elri.v1.sync.Rejection.Reason.
  */
 export const Rejection_ReasonSchema: GenEnum<Rejection_Reason, Rejection_ReasonJson> = /*@__PURE__*/
-  enumDesc(file_elri_v1_sync_sync, 18, 0);
+  enumDesc(file_elri_v1_sync_sync, 21, 0);
 
 /**
  * @generated from message elri.v1.sync.SubmitResponse
@@ -769,7 +881,7 @@ export type SubmitResponseJson = {
  * Use `create(SubmitResponseSchema)` to create a new message.
  */
 export const SubmitResponseSchema: GenMessage<SubmitResponse, {jsonType: SubmitResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 19);
+  messageDesc(file_elri_v1_sync_sync, 22);
 
 /**
  * @generated from message elri.v1.sync.PullRequest
@@ -820,7 +932,7 @@ export type PullRequestJson = {
  * Use `create(PullRequestSchema)` to create a new message.
  */
 export const PullRequestSchema: GenMessage<PullRequest, {jsonType: PullRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 20);
+  messageDesc(file_elri_v1_sync_sync, 23);
 
 /**
  * @generated from message elri.v1.sync.PullResponse
@@ -857,7 +969,7 @@ export type PullResponseJson = {
  * Use `create(PullResponseSchema)` to create a new message.
  */
 export const PullResponseSchema: GenMessage<PullResponse, {jsonType: PullResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 21);
+  messageDesc(file_elri_v1_sync_sync, 24);
 
 /**
  * @generated from message elri.v1.sync.SubscribeRequest
@@ -884,7 +996,7 @@ export type SubscribeRequestJson = {
  * Use `create(SubscribeRequestSchema)` to create a new message.
  */
 export const SubscribeRequestSchema: GenMessage<SubscribeRequest, {jsonType: SubscribeRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 22);
+  messageDesc(file_elri_v1_sync_sync, 25);
 
 /**
  * @generated from message elri.v1.sync.SubscribeEvent
@@ -921,7 +1033,7 @@ export type SubscribeEventJson = {
  * Use `create(SubscribeEventSchema)` to create a new message.
  */
 export const SubscribeEventSchema: GenMessage<SubscribeEvent, {jsonType: SubscribeEventJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 23);
+  messageDesc(file_elri_v1_sync_sync, 26);
 
 /**
  *
@@ -981,6 +1093,27 @@ export const SyncService: GenService<{
     methodKind: "unary";
     input: typeof SubmitRequestSchema;
     output: typeof SubmitResponseSchema;
+  },
+  /**
+   * Submit for a Change too large for one message: the encoded Envelope
+   * in chunks after its total size. Admitted exactly like Submit. 
+   *
+   * @generated from rpc elri.v1.sync.SyncService.SubmitChunked
+   */
+  submitChunked: {
+    methodKind: "client_streaming";
+    input: typeof SubmitChunkedRequestSchema;
+    output: typeof SubmitResponseSchema;
+  },
+  /**
+   * The encoded Envelope of a log entry Pull marked large, in chunks. 
+   *
+   * @generated from rpc elri.v1.sync.SyncService.FetchEntry
+   */
+  fetchEntry: {
+    methodKind: "server_streaming";
+    input: typeof FetchEntryRequestSchema;
+    output: typeof EntryChunkSchema;
   },
   /**
    * Accepted Changes after a sequence number, oldest first. 
