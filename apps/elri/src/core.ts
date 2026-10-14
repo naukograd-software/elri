@@ -1,13 +1,24 @@
 // Connection to the local core. The shell hands over the loopback endpoint;
 // outside Tauri (plain browser dev) it comes from Vite env variables.
 
+import { BackupServiceClient } from '@elri/proto/elri/v1/backup/backup_ws_pb.ts'
 import { ChangeServiceClient } from '@elri/proto/elri/v1/change/change_ws_pb.ts'
+import { ContextServiceClient } from '@elri/proto/elri/v1/context/context_ws_pb.ts'
 import { CoreServiceClient } from '@elri/proto/elri/v1/core/core_ws_pb.ts'
+import { DefinitionServiceClient } from '@elri/proto/elri/v1/definition/definition_ws_pb.ts'
+import { DocumentServiceClient } from '@elri/proto/elri/v1/document/document_ws_pb.ts'
 import { EventServiceClient } from '@elri/proto/elri/v1/events/event_ws_pb.ts'
 import { ObjectServiceClient } from '@elri/proto/elri/v1/object/object_ws_pb.ts'
 import { RemoteServiceClient } from '@elri/proto/elri/v1/remote/remote_ws_pb.ts'
+import {
+  GrantServiceClient,
+  RuleServiceClient,
+  ScriptServiceClient,
+} from '@elri/proto/elri/v1/script/script_ws_pb.ts'
+import { SearchServiceClient } from '@elri/proto/elri/v1/search/search_ws_pb.ts'
 import { SpaceServiceClient } from '@elri/proto/elri/v1/space/space_ws_pb.ts'
 import { InterfaceServiceClient } from '@elri/proto/elri/v1/ui/ui_ws_pb.ts'
+import { WorkflowServiceClient } from '@elri/proto/elri/v1/workflow/workflow_ws_pb.ts'
 import { WsTransport } from '@gopherex/ws-proto-transport'
 import { invoke } from '@tauri-apps/api/core'
 
@@ -25,6 +36,15 @@ export interface CoreClients {
   remote: RemoteServiceClient
   events: EventServiceClient
   interfaces: InterfaceServiceClient
+  definitions: DefinitionServiceClient
+  search: SearchServiceClient
+  scripts: ScriptServiceClient
+  grants: GrantServiceClient
+  rules: RuleServiceClient
+  workflows: WorkflowServiceClient
+  backup: BackupServiceClient
+  contexts: ContextServiceClient
+  documents: DocumentServiceClient
 }
 
 const inTauri = '__TAURI_INTERNALS__' in window
@@ -56,6 +76,15 @@ export async function connect(): Promise<CoreClients> {
     remote: new RemoteServiceClient(transport),
     events: new EventServiceClient(transport),
     interfaces: new InterfaceServiceClient(transport),
+    definitions: new DefinitionServiceClient(transport),
+    search: new SearchServiceClient(transport),
+    scripts: new ScriptServiceClient(transport),
+    grants: new GrantServiceClient(transport),
+    rules: new RuleServiceClient(transport),
+    workflows: new WorkflowServiceClient(transport),
+    backup: new BackupServiceClient(transport),
+    contexts: new ContextServiceClient(transport),
+    documents: new DocumentServiceClient(transport),
   }
 }
 
