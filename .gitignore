@@ -29,7 +29,16 @@ dist/
 *.tsbuildinfo
 
 # tauri
-apps/elri/src-tauri/gen/
+# gen/android is the Android project Tauri generates and is kept in git,
+# like any source; its build output is not.
+apps/elri/src-tauri/gen/schemas/
+apps/elri/src-tauri/gen/apple/
+apps/elri/src-tauri/gen/android/.gradle/
+apps/elri/src-tauri/gen/android/build/
+apps/elri/src-tauri/gen/android/app/build/
+apps/elri/src-tauri/gen/android/app/.cxx/
+apps/elri/src-tauri/gen/android/local.properties
+apps/elri/src-tauri/gen/android/app/src/main/jniLibs/
 apps/elri/src-tauri/target/
 
 # local

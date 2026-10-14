@@ -38,4 +38,9 @@ dev:
 android:
     cargo ndk -t arm64-v8a build -p elri-core
 
+# Build the Android application (debug APK). Needs JAVA_HOME, ANDROID_HOME,
+# NDK_HOME, cargo-ndk, and the aarch64-linux-android target.
+android-app:
+    cd apps/elri && pnpm exec tauri android build --debug --target aarch64 --apk
+
 all: proto check test web

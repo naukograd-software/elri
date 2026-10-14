@@ -265,8 +265,18 @@ impl Services {
             ObjectKind::TypeDef => {
                 let mut fields = Vec::new();
                 for f in &def.type_fields {
+                    // Only a field definition is a dependency; anything
+                    // else the id names (a type, say) is free-form here, so
+                    // publication cannot chase a cycle of types.
+                    let is_field = match ObjectId::parse(&f.field_id) {
+                        Ok(fid) => space
+                            .get(fid)
+                            .await
+                            .is_ok_and(|o| o.kind() == ObjectKind::FieldDef),
+                        Err(_) => false,
+                    };
                     let version = match ObjectId::parse(&f.field_id) {
-                        Ok(fid) if space.exists(fid).await? => {
+                        Ok(fid) if is_field => {
                             let latest = self
                                 .publications(space, Some(&f.field_id))
                                 .await?
