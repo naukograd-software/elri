@@ -192,6 +192,25 @@ pub struct ParticipantRow {
     pub role_id: String,
 }
 
+/// Projection: placements of blocks inside Entities.
+#[derive(Debug, toasty::Model)]
+#[table = "placements"]
+#[index(block_id, document_id)]
+pub struct PlacementRow {
+    /// The Entity holding the placement.
+    #[key]
+    pub document_id: Uuid,
+    /// Placement id within the document.
+    #[key]
+    pub placement_id: String,
+    /// Parent placement id; empty at the top level.
+    pub parent_id: String,
+    /// Position among siblings.
+    pub index: i64,
+    /// The placed block.
+    pub block_id: Uuid,
+}
+
 /// Accepted Changes in log order; the server's discovery sequence and the
 /// client's record of what it has installed.
 #[derive(Debug, toasty::Model)]

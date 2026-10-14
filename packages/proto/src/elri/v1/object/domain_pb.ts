@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/object/domain.proto.
  */
 export const file_elri_v1_object_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0IjEKCVZhbHVlTGlzdBIkCgVpdGVtcxgBIAMoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlIrABCgVWYWx1ZRIOCgRib29sGAEgASgISAASDQoDaW50GAIgASgDSAASEAoGZG91YmxlGAMgASgBSAASEAoGc3RyaW5nGAQgASgJSAASEQoHdGltZV9tcxgFIAEoA0gAEg0KA3JlZhgGIAEoCUgAEg4KBHRleHQYByABKAlIABIpCgRsaXN0GAggASgLMhkuZWxyaS52MS5vYmplY3QuVmFsdWVMaXN0SABCBwoFdmFsdWUiPwoLUGFydGljaXBhbnQSDAoEc2xvdBgBIAEoCRIRCglvYmplY3RfaWQYAiABKAkSDwoHcm9sZV9pZBgDIAEoCSLCAwoGT2JqZWN0EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEigKBGtpbmQYAyABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAQgAygJEjIKBmZpZWxkcxgFIAMoCzIiLmVscmkudjEub2JqZWN0Lk9iamVjdC5GaWVsZHNFbnRyeRIVCg1jcmVhdGVkX2F0X21zGAYgASgDEhUKDXVwZGF0ZWRfYXRfbXMYByABKAMSGgoNZGVsZXRlZF9hdF9tcxgIIAEoA0gAiAEBEjEKDHBhcnRpY2lwYW50cxgJIAMoCzIbLmVscmkudjEub2JqZWN0LlBhcnRpY2lwYW50EhYKCXRhcmdldF9pZBgKIAEoCUgBiAEBEjIKC3R5cGVfZmllbGRzGAsgAygLMh0uZWxyaS52MS5kZWZpbml0aW9uLlR5cGVGaWVsZBpECgtGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5lbHJpLnYxLm9iamVjdC5WYWx1ZToCOAFCEAoOX2RlbGV0ZWRfYXRfbXNCDAoKX3RhcmdldF9pZCrBAQoKT2JqZWN0S2luZBIbChdPQkpFQ1RfS0lORF9VTlNQRUNJRklFRBAAEhYKEk9CSkVDVF9LSU5EX0VOVElUWRABEhgKFE9CSkVDVF9LSU5EX1JFTEFUSU9OEAISFQoRT0JKRUNUX0tJTkRfTEFZRVIQAxIZChVPQkpFQ1RfS0lORF9GSUVMRF9ERUYQBBIYChRPQkpFQ1RfS0lORF9UWVBFX0RFRhAFEhgKFE9CSkVDVF9LSU5EX1JPTEVfREVGEAZiBnByb3RvMw", [file_elri_v1_definition_domain]);
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0IjEKCVZhbHVlTGlzdBIkCgVpdGVtcxgBIAMoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlIrABCgVWYWx1ZRIOCgRib29sGAEgASgISAASDQoDaW50GAIgASgDSAASEAoGZG91YmxlGAMgASgBSAASEAoGc3RyaW5nGAQgASgJSAASEQoHdGltZV9tcxgFIAEoA0gAEg0KA3JlZhgGIAEoCUgAEg4KBHRleHQYByABKAlIABIpCgRsaXN0GAggASgLMhkuZWxyaS52MS5vYmplY3QuVmFsdWVMaXN0SABCBwoFdmFsdWUiPwoLUGFydGljaXBhbnQSDAoEc2xvdBgBIAEoCRIRCglvYmplY3RfaWQYAiABKAkSDwoHcm9sZV9pZBgDIAEoCSJLCglQbGFjZW1lbnQSCgoCaWQYASABKAkSEQoJcGFyZW50X2lkGAIgASgJEg0KBWluZGV4GAMgASgFEhAKCGJsb2NrX2lkGAQgASgJIvEDCgZPYmplY3QSCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSKAoEa2luZBgDIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDQoFdHlwZXMYBCADKAkSMgoGZmllbGRzGAUgAygLMiIuZWxyaS52MS5vYmplY3QuT2JqZWN0LkZpZWxkc0VudHJ5EhUKDWNyZWF0ZWRfYXRfbXMYBiABKAMSFQoNdXBkYXRlZF9hdF9tcxgHIAEoAxIaCg1kZWxldGVkX2F0X21zGAggASgDSACIAQESMQoMcGFydGljaXBhbnRzGAkgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSFgoJdGFyZ2V0X2lkGAogASgJSAGIAQESMgoLdHlwZV9maWVsZHMYCyADKAsyHS5lbHJpLnYxLmRlZmluaXRpb24uVHlwZUZpZWxkEi0KCnBsYWNlbWVudHMYDCADKAsyGS5lbHJpLnYxLm9iamVjdC5QbGFjZW1lbnQaRAoLRmllbGRzRW50cnkSCwoDa2V5GAEgASgJEiQKBXZhbHVlGAIgASgLMhUuZWxyaS52MS5vYmplY3QuVmFsdWU6AjgBQhAKDl9kZWxldGVkX2F0X21zQgwKCl90YXJnZXRfaWQqwQEKCk9iamVjdEtpbmQSGwoXT0JKRUNUX0tJTkRfVU5TUEVDSUZJRUQQABIWChJPQkpFQ1RfS0lORF9FTlRJVFkQARIYChRPQkpFQ1RfS0lORF9SRUxBVElPThACEhUKEU9CSkVDVF9LSU5EX0xBWUVSEAMSGQoVT0JKRUNUX0tJTkRfRklFTERfREVGEAQSGAoUT0JKRUNUX0tJTkRfVFlQRV9ERUYQBRIYChRPQkpFQ1RfS0lORF9ST0xFX0RFRhAGYgZwcm90bzM", [file_elri_v1_definition_domain]);
 
 /**
  * Items of a list value; scalars only. 
@@ -247,6 +247,91 @@ export const ParticipantSchema: GenMessage<Participant, {jsonType: ParticipantJs
   messageDesc(file_elri_v1_object_domain, 2);
 
 /**
+ *
+ * One position of a block inside a document. A block is an Object of its own;
+ * a placement only puts it somewhere in the tree. Placement identity is
+ * separate from block identity: removing a placement leaves the block in
+ * place, and one block may be placed more than once.
+ *
+ * @generated from message elri.v1.object.Placement
+ */
+export type Placement = Message<"elri.v1.object.Placement"> & {
+  /**
+   * Placement id, assigned by the core and stable across moves. 
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * Parent placement id; empty at the top level. 
+   *
+   * @generated from field: string parent_id = 2;
+   */
+  parentId: string;
+
+  /**
+   * Position among siblings, from 0. 
+   *
+   * @generated from field: int32 index = 3;
+   */
+  index: number;
+
+  /**
+   * The placed block Object. 
+   *
+   * @generated from field: string block_id = 4;
+   */
+  blockId: string;
+};
+
+/**
+ *
+ * One position of a block inside a document. A block is an Object of its own;
+ * a placement only puts it somewhere in the tree. Placement identity is
+ * separate from block identity: removing a placement leaves the block in
+ * place, and one block may be placed more than once.
+ *
+ * @generated from message elri.v1.object.Placement
+ */
+export type PlacementJson = {
+  /**
+   * Placement id, assigned by the core and stable across moves. 
+   *
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * Parent placement id; empty at the top level. 
+   *
+   * @generated from field: string parent_id = 2;
+   */
+  parentId?: string;
+
+  /**
+   * Position among siblings, from 0. 
+   *
+   * @generated from field: int32 index = 3;
+   */
+  index?: number;
+
+  /**
+   * The placed block Object. 
+   *
+   * @generated from field: string block_id = 4;
+   */
+  blockId?: string;
+};
+
+/**
+ * Describes the message elri.v1.object.Placement.
+ * Use `create(PlacementSchema)` to create a new message.
+ */
+export const PlacementSchema: GenMessage<Placement, {jsonType: PlacementJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_domain, 3);
+
+/**
  * @generated from message elri.v1.object.Object
  */
 export type Object$ = Message<"elri.v1.object.Object"> & {
@@ -318,6 +403,13 @@ export type Object$ = Message<"elri.v1.object.Object"> & {
    * @generated from field: repeated elri.v1.definition.TypeField type_fields = 11;
    */
   typeFields: TypeField[];
+
+  /**
+   * Entities only: placed blocks, parents before children, siblings in order. 
+   *
+   * @generated from field: repeated elri.v1.object.Placement placements = 12;
+   */
+  placements: Placement[];
 };
 
 /**
@@ -392,6 +484,13 @@ export type ObjectJson = {
    * @generated from field: repeated elri.v1.definition.TypeField type_fields = 11;
    */
   typeFields?: TypeFieldJson[];
+
+  /**
+   * Entities only: placed blocks, parents before children, siblings in order. 
+   *
+   * @generated from field: repeated elri.v1.object.Placement placements = 12;
+   */
+  placements?: PlacementJson[];
 };
 
 /**
@@ -399,7 +498,7 @@ export type ObjectJson = {
  * Use `create(ObjectSchema)` to create a new message.
  */
 export const ObjectSchema: GenMessage<Object$, {jsonType: ObjectJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_domain, 3);
+  messageDesc(file_elri_v1_object_domain, 4);
 
 /**
  * What an Object is. Every kind shares the same document shape. 

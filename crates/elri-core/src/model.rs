@@ -8,6 +8,8 @@
 //! - `fields`: field-definition id → value
 //! - `participants` (Relations): slot id → `{object, role}`
 //! - `type_fields` (type definitions): field-definition id → required
+//! - `placements` (Entities): a movable tree whose nodes place blocks;
+//!   node meta `block` is the placed Object's id
 //!
 //! Definitions keep their attributes in reserved `$`-prefixed field ids.
 //!
@@ -21,10 +23,12 @@
 use std::collections::HashMap;
 
 use elri_proto::elri::v1::definition::{FieldKind, TypeField};
-use elri_proto::elri::v1::object::{value, Object, ObjectKind, Participant, Value, ValueList};
+use elri_proto::elri::v1::object::{
+    value, Object, ObjectKind, Participant, Placement, Value, ValueList,
+};
 use loro::{
-    Container, ExportMode, LoroDoc, LoroMap, LoroMovableList, LoroText, LoroValue, UpdateOptions,
-    ValueOrContainer, VersionVector,
+    Container, ExportMode, LoroDoc, LoroMap, LoroMovableList, LoroText, LoroTree, LoroValue,
+    TreeID, TreeParentId, UpdateOptions, ValueOrContainer, VersionVector,
 };
 use uuid::Uuid;
 
@@ -230,6 +234,10 @@ pub enum ModelError {
     /// Text update did not finish in time.
     #[error("field {0}: text update timed out")]
     TextTimeout(String),
+    /// A placement operation the tree refuses: unknown id, unknown parent,
+    /// or a move into the placement's own subtree.
+    #[error("placement {0}: {1}")]
+    Placement(String, String),
     /// Loro refused an operation.
     #[error(transparent)]
     Loro(#[from] loro::LoroError),
@@ -361,6 +369,129 @@ impl ObjectDoc {
 
     fn type_fields(&self) -> LoroMap {
         self.doc.get_map("type_fields")
+    }
+
+    /// The placements tree, with positional operations enabled. Positions are
+    /// fractional indexes; two placements that land on the same index from
+    /// concurrent edits are ordered by their ids, so every replica agrees.
+    fn placements(&self) -> LoroTree {
+        let tree = self.doc.get_tree("placements");
+        tree.enable_fractional_index(0);
+        tree
+    }
+
+    fn placement_parent(&self, parent_id: &str) -> Result<TreeParentId, ModelError> {
+        if parent_id.is_empty() {
+            return Ok(TreeParentId::Root);
+        }
+        Ok(TreeParentId::Node(self.live_placement(parent_id)?))
+    }
+
+    /// Resolves a placement id that must name a live placement.
+    fn live_placement(&self, id: &str) -> Result<TreeID, ModelError> {
+        let tree = self.placements();
+        let target = placement_id(id)?;
+        if !tree.contains(target) || tree.is_node_deleted(&target).unwrap_or(true) {
+            return Err(ModelError::Placement(
+                id.to_owned(),
+                "placement does not exist".to_owned(),
+            ));
+        }
+        Ok(target)
+    }
+
+    /// Places `block` under `parent_id` (empty: top level) at `index`,
+    /// clamped to the end of the siblings. Returns the placement id.
+    pub fn place_block(
+        &self,
+        parent_id: &str,
+        index: usize,
+        block: ObjectId,
+    ) -> Result<String, ModelError> {
+        let tree = self.placements();
+        let parent = self.placement_parent(parent_id)?;
+        let index = index.min(tree.children_num(parent).unwrap_or(0));
+        let id = tree
+            .create_at(parent, index)
+            .map_err(|e| ModelError::Placement(parent_id.to_owned(), e.to_string()))?;
+        tree.get_meta(id)?.insert("block", block.to_string())?;
+        Ok(id.to_string())
+    }
+
+    /// Moves placement `id` under `parent_id` (empty: top level) at `index`,
+    /// clamped to the end of the siblings. Its subtree moves with it.
+    pub fn move_placement(
+        &self,
+        id: &str,
+        parent_id: &str,
+        index: usize,
+    ) -> Result<(), ModelError> {
+        let tree = self.placements();
+        let target = self.live_placement(id)?;
+        let parent = self.placement_parent(parent_id)?;
+        let mut siblings = tree.children_num(parent).unwrap_or(0);
+        if tree.parent(target) == Some(parent) {
+            siblings = siblings.saturating_sub(1);
+        }
+        tree.mov_to(target, parent, index.min(siblings))
+            .map_err(|e| ModelError::Placement(id.to_owned(), e.to_string()))
+    }
+
+    /// Removes placement `id` with its subtree. The placed blocks stay.
+    pub fn remove_placement(&self, id: &str) -> Result<(), ModelError> {
+        let tree = self.placements();
+        let target = self.live_placement(id)?;
+        tree.delete(target)
+            .map_err(|e| ModelError::Placement(id.to_owned(), e.to_string()))
+    }
+
+    /// Placements in document order: parents before children, siblings by
+    /// position.
+    fn read_placements(&self) -> Result<Vec<Placement>, ModelError> {
+        let tree = self.placements();
+        if tree.is_empty() {
+            return Ok(Vec::new());
+        }
+        let mut by_parent: HashMap<TreeParentId, Vec<(usize, TreeID)>> = HashMap::new();
+        for node in tree.get_nodes(false) {
+            by_parent
+                .entry(node.parent)
+                .or_default()
+                .push((node.index, node.id));
+        }
+        for children in by_parent.values_mut() {
+            children.sort_unstable();
+        }
+        let mut out = Vec::new();
+        // Each sibling group is emitted whole, then its subtrees in order.
+        let mut stack: Vec<(TreeParentId, String)> = vec![(TreeParentId::Root, String::new())];
+        while let Some((parent, parent_id)) = stack.pop() {
+            let Some(children) = by_parent.get(&parent) else {
+                continue;
+            };
+            let mut group = Vec::with_capacity(children.len());
+            for &(index, id) in children {
+                let block_id = match tree.get_meta(id)?.get("block") {
+                    Some(ValueOrContainer::Value(LoroValue::String(s))) => {
+                        ObjectId::parse(&s)?.to_string()
+                    }
+                    _ => return Err(ModelError::Malformed("placement without block")),
+                };
+                let index =
+                    i32::try_from(index).map_err(|_| ModelError::Malformed("placement index"))?;
+                group.push(Placement {
+                    id: id.to_string(),
+                    parent_id: parent_id.clone(),
+                    index,
+                    block_id,
+                });
+            }
+            for &(_, id) in children.iter().rev() {
+                stack.push((TreeParentId::Node(id), id.to_string()));
+            }
+            out.extend(group);
+        }
+        Ok(out)
     }
 
     /// Sets a field. Scalars replace the previous value; a text applies the
@@ -569,6 +700,8 @@ impl ObjectDoc {
         };
         type_fields.sort_by(|a, b| a.field_id.cmp(&b.field_id));
 
+        let placements = self.read_placements()?;
+
         Ok(Object {
             id: self.id.to_string(),
             space_id,
@@ -581,8 +714,14 @@ impl ObjectDoc {
             participants,
             target_id,
             type_fields,
+            placements,
         })
     }
+}
+
+fn placement_id(id: &str) -> Result<TreeID, ModelError> {
+    TreeID::try_from(id)
+        .map_err(|_| ModelError::Placement(id.to_owned(), "not a placement id".to_owned()))
 }
 
 /// Turns `list` into `target` with the fewest insertions and deletions, so
@@ -812,5 +951,47 @@ mod tests {
             .any(|f| f.field_id == fdef.id().to_string() && f.required));
         tdef.remove_type_field("free").expect("ok");
         assert_eq!(tdef.read().expect("ok").type_fields.len(), 1);
+    }
+
+    #[test]
+    fn placements_form_a_tree_and_merge() {
+        let space = ObjectId::new();
+        let doc = ObjectDoc::create(ObjectId::new(), space, ObjectKind::Entity, 1).expect("ok");
+        let (b1, b2, b3) = (ObjectId::new(), ObjectId::new(), ObjectId::new());
+        let p1 = doc.place_block("", 0, b1).expect("ok");
+        let p2 = doc.place_block("", 99, b2).expect("ok");
+        let p3 = doc.place_block(&p1, 0, b3).expect("ok");
+        doc.touch(2).expect("ok");
+
+        let rec = doc.read().expect("ok");
+        let ids: Vec<_> = rec.placements.iter().map(|p| p.id.as_str()).collect();
+        assert_eq!(ids, [p1.as_str(), p2.as_str(), p3.as_str()]);
+        assert_eq!(rec.placements[1].index, 1);
+        assert_eq!(rec.placements[2].parent_id, p1);
+        assert_eq!(rec.placements[2].block_id, b3.to_string());
+
+        // Move p2 to the front; a move into its own subtree is refused.
+        doc.move_placement(&p2, "", 0).expect("ok");
+        assert!(doc.move_placement(&p1, &p3, 0).is_err());
+        assert!(doc.place_block("nope", 0, b1).is_err());
+        doc.touch(3).expect("ok");
+        let rec = doc.read().expect("ok");
+        assert_eq!(rec.placements[0].id, p2);
+        assert_eq!(rec.placements[0].index, 0);
+        assert_eq!(rec.placements[1].id, p1);
+
+        // Survives the snapshot round trip and a concurrent placement.
+        let other = ObjectDoc::from_snapshot(doc.id(), &doc.snapshot().expect("ok")).expect("ok");
+        let before = other.version_vector();
+        let p4 = other.place_block("", 0, b1).expect("ok");
+        other.touch(4).expect("ok");
+        doc.remove_placement(&p1).expect("ok");
+        doc.touch(4).expect("ok");
+        doc.import(&other.updates_since(&before).expect("ok"))
+            .expect("ok");
+        let rec = doc.read().expect("ok");
+        let ids: Vec<_> = rec.placements.iter().map(|p| p.id.as_str()).collect();
+        assert_eq!(ids, [p4.as_str(), p2.as_str()]);
+        assert!(doc.remove_placement(&p3).is_err());
     }
 }

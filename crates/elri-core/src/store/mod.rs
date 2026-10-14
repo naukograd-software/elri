@@ -30,7 +30,7 @@ use crate::device::DeviceId;
 use crate::model::{field_def_kind, now_ms, ModelError, ObjectDoc, ObjectId, SpaceId};
 use models::{
     ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, ObjectRow, ObjectTypeRow,
-    ParticipantRow, RemoteRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
+    ParticipantRow, PlacementRow, RemoteRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
 };
 
 /// Updates folded into a fresh snapshot once this many accumulate per document.
@@ -332,6 +332,8 @@ pub struct ObjectFilter {
     pub participant: Option<ObjectId>,
     /// Only Layers over this Object, if set.
     pub target: Option<ObjectId>,
+    /// Only Entities that place this block, if set.
+    pub placed_block: Option<ObjectId>,
 }
 
 /// Storage of one Space: documents, their update log, Changes, and
@@ -366,6 +368,7 @@ impl SpaceStore {
                 FieldValueRow,
                 ParticipantRow,
                 TypeFieldRow,
+                PlacementRow,
                 SpaceLogRow,
                 SyncStateRow
             ),
@@ -494,6 +497,16 @@ impl SpaceStore {
         Ok(field_def_kind(&load_doc(&mut db, id).await?.0.read()?))
     }
 
+    /// Whether a live Object with this id is in the Space.
+    pub async fn exists(&self, id: ObjectId) -> Result<bool, StoreError> {
+        let mut db = self.db.lock().await;
+        Ok(ObjectRow::filter_by_object_id(id.uuid())
+            .first()
+            .exec(&mut *db)
+            .await?
+            .is_some_and(|row| row.deleted_at.is_none()))
+    }
+
     /// Lists Objects matching `filter`, newest first.
     pub async fn list(&self, filter: &ObjectFilter) -> Result<Vec<Object>, StoreError> {
         use std::fmt::Write as _;
@@ -518,6 +531,13 @@ impl SpaceStore {
             let _ = write!(
                 sql,
                 " JOIN participants p ON p.relation_id = o.object_id AND p.object_id = {p}"
+            );
+        }
+        if let Some(b) = filter.placed_block {
+            let p = next(&mut params, uuid_param(b.uuid()));
+            let _ = write!(
+                sql,
+                " JOIN (SELECT DISTINCT document_id FROM placements WHERE block_id = {p}) pl ON pl.document_id = o.object_id"
             );
         }
         if let Some(t) = filter.target {
@@ -1135,6 +1155,15 @@ async fn write_projections(
         .await?;
     }
 
+    write_links(tx, id, rec).await
+}
+
+/// Projections that point at other Objects: participants and placements.
+async fn write_links(
+    tx: &mut toasty::Transaction<'_>,
+    id: Uuid,
+    rec: &Object,
+) -> Result<(), StoreError> {
     ParticipantRow::filter(ParticipantRow::fields().relation_id().eq(id))
         .delete()
         .exec(&mut *tx)
@@ -1145,6 +1174,22 @@ async fn write_projections(
             slot: p.slot.clone(),
             object_id: uuid_arg(&p.object_id)?,
             role_id: p.role_id.clone(),
+        })
+        .exec(&mut *tx)
+        .await?;
+    }
+
+    PlacementRow::filter(PlacementRow::fields().document_id().eq(id))
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    for p in &rec.placements {
+        toasty::create!(PlacementRow {
+            document_id: id,
+            placement_id: p.id.clone(),
+            parent_id: p.parent_id.clone(),
+            index: i64::from(p.index),
+            block_id: uuid_arg(&p.block_id)?,
         })
         .exec(&mut *tx)
         .await?;

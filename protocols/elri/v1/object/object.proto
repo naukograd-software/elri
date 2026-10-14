@@ -50,6 +50,13 @@ message UpdateObjectRequest {
     repeated Participant set_participants = 7;
     /* Relations only: slots to remove. */
     repeated string remove_participants = 8;
+    /*
+    Entities only: an empty id places `block_id` at `parent_id`/`index`; a
+    known id moves that placement there.
+    */
+    repeated Placement set_placements = 9;
+    /* Entities only: placements to remove, with their subtrees. Blocks stay. */
+    repeated string remove_placements = 10;
 }
 
 message UpdateObjectResponse {
@@ -77,6 +84,8 @@ message ListObjectsRequest {
     string participant_object_id = 6;
     /* Only Layers over this Object, if set. */
     string target_id = 7;
+    /* Only Entities that place this block, if set. */
+    string placed_block_id = 8;
 }
 
 message ListObjectsResponse {

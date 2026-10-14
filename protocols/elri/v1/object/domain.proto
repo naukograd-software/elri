@@ -58,6 +58,23 @@ message Participant {
     string role_id = 3;
 }
 
+/*
+One position of a block inside a document. A block is an Object of its own;
+a placement only puts it somewhere in the tree. Placement identity is
+separate from block identity: removing a placement leaves the block in
+place, and one block may be placed more than once.
+*/
+message Placement {
+    /* Placement id, assigned by the core and stable across moves. */
+    string id = 1;
+    /* Parent placement id; empty at the top level. */
+    string parent_id = 2;
+    /* Position among siblings, from 0. */
+    int32 index = 3;
+    /* The placed block Object. */
+    string block_id = 4;
+}
+
 message Object {
     /* UUIDv7, canonical string form. */
     string id = 1;
@@ -77,4 +94,6 @@ message Object {
     optional string target_id = 10;
     /* Type definitions only: the fields of the type. */
     repeated elri.v1.definition.TypeField type_fields = 11;
+    /* Entities only: placed blocks, parents before children, siblings in order. */
+    repeated Placement placements = 12;
 }

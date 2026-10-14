@@ -11,7 +11,7 @@ use elri_proto::elri::v1::change::{ChangeStatus, ListChangesRequest};
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest,
-    ObjectKind, Participant, UpdateObjectRequest, Value,
+    ObjectKind, Participant, Placement, UpdateObjectRequest, Value,
 };
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::{Authority, CreateSpaceRequest, ListSpacesRequest};
@@ -616,4 +616,188 @@ async fn relations_and_layers() {
     assert_eq!(layers.len(), 1);
     assert_eq!(layers[0].id, layer.id);
     assert_eq!(layers[0].fields["note"], s("mine"));
+}
+
+#[tokio::test]
+async fn documents_place_blocks() {
+    let dir = tmp_dir("documents");
+    let _core = Core::start(Config::new(&dir, build()))
+        .await
+        .expect("start");
+    let sess = Session::open(&dir).await;
+    let space = sess
+        .spaces
+        .create_space(sess.authed(CreateSpaceRequest { name: "s".into() }))
+        .await
+        .expect("create")
+        .msg
+        .space
+        .expect("space");
+    let entity = |kind: ObjectKind| {
+        let req = sess.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: kind.into(),
+            ..Default::default()
+        });
+        let objects = sess.objects.clone();
+        async move {
+            objects
+                .create_object(req)
+                .await
+                .expect("create")
+                .msg
+                .object
+                .expect("object")
+        }
+    };
+    let doc = entity(ObjectKind::Entity).await;
+    let heading = entity(ObjectKind::Entity).await;
+    let para = entity(ObjectKind::Entity).await;
+    let place = |id: &str, parent: &str, index: i32, block: &str| Placement {
+        id: id.into(),
+        parent_id: parent.into(),
+        index,
+        block_id: block.into(),
+    };
+    let update = |req: UpdateObjectRequest| {
+        let req = sess.authed(UpdateObjectRequest {
+            space_id: space.id.clone(),
+            id: doc.id.clone(),
+            ..req
+        });
+        let objects = sess.objects.clone();
+        async move { objects.update_object(req).await }
+    };
+
+    // Two top-level placements; then a child under the first.
+    let got = update(UpdateObjectRequest {
+        set_placements: vec![place("", "", 0, &heading.id), place("", "", 1, &para.id)],
+        ..Default::default()
+    })
+    .await
+    .expect("place")
+    .msg
+    .object
+    .expect("object");
+    assert_eq!(got.placements.len(), 2);
+    assert_eq!(got.placements[0].block_id, heading.id);
+    assert_eq!(got.placements[1].block_id, para.id);
+    let top = got.placements[0].id.clone();
+    let got = update(UpdateObjectRequest {
+        set_placements: vec![place("", &top, 0, &para.id)],
+        ..Default::default()
+    })
+    .await
+    .expect("nest")
+    .msg
+    .object
+    .expect("object");
+    assert_eq!(got.placements.len(), 3);
+    assert_eq!(got.placements[2].parent_id, top);
+    let nested = got.placements[2].id.clone();
+
+    // Found through the placed block; a block placed twice is listed once.
+    let docs = sess
+        .objects
+        .list_objects(sess.authed(ListObjectsRequest {
+            space_id: space.id.clone(),
+            placed_block_id: para.id.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("list by block")
+        .msg
+        .objects;
+    assert_eq!(docs.len(), 1);
+    assert_eq!(docs[0].id, doc.id);
+
+    // Move the nested placement to the top, ahead of everything.
+    let got = update(UpdateObjectRequest {
+        set_placements: vec![place(&nested, "", 0, &para.id)],
+        ..Default::default()
+    })
+    .await
+    .expect("move")
+    .msg
+    .object
+    .expect("object");
+    assert_eq!(got.placements[0].id, nested);
+    assert_eq!(got.placements[0].parent_id, "");
+    assert_eq!(got.placements[1].id, top);
+
+    // Removing a placement keeps the block.
+    let got = update(UpdateObjectRequest {
+        remove_placements: vec![nested.clone()],
+        ..Default::default()
+    })
+    .await
+    .expect("remove")
+    .msg
+    .object
+    .expect("object");
+    assert_eq!(got.placements.len(), 2);
+    let still = sess
+        .objects
+        .get_object(sess.authed(GetObjectRequest {
+            space_id: space.id.clone(),
+            id: para.id.clone(),
+        }))
+        .await
+        .expect("block survives")
+        .msg
+        .object
+        .expect("object");
+    assert!(still.deleted_at_ms.is_none());
+
+    // Unknown block, unknown parent, moving under itself, and placements on
+    // a relation are refused.
+    let err = update(UpdateObjectRequest {
+        set_placements: vec![place("", "", 0, &uuid::Uuid::now_v7().to_string())],
+        ..Default::default()
+    })
+    .await
+    .expect_err("unknown block");
+    assert_eq!(err.code, Code::NotFound);
+    let err = update(UpdateObjectRequest {
+        set_placements: vec![place("", "7@7", 0, &para.id)],
+        ..Default::default()
+    })
+    .await
+    .expect_err("unknown parent");
+    assert_eq!(err.code, Code::InvalidArgument);
+    let err = update(UpdateObjectRequest {
+        set_placements: vec![place(&top, &top, 0, &heading.id)],
+        ..Default::default()
+    })
+    .await
+    .expect_err("cycle");
+    assert_eq!(err.code, Code::InvalidArgument);
+    let rel = sess
+        .objects
+        .create_object(sess.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: ObjectKind::Relation.into(),
+            participants: vec![Participant {
+                slot: "a".into(),
+                object_id: heading.id.clone(),
+                role_id: String::new(),
+            }],
+            ..Default::default()
+        }))
+        .await
+        .expect("relation")
+        .msg
+        .object
+        .expect("object");
+    let err = sess
+        .objects
+        .update_object(sess.authed(UpdateObjectRequest {
+            space_id: space.id.clone(),
+            id: rel.id,
+            set_placements: vec![place("", "", 0, &heading.id)],
+            ..Default::default()
+        }))
+        .await
+        .expect_err("relation with placements");
+    assert_eq!(err.code, Code::InvalidArgument);
 }

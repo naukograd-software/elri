@@ -18,7 +18,7 @@ use elri_proto::elri::v1::object::object_service_ws::{
 use elri_proto::elri::v1::object::{
     CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest, DeleteObjectResponse,
     GetObjectRequest, GetObjectResponse, ListObjectsRequest, ListObjectsResponse, ObjectKind,
-    Participant, UpdateObjectRequest, UpdateObjectResponse, Value,
+    Participant, Placement, UpdateObjectRequest, UpdateObjectResponse, Value,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::{
     register_remote_service_arc, RemoteServiceHandler,
@@ -112,7 +112,8 @@ impl From<StoreError> for Status {
             StoreError::Model(
                 ModelError::InvalidId(_)
                 | ModelError::EmptyValue(_)
-                | ModelError::NestedContainer(_),
+                | ModelError::NestedContainer(_)
+                | ModelError::Placement(..),
             ) => Status::new(Code::InvalidArgument, e.to_string()),
             other => {
                 tracing::error!(error = %other, "storage failure");
@@ -194,6 +195,32 @@ fn check_participants(kind: ObjectKind, ps: &[Participant]) -> Result<(), Status
 }
 
 impl Services {
+    /// Rejects placements that do not name live blocks of the Space, or
+    /// that go on anything but an Entity.
+    async fn check_placements(
+        &self,
+        space: &SpaceStore,
+        kind: ObjectKind,
+        set: &[Placement],
+    ) -> Result<(), Status> {
+        if kind != ObjectKind::Entity {
+            return Err(invalid("placements are only valid on entities"));
+        }
+        for p in set {
+            if p.index < 0 {
+                return Err(invalid("placement index must not be negative"));
+            }
+            let block = parse_id(&p.block_id, "block_id")?;
+            if p.id.is_empty() && !space.exists(block).await? {
+                return Err(Status::new(
+                    Code::NotFound,
+                    format!("block {block} is not in this space"),
+                ));
+            }
+        }
+        Ok(())
+    }
+
     /// Rejects values whose field definition fixes a different kind. Field
     /// ids without a definition are free-form and pass through.
     async fn check_field_kinds(
@@ -320,11 +347,18 @@ impl ObjectServiceHandler for Services {
         self.check_field_kinds(&space, &m.set_fields).await?;
         let touches_participants =
             !m.set_participants.is_empty() || !m.remove_participants.is_empty();
-        if touches_participants {
+        let touches_placements = !m.set_placements.is_empty() || !m.remove_placements.is_empty();
+        if touches_participants || touches_placements {
             let kind = space.get(id).await?.kind();
-            check_participants(kind, &m.set_participants)?;
-            if kind != ObjectKind::Relation {
-                return Err(invalid("participants are only valid on relations"));
+            if touches_participants {
+                check_participants(kind, &m.set_participants)?;
+                if kind != ObjectKind::Relation {
+                    return Err(invalid("participants are only valid on relations"));
+                }
+            }
+            if touches_placements {
+                self.check_placements(&space, kind, &m.set_placements)
+                    .await?;
             }
         }
         let object = space
@@ -346,6 +380,17 @@ impl ObjectServiceHandler for Services {
                 }
                 for t in &m.remove_types {
                     doc.remove_type(t)?;
+                }
+                for p in &m.set_placements {
+                    let index = usize::try_from(p.index).unwrap_or(0);
+                    if p.id.is_empty() {
+                        doc.place_block(&p.parent_id, index, ObjectId::parse(&p.block_id)?)?;
+                    } else {
+                        doc.move_placement(&p.id, &p.parent_id, index)?;
+                    }
+                }
+                for p in &m.remove_placements {
+                    doc.remove_placement(p)?;
                 }
                 Ok(())
             })
@@ -392,6 +437,11 @@ impl ObjectServiceHandler for Services {
                 None
             } else {
                 Some(parse_id(&m.target_id, "target_id")?)
+            },
+            placed_block: if m.placed_block_id.is_empty() {
+                None
+            } else {
+                Some(parse_id(&m.placed_block_id, "placed_block_id")?)
             },
         };
         Ok(Response::new(ListObjectsResponse {

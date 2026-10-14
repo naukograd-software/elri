@@ -13,7 +13,7 @@ use elri_proto::elri::v1::core::GetInfoRequest;
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest, Object,
-    ObjectKind, Participant, Value, ValueList,
+    ObjectKind, Participant, Placement, UpdateObjectRequest, Value, ValueList,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::RemoteServiceClient;
 use elri_proto::elri::v1::remote::{
@@ -190,6 +190,9 @@ enum ObjectCmd {
         /// Layers over this Object.
         #[arg(long)]
         layers_of: Option<String>,
+        /// Entities that place this block.
+        #[arg(long)]
+        places: Option<String>,
         #[arg(long, default_value_t = 50)]
         limit: i32,
     },
@@ -198,6 +201,45 @@ enum ObjectCmd {
         #[arg(long)]
         space: String,
         id: String,
+    },
+    /// Place a block Object inside a document Entity.
+    Place {
+        #[arg(long)]
+        space: String,
+        /// The document.
+        id: String,
+        /// The block to place.
+        block: String,
+        /// Parent placement id; top level when omitted.
+        #[arg(long, default_value = "")]
+        parent: String,
+        /// Position among siblings; the end when omitted.
+        #[arg(long, default_value_t = i32::MAX)]
+        index: i32,
+    },
+    /// Move a placement within a document.
+    Move {
+        #[arg(long)]
+        space: String,
+        /// The document.
+        id: String,
+        /// The placement to move.
+        placement: String,
+        /// New parent placement id; top level when omitted.
+        #[arg(long, default_value = "")]
+        parent: String,
+        /// New position among siblings; the end when omitted.
+        #[arg(long, default_value_t = i32::MAX)]
+        index: i32,
+    },
+    /// Remove a placement and its subtree; the blocks stay.
+    Unplace {
+        #[arg(long)]
+        space: String,
+        /// The document.
+        id: String,
+        /// The placement to remove.
+        placement: String,
     },
 }
 
@@ -291,6 +333,13 @@ fn object_json(o: &Object) -> serde_json::Value {
         .iter()
         .map(|p| json!({ "slot": p.slot, "object_id": p.object_id, "role_id": p.role_id }))
         .collect();
+    let placements: Vec<_> = o
+        .placements
+        .iter()
+        .map(|p| {
+            json!({ "id": p.id, "parent_id": p.parent_id, "index": p.index, "block_id": p.block_id })
+        })
+        .collect();
     json!({
         "id": o.id,
         "space_id": o.space_id,
@@ -298,6 +347,7 @@ fn object_json(o: &Object) -> serde_json::Value {
         "types": o.types,
         "fields": fields,
         "participants": participants,
+        "placements": placements,
         "target_id": o.target_id,
         "created_at_ms": o.created_at_ms,
         "updated_at_ms": o.updated_at_ms,
@@ -423,6 +473,7 @@ async fn run_object(
             include_deleted,
             participant_of,
             layers_of,
+            places,
             limit,
         } => {
             let res = client
@@ -436,6 +487,7 @@ async fn run_object(
                         limit,
                         participant_object_id: participant_of.unwrap_or_default(),
                         target_id: layers_of.unwrap_or_default(),
+                        placed_block_id: places.unwrap_or_default(),
                     },
                 ))
                 .await?;
@@ -454,7 +506,81 @@ async fn run_object(
                 .await?;
             Ok(json!({ "deleted": true }))
         }
+        cmd @ (ObjectCmd::Place { .. } | ObjectCmd::Move { .. } | ObjectCmd::Unplace { .. }) => {
+            run_placement(&client, endpoint, cmd).await
+        }
     }
+}
+
+async fn run_placement(
+    client: &ObjectServiceClient,
+    endpoint: &Endpoint,
+    cmd: ObjectCmd,
+) -> Result<serde_json::Value> {
+    match cmd {
+        ObjectCmd::Place {
+            space,
+            id,
+            block,
+            parent,
+            index,
+        } => {
+            let placement = Placement {
+                id: String::new(),
+                parent_id: parent,
+                index,
+                block_id: block,
+            };
+            place(client, endpoint, space, id, vec![placement], vec![]).await
+        }
+        ObjectCmd::Move {
+            space,
+            id,
+            placement,
+            parent,
+            index,
+        } => {
+            let placement = Placement {
+                id: placement,
+                parent_id: parent,
+                index,
+                block_id: String::new(),
+            };
+            place(client, endpoint, space, id, vec![placement], vec![]).await
+        }
+        ObjectCmd::Unplace {
+            space,
+            id,
+            placement,
+        } => place(client, endpoint, space, id, vec![], vec![placement]).await,
+        _ => bail!("not a placement command"),
+    }
+}
+
+async fn place(
+    client: &ObjectServiceClient,
+    endpoint: &Endpoint,
+    space: String,
+    id: String,
+    set: Vec<Placement>,
+    remove: Vec<String>,
+) -> Result<serde_json::Value> {
+    let res = client
+        .update_object(authed(
+            endpoint,
+            UpdateObjectRequest {
+                space_id: space,
+                id,
+                set_placements: set,
+                remove_placements: remove,
+                ..Default::default()
+            },
+        ))
+        .await?;
+    let Some(o) = res.msg.object else {
+        bail!("core returned no object");
+    };
+    Ok(object_json(&o))
 }
 
 async fn run_change(

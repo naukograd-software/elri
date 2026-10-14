@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Object$, ObjectJson, ObjectKind, ObjectKindJson, Participant, ParticipantJson, Value, ValueJson } from "./domain_pb.ts";
+import type { Object$, ObjectJson, ObjectKind, ObjectKindJson, Participant, ParticipantJson, Placement, PlacementJson, Value, ValueJson } from "./domain_pb.ts";
 import { file_elri_v1_object_domain } from "./domain_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/object/object.proto.
  */
 export const file_elri_v1_object_object: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9vYmplY3QucHJvdG8SDmVscmkudjEub2JqZWN0Iq0CChNDcmVhdGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAMgAygJEj8KBmZpZWxkcxgEIAMoCzIvLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QuRmllbGRzRW50cnkSMQoMcGFydGljaXBhbnRzGAUgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSEQoJdGFyZ2V0X2lkGAYgASgJGkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRDcmVhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMAoQR2V0T2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI7ChFHZXRPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3Qi2AIKE1VwZGF0ZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSRgoKc2V0X2ZpZWxkcxgDIAMoCzIyLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QuU2V0RmllbGRzRW50cnkSFQoNcmVtb3ZlX2ZpZWxkcxgEIAMoCRIRCglhZGRfdHlwZXMYBSADKAkSFAoMcmVtb3ZlX3R5cGVzGAYgAygJEjUKEHNldF9wYXJ0aWNpcGFudHMYByADKAsyGy5lbHJpLnYxLm9iamVjdC5QYXJ0aWNpcGFudBIbChNyZW1vdmVfcGFydGljaXBhbnRzGAggAygJGkcKDlNldEZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRVcGRhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMwoTRGVsZXRlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIWChREZWxldGVPYmplY3RSZXNwb25zZSK7AQoSTGlzdE9iamVjdHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg8KB3R5cGVfaWQYAyABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAQgASgIEg0KBWxpbWl0GAUgASgFEh0KFXBhcnRpY2lwYW50X29iamVjdF9pZBgGIAEoCRIRCgl0YXJnZXRfaWQYByABKAkiPgoTTGlzdE9iamVjdHNSZXNwb25zZRInCgdvYmplY3RzGAEgAygLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0MsoDCg1PYmplY3RTZXJ2aWNlElkKDENyZWF0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5DcmVhdGVPYmplY3RSZXNwb25zZRJQCglHZXRPYmplY3QSIC5lbHJpLnYxLm9iamVjdC5HZXRPYmplY3RSZXF1ZXN0GiEuZWxyaS52MS5vYmplY3QuR2V0T2JqZWN0UmVzcG9uc2USWQoMVXBkYXRlT2JqZWN0EiMuZWxyaS52MS5vYmplY3QuVXBkYXRlT2JqZWN0UmVxdWVzdBokLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlc3BvbnNlElkKDERlbGV0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LkRlbGV0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXNwb25zZRJWCgtMaXN0T2JqZWN0cxIiLmVscmkudjEub2JqZWN0Lkxpc3RPYmplY3RzUmVxdWVzdBojLmVscmkudjEub2JqZWN0Lkxpc3RPYmplY3RzUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9vYmplY3QucHJvdG8SDmVscmkudjEub2JqZWN0Iq0CChNDcmVhdGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAMgAygJEj8KBmZpZWxkcxgEIAMoCzIvLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QuRmllbGRzRW50cnkSMQoMcGFydGljaXBhbnRzGAUgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSEQoJdGFyZ2V0X2lkGAYgASgJGkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRDcmVhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMAoQR2V0T2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI7ChFHZXRPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QipgMKE1VwZGF0ZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSRgoKc2V0X2ZpZWxkcxgDIAMoCzIyLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QuU2V0RmllbGRzRW50cnkSFQoNcmVtb3ZlX2ZpZWxkcxgEIAMoCRIRCglhZGRfdHlwZXMYBSADKAkSFAoMcmVtb3ZlX3R5cGVzGAYgAygJEjUKEHNldF9wYXJ0aWNpcGFudHMYByADKAsyGy5lbHJpLnYxLm9iamVjdC5QYXJ0aWNpcGFudBIbChNyZW1vdmVfcGFydGljaXBhbnRzGAggAygJEjEKDnNldF9wbGFjZW1lbnRzGAkgAygLMhkuZWxyaS52MS5vYmplY3QuUGxhY2VtZW50EhkKEXJlbW92ZV9wbGFjZW1lbnRzGAogAygJGkcKDlNldEZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRVcGRhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMwoTRGVsZXRlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIWChREZWxldGVPYmplY3RSZXNwb25zZSLUAQoSTGlzdE9iamVjdHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg8KB3R5cGVfaWQYAyABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAQgASgIEg0KBWxpbWl0GAUgASgFEh0KFXBhcnRpY2lwYW50X29iamVjdF9pZBgGIAEoCRIRCgl0YXJnZXRfaWQYByABKAkSFwoPcGxhY2VkX2Jsb2NrX2lkGAggASgJIj4KE0xpc3RPYmplY3RzUmVzcG9uc2USJwoHb2JqZWN0cxgBIAMoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdDLKAwoNT2JqZWN0U2VydmljZRJZCgxDcmVhdGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5DcmVhdGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuQ3JlYXRlT2JqZWN0UmVzcG9uc2USUAoJR2V0T2JqZWN0EiAuZWxyaS52MS5vYmplY3QuR2V0T2JqZWN0UmVxdWVzdBohLmVscmkudjEub2JqZWN0LkdldE9iamVjdFJlc3BvbnNlElkKDFVwZGF0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5VcGRhdGVPYmplY3RSZXNwb25zZRJZCgxEZWxldGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuRGVsZXRlT2JqZWN0UmVzcG9uc2USVgoLTGlzdE9iamVjdHMSIi5lbHJpLnYxLm9iamVjdC5MaXN0T2JqZWN0c1JlcXVlc3QaIy5lbHJpLnYxLm9iamVjdC5MaXN0T2JqZWN0c1Jlc3BvbnNlYgZwcm90bzM", [file_elri_v1_object_domain]);
 
 /**
  * @generated from message elri.v1.object.CreateObjectRequest
@@ -237,6 +237,22 @@ export type UpdateObjectRequest = Message<"elri.v1.object.UpdateObjectRequest"> 
    * @generated from field: repeated string remove_participants = 8;
    */
   removeParticipants: string[];
+
+  /**
+   *
+   * Entities only: an empty id places `block_id` at `parent_id`/`index`; a
+   * known id moves that placement there.
+   *
+   * @generated from field: repeated elri.v1.object.Placement set_placements = 9;
+   */
+  setPlacements: Placement[];
+
+  /**
+   * Entities only: placements to remove, with their subtrees. Blocks stay. 
+   *
+   * @generated from field: repeated string remove_placements = 10;
+   */
+  removePlacements: string[];
 };
 
 /**
@@ -286,6 +302,22 @@ export type UpdateObjectRequestJson = {
    * @generated from field: repeated string remove_participants = 8;
    */
   removeParticipants?: string[];
+
+  /**
+   *
+   * Entities only: an empty id places `block_id` at `parent_id`/`index`; a
+   * known id moves that placement there.
+   *
+   * @generated from field: repeated elri.v1.object.Placement set_placements = 9;
+   */
+  setPlacements?: PlacementJson[];
+
+  /**
+   * Entities only: placements to remove, with their subtrees. Blocks stay. 
+   *
+   * @generated from field: repeated string remove_placements = 10;
+   */
+  removePlacements?: string[];
 };
 
 /**
@@ -428,6 +460,13 @@ export type ListObjectsRequest = Message<"elri.v1.object.ListObjectsRequest"> & 
    * @generated from field: string target_id = 7;
    */
   targetId: string;
+
+  /**
+   * Only Entities that place this block, if set. 
+   *
+   * @generated from field: string placed_block_id = 8;
+   */
+  placedBlockId: string;
 };
 
 /**
@@ -480,6 +519,13 @@ export type ListObjectsRequestJson = {
    * @generated from field: string target_id = 7;
    */
   targetId?: string;
+
+  /**
+   * Only Entities that place this block, if set. 
+   *
+   * @generated from field: string placed_block_id = 8;
+   */
+  placedBlockId?: string;
 };
 
 /**

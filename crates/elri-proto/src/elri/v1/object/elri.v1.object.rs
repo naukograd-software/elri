@@ -57,6 +57,26 @@ pub struct Participant {
     #[prost(string, tag = "3")]
     pub role_id: ::prost::alloc::string::String,
 }
+///
+/// One position of a block inside a document. A block is an Object of its own;
+/// a placement only puts it somewhere in the tree. Placement identity is
+/// separate from block identity: removing a placement leaves the block in
+/// place, and one block may be placed more than once.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Placement {
+    /// Placement id, assigned by the core and stable across moves. 
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    /// Parent placement id; empty at the top level. 
+    #[prost(string, tag = "2")]
+    pub parent_id: ::prost::alloc::string::String,
+    /// Position among siblings, from 0. 
+    #[prost(int32, tag = "3")]
+    pub index: i32,
+    /// The placed block Object. 
+    #[prost(string, tag = "4")]
+    pub block_id: ::prost::alloc::string::String,
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Object {
     /// UUIDv7, canonical string form. 
@@ -88,6 +108,9 @@ pub struct Object {
     /// Type definitions only: the fields of the type. 
     #[prost(message, repeated, tag = "11")]
     pub type_fields: ::prost::alloc::vec::Vec<super::definition::TypeField>,
+    /// Entities only: placed blocks, parents before children, siblings in order. 
+    #[prost(message, repeated, tag = "12")]
+    pub placements: ::prost::alloc::vec::Vec<Placement>,
 }
 /// What an Object is. Every kind shares the same document shape. 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -188,6 +211,14 @@ pub struct UpdateObjectRequest {
     /// Relations only: slots to remove. 
     #[prost(string, repeated, tag = "8")]
     pub remove_participants: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    ///
+    /// Entities only: an empty id places `block_id` at `parent_id`/`index`; a
+    /// known id moves that placement there.
+    #[prost(message, repeated, tag = "9")]
+    pub set_placements: ::prost::alloc::vec::Vec<Placement>,
+    /// Entities only: placements to remove, with their subtrees. Blocks stay. 
+    #[prost(string, repeated, tag = "10")]
+    pub remove_placements: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct UpdateObjectResponse {
@@ -226,6 +257,9 @@ pub struct ListObjectsRequest {
     /// Only Layers over this Object, if set. 
     #[prost(string, tag = "7")]
     pub target_id: ::prost::alloc::string::String,
+    /// Only Entities that place this block, if set. 
+    #[prost(string, tag = "8")]
+    pub placed_block_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListObjectsResponse {
