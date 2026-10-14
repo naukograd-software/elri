@@ -5,6 +5,7 @@ members = [
     "crates/elri-core",
     "crates/elri-server",
     "crates/elri-cli",
+    "crates/elri-daemon",
     "apps/elri/src-tauri",
 ]
 

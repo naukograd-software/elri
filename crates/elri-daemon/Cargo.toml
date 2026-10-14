@@ -1,0 +1,22 @@
+[package]
+name = "elri-daemon"
+description = "elri local core without a window, for headless and CLI-only use"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[[bin]]
+name = "elri-daemon"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+elri-core.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal"] }
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

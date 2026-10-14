@@ -15,7 +15,13 @@ use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest, Object,
     ObjectKind, Participant, Value,
 };
+use elri_proto::elri::v1::remote::remote_service_ws::RemoteServiceClient;
+use elri_proto::elri::v1::remote::{
+    AddMemberRequest, ConnectRequest, CreateRemoteSpaceRequest, DisconnectRequest,
+    GetStatusRequest, JoinSpaceRequest, ListRemoteSpacesRequest,
+};
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
+use elri_proto::elri::v1::space::Role;
 use elri_proto::elri::v1::space::{CreateSpaceRequest, ListSpacesRequest};
 use serde_json::json;
 use ws_proto::{Client, ClientConfig, Request};
@@ -48,6 +54,42 @@ enum Cmd {
     Change {
         #[command(subcommand)]
         cmd: ChangeCmd,
+    },
+    /// The server this device synchronizes with.
+    Remote {
+        #[command(subcommand)]
+        cmd: RemoteCmd,
+    },
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum MemberRole {
+    Admin,
+    Editor,
+    Viewer,
+}
+
+#[derive(Subcommand, Debug)]
+enum RemoteCmd {
+    /// Store the server URL and token after verifying them.
+    Connect { url: String, token: String },
+    /// Forget the server; replicated Spaces stay on the device.
+    Disconnect,
+    /// Connection and per-Space replication status.
+    Status,
+    /// Spaces visible on the server.
+    Spaces,
+    /// Create a server Space and join it.
+    Create { name: String },
+    /// Replicate a server Space to this device.
+    Join { space: String },
+    /// Owner/Admin: add a member by user name.
+    AddMember {
+        #[arg(long)]
+        space: String,
+        user: String,
+        #[arg(long, value_enum, default_value_t = MemberRole::Editor)]
+        role: MemberRole,
     },
 }
 
@@ -259,6 +301,7 @@ async fn main() -> Result<()> {
         Cmd::Space { cmd } => run_space(&endpoint, conn, cmd).await?,
         Cmd::Object { cmd } => run_object(&endpoint, conn, cmd).await?,
         Cmd::Change { cmd } => run_change(&endpoint, conn, cmd).await?,
+        Cmd::Remote { cmd } => run_remote(&endpoint, conn, cmd).await?,
     };
     print(&out)
 }
@@ -282,19 +325,7 @@ async fn run_space(endpoint: &Endpoint, conn: Client, cmd: SpaceCmd) -> Result<s
             let res = client
                 .list_spaces(authed(endpoint, ListSpacesRequest {}))
                 .await?;
-            let spaces: Vec<_> = res
-                .msg
-                .spaces
-                .iter()
-                .map(|s| {
-                    json!({
-                        "id": s.id,
-                        "name": s.name,
-                        "role": s.role().as_str_name(),
-                        "authority": s.authority().as_str_name(),
-                    })
-                })
-                .collect();
+            let spaces: Vec<_> = res.msg.spaces.iter().map(space_json).collect();
             Ok(json!(spaces))
         }
         SpaceCmd::Create { name } => {
@@ -436,6 +467,107 @@ async fn run_change(
                 })
                 .collect();
             Ok(json!(changes))
+        }
+    }
+}
+
+fn space_json(s: &elri_proto::elri::v1::space::Space) -> serde_json::Value {
+    json!({
+        "id": s.id,
+        "name": s.name,
+        "role": s.role().as_str_name(),
+        "authority": s.authority().as_str_name(),
+    })
+}
+
+async fn run_remote(
+    endpoint: &Endpoint,
+    conn: Client,
+    cmd: RemoteCmd,
+) -> Result<serde_json::Value> {
+    let client = RemoteServiceClient::new(conn);
+    match cmd {
+        RemoteCmd::Connect { url, token } => {
+            let res = client
+                .connect(authed(endpoint, ConnectRequest { url, token }))
+                .await?;
+            Ok(json!({ "user_id": res.msg.user_id, "user_name": res.msg.user_name }))
+        }
+        RemoteCmd::Disconnect => {
+            client
+                .disconnect(authed(endpoint, DisconnectRequest {}))
+                .await?;
+            Ok(json!({ "disconnected": true }))
+        }
+        RemoteCmd::Status => {
+            let st = client
+                .get_status(authed(endpoint, GetStatusRequest {}))
+                .await?
+                .msg;
+            Ok(json!({
+                "configured": st.configured,
+                "url": st.url,
+                "user_name": st.user_name,
+                "connected": st.connected,
+                "spaces": st.spaces.iter().map(|s| json!({
+                    "space_id": s.space_id,
+                    "cursor": s.cursor,
+                    "pending": s.pending,
+                    "rejected": s.rejected,
+                })).collect::<Vec<_>>(),
+            }))
+        }
+        RemoteCmd::Spaces => {
+            let res = client
+                .list_remote_spaces(authed(endpoint, ListRemoteSpacesRequest {}))
+                .await?;
+            let spaces: Vec<_> = res
+                .msg
+                .spaces
+                .iter()
+                .map(|r| {
+                    let mut v = r.space.as_ref().map(space_json).unwrap_or_default();
+                    v["joined"] = json!(r.joined);
+                    v
+                })
+                .collect();
+            Ok(json!(spaces))
+        }
+        RemoteCmd::Create { name } => {
+            let res = client
+                .create_remote_space(authed(endpoint, CreateRemoteSpaceRequest { name }))
+                .await?;
+            let Some(s) = res.msg.space else {
+                bail!("core returned no space");
+            };
+            Ok(space_json(&s))
+        }
+        RemoteCmd::Join { space } => {
+            let res = client
+                .join_space(authed(endpoint, JoinSpaceRequest { space_id: space }))
+                .await?;
+            let Some(s) = res.msg.space else {
+                bail!("core returned no space");
+            };
+            Ok(space_json(&s))
+        }
+        RemoteCmd::AddMember { space, user, role } => {
+            let role = match role {
+                MemberRole::Admin => Role::Admin,
+                MemberRole::Editor => Role::Editor,
+                MemberRole::Viewer => Role::Viewer,
+            };
+            client
+                .add_member(authed(
+                    endpoint,
+                    AddMemberRequest {
+                        space_id: space,
+                        user_name: user,
+                        role: role.into(),
+                    },
+                ))
+                .await?;
+            Ok(json!({ "added": true }))
         }
     }
 }

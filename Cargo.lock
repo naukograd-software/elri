@@ -1456,6 +1456,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "elri-daemon"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "elri-core",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "elri-proto"
 version = "0.1.0"
 dependencies = [
