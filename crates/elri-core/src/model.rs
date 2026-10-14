@@ -21,8 +21,11 @@
 use std::collections::HashMap;
 
 use elri_proto::elri::v1::definition::{FieldKind, TypeField};
-use elri_proto::elri::v1::object::{value, Object, ObjectKind, Participant, Value};
-use loro::{ExportMode, LoroDoc, LoroMap, LoroValue, VersionVector};
+use elri_proto::elri::v1::object::{value, Object, ObjectKind, Participant, Value, ValueList};
+use loro::{
+    Container, ExportMode, LoroDoc, LoroMap, LoroMovableList, LoroText, LoroValue, UpdateOptions,
+    ValueOrContainer, VersionVector,
+};
 use uuid::Uuid;
 
 /// Identity of an Object: a `UUIDv7`. The protocol carries it as its
@@ -87,6 +90,17 @@ pub fn kind_accepts(kind: FieldKind, v: &Value) -> bool {
             | (FieldKind::String, Some(value::Value::String(_)))
             | (FieldKind::Time, Some(value::Value::TimeMs(_)))
             | (FieldKind::Ref, Some(value::Value::Ref(_)))
+            | (FieldKind::Text, Some(value::Value::Text(_)))
+            | (FieldKind::List, Some(value::Value::List(_)))
+    )
+}
+
+/// Whether a value is a scalar (stored directly in the fields map) rather
+/// than a container (text, list).
+pub fn is_scalar(v: &Value) -> bool {
+    !matches!(
+        v.value,
+        Some(value::Value::Text(_) | value::Value::List(_)) | None
     )
 }
 
@@ -109,7 +123,7 @@ fn tagged(tag: &str, value: LoroValue) -> LoroValue {
     LoroValue::from(m)
 }
 
-/// Loro form of a field value.
+/// Loro form of a scalar field value; `None` for containers and empties.
 pub fn value_to_loro(v: &Value) -> Option<LoroValue> {
     Some(match v.value.as_ref()? {
         value::Value::Bool(b) => LoroValue::from(*b),
@@ -118,7 +132,22 @@ pub fn value_to_loro(v: &Value) -> Option<LoroValue> {
         value::Value::String(s) => LoroValue::from(s.as_str()),
         value::Value::TimeMs(ms) => tagged(TIME_TAG, LoroValue::from(*ms)),
         value::Value::Ref(id) => tagged(REF_TAG, LoroValue::from(id.as_str())),
+        value::Value::Text(_) | value::Value::List(_) => return None,
     })
+}
+
+/// Shorthand for a collaborative text value.
+pub fn text_value(s: impl Into<String>) -> Value {
+    Value {
+        value: Some(value::Value::Text(s.into())),
+    }
+}
+
+/// Shorthand for a list value.
+pub fn list_value(items: Vec<Value>) -> Value {
+    Value {
+        value: Some(value::Value::List(ValueList { items })),
+    }
 }
 
 /// Field value of a Loro value; `None` for shapes a field cannot hold.
@@ -195,6 +224,12 @@ pub enum ModelError {
     /// A value shape a field cannot hold.
     #[error("field {0}: empty value")]
     EmptyValue(String),
+    /// A list item that is not a scalar.
+    #[error("field {0}: list items must be scalars")]
+    NestedContainer(String),
+    /// Text update did not finish in time.
+    #[error("field {0}: text update timed out")]
+    TextTimeout(String),
     /// Loro refused an operation.
     #[error(transparent)]
     Loro(#[from] loro::LoroError),
@@ -328,11 +363,61 @@ impl ObjectDoc {
         self.doc.get_map("type_fields")
     }
 
-    /// Sets a scalar field.
+    /// Sets a field. Scalars replace the previous value; a text applies the
+    /// minimal edit to the existing collaborative text; a list applies the
+    /// minimal insertions and deletions to the existing list.
     pub fn set_field(&self, field_id: &str, value: &Value) -> Result<(), ModelError> {
-        let v = value_to_loro(value).ok_or_else(|| ModelError::EmptyValue(field_id.to_owned()))?;
-        self.fields().insert(field_id, v)?;
-        Ok(())
+        match value.value.as_ref() {
+            None => Err(ModelError::EmptyValue(field_id.to_owned())),
+            Some(value::Value::Text(s)) => {
+                let text = self.text_container(field_id)?;
+                text.update(s, UpdateOptions::default())
+                    .map_err(|_| ModelError::TextTimeout(field_id.to_owned()))?;
+                Ok(())
+            }
+            Some(value::Value::List(l)) => {
+                let mut items = Vec::with_capacity(l.items.len());
+                for it in &l.items {
+                    items.push(
+                        value_to_loro(it)
+                            .ok_or_else(|| ModelError::NestedContainer(field_id.to_owned()))?,
+                    );
+                }
+                let list = self.list_container(field_id)?;
+                apply_list_diff(&list, &items)?;
+                Ok(())
+            }
+            Some(_) => {
+                let v = value_to_loro(value)
+                    .ok_or_else(|| ModelError::EmptyValue(field_id.to_owned()))?;
+                self.fields().insert(field_id, v)?;
+                Ok(())
+            }
+        }
+    }
+
+    /// The text container of a field, replacing a scalar or a container of
+    /// another type if one is there.
+    fn text_container(&self, field_id: &str) -> Result<LoroText, ModelError> {
+        if !matches!(
+            self.fields().get(field_id),
+            None | Some(ValueOrContainer::Container(Container::Text(_)))
+        ) {
+            self.fields().delete(field_id)?;
+        }
+        Ok(self.fields().ensure_mergeable_text(field_id)?)
+    }
+
+    /// The list container of a field, replacing a scalar or a container of
+    /// another type if one is there.
+    fn list_container(&self, field_id: &str) -> Result<LoroMovableList, ModelError> {
+        if !matches!(
+            self.fields().get(field_id),
+            None | Some(ValueOrContainer::Container(Container::MovableList(_)))
+        ) {
+            self.fields().delete(field_id)?;
+        }
+        Ok(self.fields().ensure_mergeable_movable_list(field_id)?)
     }
 
     /// Removes a field.
@@ -428,13 +513,26 @@ impl ObjectDoc {
         };
         types.sort();
 
-        let fields: HashMap<String, Value> = match self.fields().get_value() {
-            LoroValue::Map(m) => m
-                .iter()
-                .filter_map(|(k, v)| value_from_loro(v).map(|v| (k.clone(), v)))
-                .collect(),
-            _ => HashMap::new(),
-        };
+        let mut fields: HashMap<String, Value> = HashMap::new();
+        if let LoroValue::Map(m) = self.fields().get_value() {
+            for key in m.keys() {
+                let value = match self.fields().get(key) {
+                    Some(ValueOrContainer::Value(v)) => value_from_loro(&v),
+                    Some(ValueOrContainer::Container(Container::Text(t))) => {
+                        Some(text_value(t.to_string()))
+                    }
+                    Some(ValueOrContainer::Container(Container::MovableList(l))) => {
+                        let items: Option<Vec<Value>> =
+                            l.to_vec().iter().map(value_from_loro).collect();
+                        items.map(list_value)
+                    }
+                    _ => None,
+                };
+                if let Some(v) = value {
+                    fields.insert(key.clone(), v);
+                }
+            }
+        }
 
         let mut participants = Vec::new();
         if let LoroValue::Map(m) = self.participants().get_value() {
@@ -485,6 +583,42 @@ impl ObjectDoc {
             type_fields,
         })
     }
+}
+
+/// Turns `list` into `target` with the fewest insertions and deletions, so
+/// that concurrent edits to untouched items still merge.
+fn apply_list_diff(list: &LoroMovableList, target: &[LoroValue]) -> Result<(), ModelError> {
+    let current = list.to_vec();
+    let (n, m) = (current.len(), target.len());
+    // Longest common subsequence table.
+    let mut lcs = vec![vec![0usize; m + 1]; n + 1];
+    for i in (0..n).rev() {
+        for j in (0..m).rev() {
+            lcs[i][j] = if current[i] == target[j] {
+                lcs[i + 1][j + 1] + 1
+            } else {
+                lcs[i + 1][j].max(lcs[i][j + 1])
+            };
+        }
+    }
+    // Walk the table, editing the live list in place; `pos` tracks the
+    // position in the live list as it changes.
+    let (mut i, mut j, mut pos) = (0usize, 0usize, 0usize);
+    while i < n || j < m {
+        if i < n && j < m && current[i] == target[j] {
+            i += 1;
+            j += 1;
+            pos += 1;
+        } else if j < m && (i >= n || lcs[i][j + 1] >= lcs[i + 1][j]) {
+            list.insert(pos, target[j].clone())?;
+            j += 1;
+            pos += 1;
+        } else {
+            list.delete(pos, 1)?;
+            i += 1;
+        }
+    }
+    Ok(())
 }
 
 /// Current wall-clock time in milliseconds since the Unix epoch.
@@ -582,6 +716,69 @@ mod tests {
         let rec = layer.read().expect("ok");
         assert_eq!(rec.kind(), ObjectKind::Layer);
         assert_eq!(rec.target_id.as_deref(), Some(a.to_string().as_str()));
+    }
+
+    #[test]
+    fn text_fields_merge_and_lists_diff() {
+        let space = ObjectId::new();
+        let doc = ObjectDoc::create(ObjectId::new(), space, ObjectKind::Entity, 1).expect("ok");
+        doc.set_field("body", &text_value("hello world"))
+            .expect("ok");
+        doc.set_field(
+            "tags",
+            &list_value(vec![string_value("a"), string_value("b")]),
+        )
+        .expect("ok");
+        doc.touch(2).expect("ok");
+        let rec = doc.read().expect("ok");
+        assert_eq!(rec.fields["body"], text_value("hello world"));
+        assert_eq!(
+            rec.fields["tags"],
+            list_value(vec![string_value("a"), string_value("b")])
+        );
+
+        // A concurrent replica edits the same text and list; both sides keep
+        // their changes after merging because edits are minimal.
+        let other = ObjectDoc::from_snapshot(doc.id(), &doc.snapshot().expect("ok")).expect("ok");
+        other
+            .set_field("body", &text_value("hello big world"))
+            .expect("ok");
+        other
+            .set_field(
+                "tags",
+                &list_value(vec![
+                    string_value("a"),
+                    string_value("b"),
+                    string_value("c"),
+                ]),
+            )
+            .expect("ok");
+        other.touch(3).expect("ok");
+        doc.set_field("body", &text_value("hello world!"))
+            .expect("ok");
+        doc.set_field("tags", &list_value(vec![string_value("b")]))
+            .expect("ok");
+        doc.touch(3).expect("ok");
+
+        let from_other = other.updates_since(&VersionVector::default()).expect("ok");
+        assert!(doc.import(&from_other).expect("ok"));
+        let merged = doc.read().expect("ok");
+        assert_eq!(merged.fields["body"], text_value("hello big world!"));
+        assert_eq!(
+            merged.fields["tags"],
+            list_value(vec![string_value("b"), string_value("c")])
+        );
+
+        // Changing a field's shape replaces it.
+        doc.set_field("body", &string_value("plain")).expect("ok");
+        doc.set_field("tags", &text_value("now text")).expect("ok");
+        let rec = doc.read().expect("ok");
+        assert_eq!(rec.fields["body"], string_value("plain"));
+        assert_eq!(rec.fields["tags"], text_value("now text"));
+        assert!(matches!(
+            doc.set_field("bad", &list_value(vec![text_value("nested")])),
+            Err(ModelError::NestedContainer(_))
+        ));
     }
 
     #[test]

@@ -13,7 +13,7 @@ use elri_proto::elri::v1::core::GetInfoRequest;
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest, Object,
-    ObjectKind, Participant, Value,
+    ObjectKind, Participant, Value, ValueList,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::RemoteServiceClient;
 use elri_proto::elri::v1::remote::{
@@ -157,7 +157,7 @@ enum ObjectCmd {
         #[arg(long = "type")]
         types: Vec<String>,
         /// Fields as `id=value`; value is parsed as bool, int, float, `ref:<id>`,
-        /// `time:<ms>`, or text.
+        /// `time:<ms>`, `text:<collaborative text>`, `list:a,b,c`, or a string.
         #[arg(long = "field", value_parser = parse_field)]
         fields: Vec<(String, Value)>,
         /// Relation participants as `slot=object_id[:role_id]`.
@@ -210,6 +210,19 @@ fn parse_field(s: &str) -> Result<(String, Value), String> {
     }
     let v = if let Some(id) = v.strip_prefix("ref:") {
         value::Value::Ref(id.to_owned())
+    } else if let Some(t) = v.strip_prefix("text:") {
+        value::Value::Text(t.to_owned())
+    } else if let Some(items) = v.strip_prefix("list:") {
+        value::Value::List(ValueList {
+            items: items
+                .split(',')
+                .map(str::trim)
+                .filter(|x| !x.is_empty())
+                .map(|x| Value {
+                    value: Some(value::Value::String(x.to_owned())),
+                })
+                .collect(),
+        })
     } else if let Some(ms) = v.strip_prefix("time:") {
         value::Value::TimeMs(ms.parse().map_err(|e| format!("time: {e}"))?)
     } else if v == "true" || v == "false" {
@@ -261,6 +274,8 @@ fn value_json(v: &Value) -> serde_json::Value {
         Some(value::Value::String(s)) => json!(s),
         Some(value::Value::TimeMs(t)) => json!({ "time_ms": t }),
         Some(value::Value::Ref(r)) => json!({ "ref": r }),
+        Some(value::Value::Text(t)) => json!({ "text": t }),
+        Some(value::Value::List(l)) => json!(l.items.iter().map(value_json).collect::<Vec<_>>()),
         None => serde_json::Value::Null,
     }
 }

@@ -18,10 +18,20 @@ enum ObjectKind {
     OBJECT_KIND_ROLE_DEF = 6;
 }
 
+/* Items of a list value; scalars only. */
+message ValueList {
+    repeated Value items = 1;
+}
+
 /*
 A field value. Fields are keyed by field-definition id; the definition fixes
-which variant is valid. Text containers and collections are not represented
-here yet.
+which variant is valid.
+
+`string` is a last-writer-wins scalar. `text` is collaborative: concurrent
+edits merge character by character, and setting it applies the minimal
+difference to the current text rather than replacing it. `list` is an ordered
+collection of scalars; setting it applies the minimal insertions and
+deletions.
 */
 message Value {
     oneof value {
@@ -33,6 +43,8 @@ message Value {
         int64 time_ms = 5;
         /* Reference to another Object by id. */
         string ref = 6;
+        string text = 7;
+        ValueList list = 8;
     }
 }
 

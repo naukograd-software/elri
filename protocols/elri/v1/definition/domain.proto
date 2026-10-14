@@ -18,6 +18,10 @@ enum FieldKind {
     FIELD_KIND_STRING = 4;
     FIELD_KIND_TIME = 5;
     FIELD_KIND_REF = 6;
+    /* Collaborative text. */
+    FIELD_KIND_TEXT = 7;
+    /* Ordered list of scalars. */
+    FIELD_KIND_LIST = 8;
 }
 
 message FieldDefinition {

@@ -3,9 +3,18 @@
 import { create } from '@bufbuild/protobuf'
 import { type Value, ValueSchema } from '@elri/proto/elri/v1/object/domain_pb.ts'
 
-export type ValueKind = 'string' | 'int' | 'double' | 'bool' | 'time' | 'ref'
+export type ValueKind = 'string' | 'text' | 'int' | 'double' | 'bool' | 'time' | 'ref' | 'list'
 
-export const VALUE_KINDS: ValueKind[] = ['string', 'int', 'double', 'bool', 'time', 'ref']
+export const VALUE_KINDS: ValueKind[] = [
+  'string',
+  'text',
+  'int',
+  'double',
+  'bool',
+  'time',
+  'ref',
+  'list',
+]
 
 export function kindOf(v: Value): ValueKind {
   switch (v.value.case) {
@@ -19,6 +28,10 @@ export function kindOf(v: Value): ValueKind {
       return 'time'
     case 'ref':
       return 'ref'
+    case 'text':
+      return 'text'
+    case 'list':
+      return 'list'
     default:
       return 'string'
   }
@@ -38,6 +51,10 @@ export function textOf(v: Value): string {
       return new Date(Number(v.value.value)).toISOString()
     case 'ref':
       return v.value.value
+    case 'text':
+      return v.value.value
+    case 'list':
+      return v.value.value.items.map(textOf).join(', ')
     default:
       return ''
   }
@@ -69,6 +86,17 @@ export function parseValue(kind: ValueKind, text: string): Value | string {
     case 'ref': {
       if (!/^[0-9a-f-]{36}$/i.test(t)) return 'expected an object id'
       return create(ValueSchema, { value: { case: 'ref', value: t } })
+    }
+    case 'text':
+      return create(ValueSchema, { value: { case: 'text', value: text } })
+    case 'list': {
+      // Comma-separated strings; typed items come later with a real editor.
+      const items = text
+        .split(',')
+        .map((x) => x.trim())
+        .filter((x) => x.length > 0)
+        .map((x) => create(ValueSchema, { value: { case: 'string', value: x } }))
+      return create(ValueSchema, { value: { case: 'list', value: { items } } })
     }
   }
 }

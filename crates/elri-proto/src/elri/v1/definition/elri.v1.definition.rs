@@ -80,6 +80,10 @@ pub enum FieldKind {
     String = 4,
     Time = 5,
     Ref = 6,
+    /// Collaborative text. 
+    Text = 7,
+    /// Ordered list of scalars. 
+    List = 8,
 }
 impl FieldKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -95,6 +99,8 @@ impl FieldKind {
             Self::String => "FIELD_KIND_STRING",
             Self::Time => "FIELD_KIND_TIME",
             Self::Ref => "FIELD_KIND_REF",
+            Self::Text => "FIELD_KIND_TEXT",
+            Self::List => "FIELD_KIND_LIST",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -107,6 +113,8 @@ impl FieldKind {
             "FIELD_KIND_STRING" => Some(Self::String),
             "FIELD_KIND_TIME" => Some(Self::Time),
             "FIELD_KIND_REF" => Some(Self::Ref),
+            "FIELD_KIND_TEXT" => Some(Self::Text),
+            "FIELD_KIND_LIST" => Some(Self::List),
             _ => None,
         }
     }

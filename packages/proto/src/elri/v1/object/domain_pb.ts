@@ -12,13 +12,49 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/object/domain.proto.
  */
 export const file_elri_v1_object_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0InUKBVZhbHVlEg4KBGJvb2wYASABKAhIABINCgNpbnQYAiABKANIABIQCgZkb3VibGUYAyABKAFIABIQCgZzdHJpbmcYBCABKAlIABIRCgd0aW1lX21zGAUgASgDSAASDQoDcmVmGAYgASgJSABCBwoFdmFsdWUiPwoLUGFydGljaXBhbnQSDAoEc2xvdBgBIAEoCRIRCglvYmplY3RfaWQYAiABKAkSDwoHcm9sZV9pZBgDIAEoCSLCAwoGT2JqZWN0EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEigKBGtpbmQYAyABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAQgAygJEjIKBmZpZWxkcxgFIAMoCzIiLmVscmkudjEub2JqZWN0Lk9iamVjdC5GaWVsZHNFbnRyeRIVCg1jcmVhdGVkX2F0X21zGAYgASgDEhUKDXVwZGF0ZWRfYXRfbXMYByABKAMSGgoNZGVsZXRlZF9hdF9tcxgIIAEoA0gAiAEBEjEKDHBhcnRpY2lwYW50cxgJIAMoCzIbLmVscmkudjEub2JqZWN0LlBhcnRpY2lwYW50EhYKCXRhcmdldF9pZBgKIAEoCUgBiAEBEjIKC3R5cGVfZmllbGRzGAsgAygLMh0uZWxyaS52MS5kZWZpbml0aW9uLlR5cGVGaWVsZBpECgtGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5lbHJpLnYxLm9iamVjdC5WYWx1ZToCOAFCEAoOX2RlbGV0ZWRfYXRfbXNCDAoKX3RhcmdldF9pZCrBAQoKT2JqZWN0S2luZBIbChdPQkpFQ1RfS0lORF9VTlNQRUNJRklFRBAAEhYKEk9CSkVDVF9LSU5EX0VOVElUWRABEhgKFE9CSkVDVF9LSU5EX1JFTEFUSU9OEAISFQoRT0JKRUNUX0tJTkRfTEFZRVIQAxIZChVPQkpFQ1RfS0lORF9GSUVMRF9ERUYQBBIYChRPQkpFQ1RfS0lORF9UWVBFX0RFRhAFEhgKFE9CSkVDVF9LSU5EX1JPTEVfREVGEAZiBnByb3RvMw", [file_elri_v1_definition_domain]);
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0IjEKCVZhbHVlTGlzdBIkCgVpdGVtcxgBIAMoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlIrABCgVWYWx1ZRIOCgRib29sGAEgASgISAASDQoDaW50GAIgASgDSAASEAoGZG91YmxlGAMgASgBSAASEAoGc3RyaW5nGAQgASgJSAASEQoHdGltZV9tcxgFIAEoA0gAEg0KA3JlZhgGIAEoCUgAEg4KBHRleHQYByABKAlIABIpCgRsaXN0GAggASgLMhkuZWxyaS52MS5vYmplY3QuVmFsdWVMaXN0SABCBwoFdmFsdWUiPwoLUGFydGljaXBhbnQSDAoEc2xvdBgBIAEoCRIRCglvYmplY3RfaWQYAiABKAkSDwoHcm9sZV9pZBgDIAEoCSLCAwoGT2JqZWN0EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEigKBGtpbmQYAyABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAQgAygJEjIKBmZpZWxkcxgFIAMoCzIiLmVscmkudjEub2JqZWN0Lk9iamVjdC5GaWVsZHNFbnRyeRIVCg1jcmVhdGVkX2F0X21zGAYgASgDEhUKDXVwZGF0ZWRfYXRfbXMYByABKAMSGgoNZGVsZXRlZF9hdF9tcxgIIAEoA0gAiAEBEjEKDHBhcnRpY2lwYW50cxgJIAMoCzIbLmVscmkudjEub2JqZWN0LlBhcnRpY2lwYW50EhYKCXRhcmdldF9pZBgKIAEoCUgBiAEBEjIKC3R5cGVfZmllbGRzGAsgAygLMh0uZWxyaS52MS5kZWZpbml0aW9uLlR5cGVGaWVsZBpECgtGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5lbHJpLnYxLm9iamVjdC5WYWx1ZToCOAFCEAoOX2RlbGV0ZWRfYXRfbXNCDAoKX3RhcmdldF9pZCrBAQoKT2JqZWN0S2luZBIbChdPQkpFQ1RfS0lORF9VTlNQRUNJRklFRBAAEhYKEk9CSkVDVF9LSU5EX0VOVElUWRABEhgKFE9CSkVDVF9LSU5EX1JFTEFUSU9OEAISFQoRT0JKRUNUX0tJTkRfTEFZRVIQAxIZChVPQkpFQ1RfS0lORF9GSUVMRF9ERUYQBBIYChRPQkpFQ1RfS0lORF9UWVBFX0RFRhAFEhgKFE9CSkVDVF9LSU5EX1JPTEVfREVGEAZiBnByb3RvMw", [file_elri_v1_definition_domain]);
+
+/**
+ * Items of a list value; scalars only. 
+ *
+ * @generated from message elri.v1.object.ValueList
+ */
+export type ValueList = Message<"elri.v1.object.ValueList"> & {
+  /**
+   * @generated from field: repeated elri.v1.object.Value items = 1;
+   */
+  items: Value[];
+};
+
+/**
+ * Items of a list value; scalars only. 
+ *
+ * @generated from message elri.v1.object.ValueList
+ */
+export type ValueListJson = {
+  /**
+   * @generated from field: repeated elri.v1.object.Value items = 1;
+   */
+  items?: ValueJson[];
+};
+
+/**
+ * Describes the message elri.v1.object.ValueList.
+ * Use `create(ValueListSchema)` to create a new message.
+ */
+export const ValueListSchema: GenMessage<ValueList, {jsonType: ValueListJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_domain, 0);
 
 /**
  *
  * A field value. Fields are keyed by field-definition id; the definition fixes
- * which variant is valid. Text containers and collections are not represented
- * here yet.
+ * which variant is valid.
+ *
+ * `string` is a last-writer-wins scalar. `text` is collaborative: concurrent
+ * edits merge character by character, and setting it applies the minimal
+ * difference to the current text rather than replacing it. `list` is an ordered
+ * collection of scalars; setting it applies the minimal insertions and
+ * deletions.
  *
  * @generated from message elri.v1.object.Value
  */
@@ -66,14 +102,31 @@ export type Value = Message<"elri.v1.object.Value"> & {
      */
     value: string;
     case: "ref";
+  } | {
+    /**
+     * @generated from field: string text = 7;
+     */
+    value: string;
+    case: "text";
+  } | {
+    /**
+     * @generated from field: elri.v1.object.ValueList list = 8;
+     */
+    value: ValueList;
+    case: "list";
   } | { case: undefined; value?: undefined };
 };
 
 /**
  *
  * A field value. Fields are keyed by field-definition id; the definition fixes
- * which variant is valid. Text containers and collections are not represented
- * here yet.
+ * which variant is valid.
+ *
+ * `string` is a last-writer-wins scalar. `text` is collaborative: concurrent
+ * edits merge character by character, and setting it applies the minimal
+ * difference to the current text rather than replacing it. `list` is an ordered
+ * collection of scalars; setting it applies the minimal insertions and
+ * deletions.
  *
  * @generated from message elri.v1.object.Value
  */
@@ -111,6 +164,16 @@ export type ValueJson = {
    * @generated from field: string ref = 6;
    */
   ref?: string;
+
+  /**
+   * @generated from field: string text = 7;
+   */
+  text?: string;
+
+  /**
+   * @generated from field: elri.v1.object.ValueList list = 8;
+   */
+  list?: ValueListJson;
 };
 
 /**
@@ -118,7 +181,7 @@ export type ValueJson = {
  * Use `create(ValueSchema)` to create a new message.
  */
 export const ValueSchema: GenMessage<Value, {jsonType: ValueJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_domain, 0);
+  messageDesc(file_elri_v1_object_domain, 1);
 
 /**
  * One participant of a Relation. 
@@ -181,7 +244,7 @@ export type ParticipantJson = {
  * Use `create(ParticipantSchema)` to create a new message.
  */
 export const ParticipantSchema: GenMessage<Participant, {jsonType: ParticipantJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_domain, 1);
+  messageDesc(file_elri_v1_object_domain, 2);
 
 /**
  * @generated from message elri.v1.object.Object
@@ -336,7 +399,7 @@ export type ObjectJson = {
  * Use `create(ObjectSchema)` to create a new message.
  */
 export const ObjectSchema: GenMessage<Object$, {jsonType: ObjectJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_domain, 2);
+  messageDesc(file_elri_v1_object_domain, 3);
 
 /**
  * What an Object is. Every kind shares the same document shape. 

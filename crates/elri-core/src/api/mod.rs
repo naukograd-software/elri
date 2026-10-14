@@ -39,7 +39,9 @@ use ws_proto::server::{Handler, OriginPolicy};
 use ws_proto::{Code, Request, Response, Server, ServerConfig, Status};
 
 use crate::device::{DeviceId, LaunchToken};
-use crate::model::{is_definition, kind_accepts, now_ms, ModelError, ObjectDoc, ObjectId};
+use crate::model::{
+    is_definition, is_scalar, kind_accepts, now_ms, ModelError, ObjectDoc, ObjectId,
+};
 use crate::remote::{Remote, RemoteError};
 use crate::store::{ObjectFilter, SpaceStore, Store, StoreError};
 use crate::BuildInfo;
@@ -107,9 +109,11 @@ impl From<StoreError> for Status {
             StoreError::SpaceNotFound(_) | StoreError::ObjectNotFound(_) => {
                 Status::new(Code::NotFound, e.to_string())
             }
-            StoreError::Model(ModelError::InvalidId(_) | ModelError::EmptyValue(_)) => {
-                Status::new(Code::InvalidArgument, e.to_string())
-            }
+            StoreError::Model(
+                ModelError::InvalidId(_)
+                | ModelError::EmptyValue(_)
+                | ModelError::NestedContainer(_),
+            ) => Status::new(Code::InvalidArgument, e.to_string()),
             other => {
                 tracing::error!(error = %other, "storage failure");
                 Status::new(Code::Internal, "storage failure")
@@ -147,14 +151,25 @@ fn kind_arg(kind: i32) -> Result<ObjectKind, Status> {
 // --- validation --------------------------------------------------------------
 
 fn check_fields(fields: &std::collections::HashMap<String, Value>) -> Result<(), Status> {
+    use elri_proto::elri::v1::object::value::Value as V;
     for (id, v) in fields {
         if id.is_empty() {
             return Err(invalid("field id must not be empty"));
         }
         match &v.value {
             None => return Err(invalid(format!("field {id}: value is empty"))),
-            Some(elri_proto::elri::v1::object::value::Value::Ref(r)) => {
+            Some(V::Ref(r)) => {
                 parse_id(r, &format!("field {id}"))?;
+            }
+            Some(V::List(l)) => {
+                for item in &l.items {
+                    if !is_scalar(item) {
+                        return Err(invalid(format!("field {id}: list items must be scalars")));
+                    }
+                    if let Some(V::Ref(r)) = &item.value {
+                        parse_id(r, &format!("field {id}"))?;
+                    }
+                }
             }
             Some(_) => {}
         }

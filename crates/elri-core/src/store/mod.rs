@@ -1103,7 +1103,9 @@ async fn write_projections(
             Some(value::Value::String(s)) => row.v_text = Some(s.clone()),
             Some(value::Value::TimeMs(t)) => row.v_time = Some(*t),
             Some(value::Value::Ref(r)) => row.v_ref = Some(uuid_arg(r)?),
-            None => continue,
+            Some(value::Value::Text(t)) => row.v_text = Some(t.clone()),
+            // Lists are not projected yet; they are read from the document.
+            Some(value::Value::List(_)) | None => continue,
         }
         toasty::create!(FieldValueRow {
             object_id: row.object_id,
