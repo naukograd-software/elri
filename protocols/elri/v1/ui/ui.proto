@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package elri.v1.ui;
+
+import "elri/v1/ui/domain.proto";
+
+/*
+Interfaces are Objects; whoever can write the Object can build the
+interface. The renderer draws what `Evaluate` returns and reports events
+through `Dispatch`.
+*/
+service InterfaceService {
+    rpc CreateInterface(CreateInterfaceRequest) returns (CreateInterfaceResponse);
+    rpc GetInterface(GetInterfaceRequest) returns (GetInterfaceResponse);
+    rpc ListInterfaces(ListInterfacesRequest) returns (ListInterfacesResponse);
+    /* Edits a draft: name, state declarations, and nodes (an empty node id
+       creates, a known id moves or rewrites). */
+    rpc UpdateInterface(UpdateInterfaceRequest) returns (UpdateInterfaceResponse);
+    /* Freezes the draft as the next version. */
+    rpc PublishInterface(PublishInterfaceRequest) returns (PublishInterfaceResponse);
+    /* Which version this device shows for a draft; 0 = the draft itself. */
+    rpc SelectVersion(SelectVersionRequest) returns (SelectVersionResponse);
+    /* Evaluates every binding against the Space and the given state. */
+    rpc Evaluate(EvaluateRequest) returns (EvaluateResponse);
+    /* Runs a node's handler for an event with the given state and payload. */
+    rpc Dispatch(DispatchRequest) returns (DispatchResponse);
+}
+
+message CreateInterfaceRequest {
+    string space_id = 1;
+    string name = 2;
+    string state_json = 3;
+}
+
+message CreateInterfaceResponse {
+    Interface interface = 1;
+}
+
+message GetInterfaceRequest {
+    string space_id = 1;
+    string id = 2;
+    /* Resolve to the version this device has selected for the draft. */
+    bool selected = 3;
+}
+
+message GetInterfaceResponse {
+    Interface interface = 1;
+    /* The version this device has selected for the draft; 0 = draft. */
+    int32 selected_version = 2;
+}
+
+message ListInterfacesRequest {
+    string space_id = 1;
+    /* Published copies of this draft instead of drafts. */
+    string versions_of = 2;
+    bool include_deleted = 3;
+}
+
+message ListInterfacesResponse {
+    repeated Interface interfaces = 1;
+}
+
+message UpdateInterfaceRequest {
+    string space_id = 1;
+    string id = 2;
+    optional string name = 3;
+    optional string state_json = 4;
+    /* Empty id creates at parent/index; a known id moves there and takes
+       the given type, props, bindings, and handlers. */
+    repeated Node set_nodes = 5;
+    /* Node ids to remove with their subtrees. */
+    repeated string remove_nodes = 6;
+}
+
+message UpdateInterfaceResponse {
+    Interface interface = 1;
+}
+
+message PublishInterfaceRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message PublishInterfaceResponse {
+    Interface version = 1;
+}
+
+message SelectVersionRequest {
+    string space_id = 1;
+    string draft_id = 2;
+    /* 0 = show the draft. */
+    int32 version = 3;
+}
+
+message SelectVersionResponse {
+    int32 version = 1;
+}
+
+message EvaluateRequest {
+    string space_id = 1;
+    /* Draft or version id. */
+    string id = 2;
+    /* Current local state as a JSON object. */
+    string state_json = 3;
+}
+
+message EvaluateResponse {
+    repeated NodeValues nodes = 1;
+}
+
+message DispatchRequest {
+    string space_id = 1;
+    string id = 2;
+    string node_id = 3;
+    /* `click`, `change`, `submit`, ... */
+    string event = 4;
+    string state_json = 5;
+    /* Event payload as JSON: the input's value, the chosen item, ... */
+    string payload_json = 6;
+}
+
+message DispatchResponse {
+    /* State after the handler ran. */
+    string state_json = 1;
+    repeated string logs = 2;
+    string error = 3;
+}

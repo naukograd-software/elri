@@ -5,6 +5,8 @@ import { ListSpacesRequestSchema } from '@elri/proto/elri/v1/space/space_pb.ts'
 import { useCallback, useEffect, useState } from 'react'
 import { type CoreClients, connect, errorText } from './core.ts'
 import { watch } from './events.ts'
+import { InterfaceList } from './InterfaceList.tsx'
+import { InterfaceView } from './InterfaceView.tsx'
 import { RemotePanel } from './RemotePanel.tsx'
 import { SpaceList } from './SpaceList.tsx'
 import { SpaceView } from './SpaceView.tsx'
@@ -20,6 +22,7 @@ export function App() {
   const [spaces, setSpaces] = useState<Space[]>([])
   const [current, setCurrent] = useState<Space | null>(null)
   const [panel, setPanel] = useState<'space' | 'remote'>('space')
+  const [iface, setIface] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const refreshSpaces = useCallback(async (c: CoreClients) => {
@@ -79,10 +82,19 @@ export function App() {
           current={panel === 'space' ? current : null}
           onSelect={(s) => {
             setCurrent(s)
+            setIface(null)
             setPanel('space')
           }}
           onChanged={() => refreshSpaces(clients)}
         />
+        {current && panel === 'space' && (
+          <InterfaceList
+            clients={clients}
+            spaceId={current.id}
+            current={iface}
+            onSelect={setIface}
+          />
+        )}
         <div className="section" style={{ marginTop: 24 }}>
           <h3>Device</h3>
           <button type="button" onClick={() => setPanel('remote')}>
@@ -97,6 +109,10 @@ export function App() {
       </aside>
       {panel === 'remote' ? (
         <RemotePanel clients={clients} onChanged={() => refreshSpaces(clients)} />
+      ) : current && iface ? (
+        <main className="main">
+          <InterfaceView key={iface} clients={clients} spaceId={current.id} interfaceId={iface} />
+        </main>
       ) : current ? (
         <SpaceView key={current.id} clients={clients} space={current} />
       ) : (

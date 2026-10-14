@@ -45,6 +45,11 @@ use elri_proto::elri::v1::search::SearchRequest;
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::Role;
 use elri_proto::elri::v1::space::{CreateSpaceRequest, ListSpacesRequest};
+use elri_proto::elri::v1::ui::interface_service_ws::InterfaceServiceClient;
+use elri_proto::elri::v1::ui::{
+    CreateInterfaceRequest, EvaluateRequest, Interface, ListInterfacesRequest, Node,
+    PublishInterfaceRequest, SelectVersionRequest, UpdateInterfaceRequest,
+};
 use serde_json::json;
 use ws_proto::{Client, ClientConfig, Request};
 
@@ -104,6 +109,11 @@ enum Cmd {
     Rule {
         #[command(subcommand)]
         cmd: RuleCmd,
+    },
+    /// Interfaces: trees of catalog nodes the renderer draws.
+    Ui {
+        #[command(subcommand)]
+        cmd: UiCmd,
     },
     /// Attachments: files kept beside a Space.
     Attachment {
@@ -240,6 +250,80 @@ enum RuleCmd {
         id: String,
         #[arg(long)]
         off: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum UiCmd {
+    /// Create an interface draft.
+    Create {
+        #[arg(long)]
+        space: String,
+        name: String,
+        /// Declared local state as a JSON object.
+        #[arg(long, default_value = "{}")]
+        state: String,
+    },
+    /// List drafts of a Space, or the versions of one draft.
+    List {
+        #[arg(long)]
+        space: String,
+        #[arg(long)]
+        versions_of: Option<String>,
+    },
+    /// Add a node (or rewrite one with --id) in a draft.
+    Node {
+        #[arg(long)]
+        space: String,
+        /// The draft.
+        id: String,
+        /// Catalog type: column, row, text, button, input, checkbox, list, table, card.
+        #[arg(long = "type")]
+        node_type: String,
+        /// Rewrite this node instead of creating one.
+        #[arg(long)]
+        node_id: Option<String>,
+        #[arg(long, default_value = "")]
+        parent: String,
+        #[arg(long, default_value_t = i32::MAX)]
+        index: i32,
+        /// Literal properties, JSON object.
+        #[arg(long, default_value = "{}")]
+        props: String,
+        /// Bindings: property → Luau expression, JSON object.
+        #[arg(long, default_value = "{}")]
+        bind: String,
+        /// Handlers: event → Luau source, JSON object.
+        #[arg(long, default_value = "{}")]
+        on: String,
+    },
+    /// Remove nodes from a draft.
+    Remove {
+        #[arg(long)]
+        space: String,
+        id: String,
+        nodes: Vec<String>,
+    },
+    /// Freeze the draft as the next version.
+    Publish {
+        #[arg(long)]
+        space: String,
+        id: String,
+    },
+    /// Choose which version this device shows (0 = the draft).
+    Select {
+        #[arg(long)]
+        space: String,
+        id: String,
+        version: i32,
+    },
+    /// Evaluate every binding against the Space and STATE.
+    Eval {
+        #[arg(long)]
+        space: String,
+        id: String,
+        #[arg(default_value = "{}")]
+        state: String,
     },
 }
 
@@ -852,6 +936,157 @@ async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<ser
     }
 }
 
+fn interface_json(i: &Interface) -> serde_json::Value {
+    json!({
+        "id": i.id,
+        "space_id": i.space_id,
+        "name": i.name,
+        "version": i.version,
+        "draft_id": i.draft_id,
+        "state": serde_json::from_str::<serde_json::Value>(&i.state_json).unwrap_or(json!({})),
+        "nodes": i.nodes.iter().map(|n| json!({
+            "id": n.id, "parent_id": n.parent_id, "index": n.index, "type": n.r#type,
+            "props": serde_json::from_str::<serde_json::Value>(&n.props_json).unwrap_or(json!({})),
+            "bindings": serde_json::from_str::<serde_json::Value>(&n.bindings_json).unwrap_or(json!({})),
+            "handlers": serde_json::from_str::<serde_json::Value>(&n.handlers_json).unwrap_or(json!({})),
+        })).collect::<Vec<_>>(),
+    })
+}
+
+async fn run_ui(endpoint: &Endpoint, conn: Client, cmd: UiCmd) -> Result<serde_json::Value> {
+    let client = InterfaceServiceClient::new(conn);
+    let iface = |o: Option<Interface>| -> Result<serde_json::Value> {
+        o.map(|i| interface_json(&i))
+            .ok_or_else(|| anyhow::anyhow!("core returned no interface"))
+    };
+    match cmd {
+        UiCmd::Create { space, name, state } => {
+            let res = client
+                .create_interface(authed(
+                    endpoint,
+                    CreateInterfaceRequest {
+                        space_id: space,
+                        name,
+                        state_json: state,
+                    },
+                ))
+                .await?;
+            iface(res.msg.interface)
+        }
+        UiCmd::List { space, versions_of } => {
+            let res = client
+                .list_interfaces(authed(
+                    endpoint,
+                    ListInterfacesRequest {
+                        space_id: space,
+                        versions_of: versions_of.unwrap_or_default(),
+                        include_deleted: false,
+                    },
+                ))
+                .await?;
+            Ok(json!(res
+                .msg
+                .interfaces
+                .iter()
+                .map(interface_json)
+                .collect::<Vec<_>>()))
+        }
+        UiCmd::Node {
+            space,
+            id,
+            node_type,
+            node_id,
+            parent,
+            index,
+            props,
+            bind,
+            on,
+        } => {
+            let res = client
+                .update_interface(authed(
+                    endpoint,
+                    UpdateInterfaceRequest {
+                        space_id: space,
+                        id,
+                        set_nodes: vec![Node {
+                            id: node_id.unwrap_or_default(),
+                            parent_id: parent,
+                            index,
+                            r#type: node_type,
+                            props_json: props,
+                            bindings_json: bind,
+                            handlers_json: on,
+                        }],
+                        ..Default::default()
+                    },
+                ))
+                .await?;
+            iface(res.msg.interface)
+        }
+        UiCmd::Remove { space, id, nodes } => {
+            let res = client
+                .update_interface(authed(
+                    endpoint,
+                    UpdateInterfaceRequest {
+                        space_id: space,
+                        id,
+                        remove_nodes: nodes,
+                        ..Default::default()
+                    },
+                ))
+                .await?;
+            iface(res.msg.interface)
+        }
+        UiCmd::Publish { space, id } => {
+            let res = client
+                .publish_interface(authed(
+                    endpoint,
+                    PublishInterfaceRequest {
+                        space_id: space,
+                        id,
+                    },
+                ))
+                .await?;
+            iface(res.msg.version)
+        }
+        UiCmd::Select { space, id, version } => {
+            let res = client
+                .select_version(authed(
+                    endpoint,
+                    SelectVersionRequest {
+                        space_id: space,
+                        draft_id: id,
+                        version,
+                    },
+                ))
+                .await?;
+            Ok(json!({ "selected": res.msg.version }))
+        }
+        UiCmd::Eval { space, id, state } => {
+            let res = client
+                .evaluate(authed(
+                    endpoint,
+                    EvaluateRequest {
+                        space_id: space,
+                        id,
+                        state_json: state,
+                    },
+                ))
+                .await?;
+            Ok(json!(res
+                .msg
+                .nodes
+                .iter()
+                .map(|n| json!({
+                    "node_id": n.node_id,
+                    "values": serde_json::from_str::<serde_json::Value>(&n.values_json).unwrap_or(json!({})),
+                    "errors": n.errors,
+                }))
+                .collect::<Vec<_>>()))
+        }
+    }
+}
+
 fn attachment_json(a: &Attachment) -> serde_json::Value {
     json!({
         "id": a.id,
@@ -1093,6 +1328,7 @@ async fn main() -> Result<()> {
         Cmd::Script { cmd } => run_script(&endpoint, conn, cmd).await?,
         Cmd::Grant { cmd } => run_grant(&endpoint, conn, cmd).await?,
         Cmd::Rule { cmd } => run_rule(&endpoint, conn, cmd).await?,
+        Cmd::Ui { cmd } => run_ui(&endpoint, conn, cmd).await?,
         Cmd::Backup {
             cmd: BackupCmd::Create { dest },
         } => {

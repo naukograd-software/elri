@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package elri.v1.ui;
+
+/*
+One node of an interface tree. The renderer draws it by `type` from its
+fixed catalog; it never runs user code. Properties are literal JSON;
+bindings are Luau expressions the core evaluates to a property's value;
+handlers are Luau functions the core runs on an event.
+*/
+message Node {
+    /* Node id, assigned by the core and stable across moves. */
+    string id = 1;
+    /* Parent node id; empty at the top level. */
+    string parent_id = 2;
+    /* Position among siblings, from 0. */
+    int32 index = 3;
+    /* Catalog type: column, row, text, button, input, checkbox, list, table, card. */
+    string type = 4;
+    /* Literal properties as a JSON object. */
+    string props_json = 5;
+    /* Property name → Luau expression, as a JSON object. */
+    string bindings_json = 6;
+    /* Event name → Luau source, as a JSON object. */
+    string handlers_json = 7;
+}
+
+/*
+An interface Object. A draft is edited node by node; publishing freezes a
+copy as a version. The tree is one Loro movable tree, so concurrent edits
+merge.
+*/
+message Interface {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    /* Nodes in document order: parents before children, siblings by position. */
+    repeated Node nodes = 4;
+    /* Declared local state: name → default value, as a JSON object. Values
+       live on the device and are never synchronized. */
+    string state_json = 5;
+    /* 0 for a draft; the version number of a published copy. */
+    int32 version = 6;
+    /* Published copies: the draft they were taken from. */
+    string draft_id = 7;
+    int64 created_at_ms = 8;
+    int64 updated_at_ms = 9;
+    optional int64 deleted_at_ms = 10;
+}
+
+/* A node's evaluated properties: literal ones merged with bound ones. */
+message NodeValues {
+    string node_id = 1;
+    /* Property name → value, as a JSON object. */
+    string values_json = 2;
+    /* Bindings that failed: property → error. */
+    map<string, string> errors = 3;
+}

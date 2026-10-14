@@ -132,6 +132,8 @@ pub enum ObjectKind {
     Script = 8,
     /// Runs a script when something happens; see elri.v1.script. 
     Rule = 9,
+    /// A tree of interface nodes drawn by the renderer; see elri.v1.ui. 
+    Interface = 10,
 }
 impl ObjectKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -150,6 +152,7 @@ impl ObjectKind {
             Self::Attachment => "OBJECT_KIND_ATTACHMENT",
             Self::Script => "OBJECT_KIND_SCRIPT",
             Self::Rule => "OBJECT_KIND_RULE",
+            Self::Interface => "OBJECT_KIND_INTERFACE",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -165,6 +168,7 @@ impl ObjectKind {
             "OBJECT_KIND_ATTACHMENT" => Some(Self::Attachment),
             "OBJECT_KIND_SCRIPT" => Some(Self::Script),
             "OBJECT_KIND_RULE" => Some(Self::Rule),
+            "OBJECT_KIND_INTERFACE" => Some(Self::Interface),
             _ => None,
         }
     }

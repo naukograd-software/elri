@@ -5,6 +5,7 @@
 mod attachments;
 mod definitions;
 mod scripts;
+mod ui;
 
 use std::sync::Arc;
 
@@ -101,7 +102,8 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     register_backup_service_arc(&server, Arc::clone(&services));
     definitions::register(&server, Arc::clone(&services));
     attachments::register(&server, Arc::clone(&services));
-    scripts::register(&server, services);
+    scripts::register(&server, Arc::clone(&services));
+    ui::register(&server, services);
     server
 }
 

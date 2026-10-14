@@ -288,6 +288,143 @@ impl Host {
         }
     }
 
+    /// Evaluates Luau expressions in one read-only VM: `elri` offers reads
+    /// of the interface's Space only, `state` is the given object. Each
+    /// result is JSON or the expression's error.
+    pub async fn evaluate(
+        &self,
+        space: SpaceId,
+        exprs: &[(String, String, String)],
+        state: &serde_json::Value,
+    ) -> Vec<Result<serde_json::Value, String>> {
+        let started = Instant::now();
+        let access = Arc::new(Mutex::new(Access {
+            own: space,
+            manifest: Manifest::default(),
+            labels: BTreeSet::new(),
+            logs: Vec::new(),
+            calls: 0,
+            bytes_out: 0,
+        }));
+        let identity = RunIdentity {
+            script_id: String::new(),
+            rule_id: None,
+            grant_id: String::new(),
+        };
+        let lua = match self.vm(space, &identity, &access, started, true) {
+            Ok(lua) => lua,
+            Err(e) => return exprs.iter().map(|_| Err(e.to_string())).collect(),
+        };
+        if let Err(e) = lua
+            .to_value(state)
+            .and_then(|v| lua.globals().set("state", v))
+        {
+            return exprs.iter().map(|_| Err(e.to_string())).collect();
+        }
+        let mut out = Vec::with_capacity(exprs.len());
+        for (_, _, expr) in exprs {
+            let r = async {
+                let f = lua
+                    .load(format!("return {expr}"))
+                    .set_name("binding")
+                    .into_function()
+                    .map_err(|e| e.to_string())?;
+                let v: LuaValue = f.call_async(()).await.map_err(|e| e.to_string())?;
+                lua.from_value::<serde_json::Value>(v)
+                    .map_err(|e| e.to_string())
+            }
+            .await;
+            out.push(r);
+        }
+        out
+    }
+
+    /// Runs handler source with a mutable `state` table and an `event`
+    /// payload; returns the state afterwards, the logs, and the error.
+    pub async fn handle(
+        &self,
+        space: SpaceId,
+        source: &str,
+        state: serde_json::Value,
+        payload: serde_json::Value,
+        identity: RunIdentity,
+    ) -> (serde_json::Value, Vec<String>, String) {
+        let started = Instant::now();
+        let access = Arc::new(Mutex::new(Access {
+            own: space,
+            manifest: Manifest::default(),
+            labels: BTreeSet::new(),
+            logs: Vec::new(),
+            calls: 0,
+            bytes_out: 0,
+        }));
+        let result: Result<serde_json::Value, ScriptError> = async {
+            let lua = self.vm(space, &identity, &access, started, false)?;
+            lua.globals()
+                .set("state", lua.to_value(&state).map_err(|e| lua_err(&e))?)
+                .map_err(|e| lua_err(&e))?;
+            lua.globals()
+                .set("event", lua.to_value(&payload).map_err(|e| lua_err(&e))?)
+                .map_err(|e| lua_err(&e))?;
+            let f = lua
+                .load(source)
+                .set_name("handler")
+                .into_function()
+                .map_err(|e| lua_err(&e))?;
+            f.call_async::<LuaValue>(())
+                .await
+                .map_err(|e| lua_err(&e))?;
+            let after: LuaValue = lua.globals().get("state").map_err(|e| lua_err(&e))?;
+            lua.from_value(after).map_err(|e| lua_err(&e))
+        }
+        .await;
+        let guard = access
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        match result {
+            Ok(new_state) => (new_state, guard.logs.clone(), String::new()),
+            Err(e) => (state, guard.logs.clone(), e.to_string()),
+        }
+    }
+
+    /// A fresh sandboxed VM with the `elri` table installed; `read_only`
+    /// leaves out every writing function.
+    fn vm(
+        &self,
+        space: SpaceId,
+        identity: &RunIdentity,
+        access: &Arc<Mutex<Access>>,
+        started: Instant,
+        read_only: bool,
+    ) -> Result<Lua, ScriptError> {
+        let lua = Lua::new();
+        lua.sandbox(true).map_err(|e| lua_err(&e))?;
+        lua.set_memory_limit(MEMORY_LIMIT)
+            .map_err(|e| lua_err(&e))?;
+        let deadline = started + TIME_LIMIT;
+        lua.set_interrupt(move |_| {
+            if Instant::now() > deadline {
+                Err(mlua::Error::runtime("time limit exceeded"))
+            } else {
+                Ok(VmState::Continue)
+            }
+        });
+        let elri = lua.create_table().map_err(|e| lua_err(&e))?;
+        elri.set("space", space.to_string())
+            .map_err(|e| lua_err(&e))?;
+        elri.set("device", self.device_id.clone())
+            .map_err(|e| lua_err(&e))?;
+        elri.set("now", now_ms()).map_err(|e| lua_err(&e))?;
+        self.install(&lua, &elri, space, identity, access)?;
+        if read_only {
+            for name in ["create", "update", "delete", "notify"] {
+                elri.set(name, LuaValue::Nil).map_err(|e| lua_err(&e))?;
+            }
+        }
+        lua.globals().set("elri", elri).map_err(|e| lua_err(&e))?;
+        Ok(lua)
+    }
+
     async fn run_inner(
         &self,
         space: SpaceId,

@@ -79,5 +79,11 @@ pub mod elri {
             include!("elri/v1/sync/elri.v1.sync.rs");
             // @@protoc_insertion_point(elri.v1.sync)
         }
+        #[cfg(feature = "elri-v1-ui")]
+        // @@protoc_insertion_point(attribute:elri.v1.ui)
+        pub mod ui {
+            include!("elri/v1/ui/elri.v1.ui.rs");
+            // @@protoc_insertion_point(elri.v1.ui)
+        }
     }
 }

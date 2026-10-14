@@ -26,6 +26,7 @@ use elri_proto::elri::v1::definition::{FieldKind, TypeField};
 use elri_proto::elri::v1::object::{
     value, Object, ObjectKind, Participant, Placement, Value, ValueList,
 };
+use elri_proto::elri::v1::ui::Node as UiNode;
 use loro::{
     Container, ExportMode, LoroDoc, LoroMap, LoroMovableList, LoroText, LoroTree, LoroValue,
     TreeID, TreeParentId, UpdateOptions, ValueOrContainer, VersionVector,
@@ -87,7 +88,11 @@ pub fn is_definition(kind: ObjectKind) -> bool {
 /// Whether a kind is created through its own service rather than
 /// `ObjectService`: definitions and attachments.
 pub fn is_managed(kind: ObjectKind) -> bool {
-    is_definition(kind) || kind == ObjectKind::Attachment
+    is_definition(kind)
+        || matches!(
+            kind,
+            ObjectKind::Attachment | ObjectKind::Script | ObjectKind::Rule | ObjectKind::Interface
+        )
 }
 
 /// An integer field, if present.
@@ -413,33 +418,24 @@ impl ObjectDoc {
         self.doc.get_map("type_fields")
     }
 
-    /// The placements tree, with positional operations enabled. Positions are
-    /// fractional indexes; two placements that land on the same index from
-    /// concurrent edits are ordered by their ids, so every replica agrees.
-    fn placements(&self) -> LoroTree {
-        let tree = self.doc.get_tree("placements");
+    /// A movable tree of this document with positional operations enabled.
+    /// Positions are fractional indexes; two nodes that land on the same
+    /// index from concurrent edits are ordered by their ids, so every
+    /// replica agrees.
+    fn tree(&self, name: &str) -> LoroTree {
+        let tree = self.doc.get_tree(name);
         tree.enable_fractional_index(0);
         tree
     }
 
-    fn placement_parent(&self, parent_id: &str) -> Result<TreeParentId, ModelError> {
-        if parent_id.is_empty() {
-            return Ok(TreeParentId::Root);
-        }
-        Ok(TreeParentId::Node(self.live_placement(parent_id)?))
+    /// The placements tree of a document Entity.
+    fn placements(&self) -> LoroTree {
+        self.tree("placements")
     }
 
-    /// Resolves a placement id that must name a live placement.
-    fn live_placement(&self, id: &str) -> Result<TreeID, ModelError> {
-        let tree = self.placements();
-        let target = placement_id(id)?;
-        if !tree.contains(target) || tree.is_node_deleted(&target).unwrap_or(true) {
-            return Err(ModelError::Placement(
-                id.to_owned(),
-                "placement does not exist".to_owned(),
-            ));
-        }
-        Ok(target)
+    /// The node tree of an interface.
+    fn ui_tree(&self) -> LoroTree {
+        self.tree("ui")
     }
 
     /// Places `block` under `parent_id` (empty: top level) at `index`,
@@ -451,11 +447,7 @@ impl ObjectDoc {
         block: ObjectId,
     ) -> Result<String, ModelError> {
         let tree = self.placements();
-        let parent = self.placement_parent(parent_id)?;
-        let index = index.min(tree.children_num(parent).unwrap_or(0));
-        let id = tree
-            .create_at(parent, index)
-            .map_err(|e| ModelError::Placement(parent_id.to_owned(), e.to_string()))?;
+        let id = create_node(&tree, parent_id, index)?;
         tree.get_meta(id)?.insert("block", block.to_string())?;
         Ok(id.to_string())
     }
@@ -468,72 +460,84 @@ impl ObjectDoc {
         parent_id: &str,
         index: usize,
     ) -> Result<(), ModelError> {
-        let tree = self.placements();
-        let target = self.live_placement(id)?;
-        let parent = self.placement_parent(parent_id)?;
-        let mut siblings = tree.children_num(parent).unwrap_or(0);
-        if tree.parent(target) == Some(parent) {
-            siblings = siblings.saturating_sub(1);
-        }
-        tree.mov_to(target, parent, index.min(siblings))
-            .map_err(|e| ModelError::Placement(id.to_owned(), e.to_string()))
+        move_node(&self.placements(), id, parent_id, index)
     }
 
     /// Removes placement `id` with its subtree. The placed blocks stay.
     pub fn remove_placement(&self, id: &str) -> Result<(), ModelError> {
-        let tree = self.placements();
-        let target = self.live_placement(id)?;
-        tree.delete(target)
-            .map_err(|e| ModelError::Placement(id.to_owned(), e.to_string()))
+        remove_node(&self.placements(), id)
     }
 
     /// Placements in document order: parents before children, siblings by
     /// position.
     fn read_placements(&self) -> Result<Vec<Placement>, ModelError> {
-        let tree = self.placements();
-        if tree.is_empty() {
-            return Ok(Vec::new());
-        }
-        let mut by_parent: HashMap<TreeParentId, Vec<(usize, TreeID)>> = HashMap::new();
-        for node in tree.get_nodes(false) {
-            by_parent
-                .entry(node.parent)
-                .or_default()
-                .push((node.index, node.id));
-        }
-        for children in by_parent.values_mut() {
-            children.sort_unstable();
-        }
-        let mut out = Vec::new();
-        // Each sibling group is emitted whole, then its subtrees in order.
-        let mut stack: Vec<(TreeParentId, String)> = vec![(TreeParentId::Root, String::new())];
-        while let Some((parent, parent_id)) = stack.pop() {
-            let Some(children) = by_parent.get(&parent) else {
-                continue;
+        walk_tree(&self.placements(), |id, parent_id, index, meta| {
+            let block_id = match meta.get("block") {
+                Some(ValueOrContainer::Value(LoroValue::String(s))) => {
+                    ObjectId::parse(&s)?.to_string()
+                }
+                _ => return Err(ModelError::Malformed("placement without block")),
             };
-            let mut group = Vec::with_capacity(children.len());
-            for &(index, id) in children {
-                let block_id = match tree.get_meta(id)?.get("block") {
-                    Some(ValueOrContainer::Value(LoroValue::String(s))) => {
-                        ObjectId::parse(&s)?.to_string()
-                    }
-                    _ => return Err(ModelError::Malformed("placement without block")),
-                };
-                let index =
-                    i32::try_from(index).map_err(|_| ModelError::Malformed("placement index"))?;
-                group.push(Placement {
-                    id: id.to_string(),
-                    parent_id: parent_id.clone(),
-                    index,
-                    block_id,
-                });
-            }
-            for &(_, id) in children.iter().rev() {
-                stack.push((TreeParentId::Node(id), id.to_string()));
-            }
-            out.extend(group);
-        }
-        Ok(out)
+            Ok(Placement {
+                id,
+                parent_id,
+                index,
+                block_id,
+            })
+        })
+    }
+
+    /// Interfaces: creates a node under `parent_id` (empty: top level) at
+    /// `index` with the given type and JSON attributes. Returns its id.
+    pub fn create_ui_node(
+        &self,
+        parent_id: &str,
+        index: usize,
+        node: &UiNode,
+    ) -> Result<String, ModelError> {
+        let tree = self.ui_tree();
+        let id = create_node(&tree, parent_id, index)?;
+        write_ui_meta(&tree.get_meta(id)?, node)?;
+        Ok(id.to_string())
+    }
+
+    /// Interfaces: moves node `id` under `parent_id` at `index` and rewrites
+    /// its type and JSON attributes.
+    pub fn set_ui_node(
+        &self,
+        id: &str,
+        parent_id: &str,
+        index: usize,
+        node: &UiNode,
+    ) -> Result<(), ModelError> {
+        let tree = self.ui_tree();
+        move_node(&tree, id, parent_id, index)?;
+        write_ui_meta(&tree.get_meta(placement_id(id)?)?, node)?;
+        Ok(())
+    }
+
+    /// Interfaces: removes node `id` with its subtree.
+    pub fn remove_ui_node(&self, id: &str) -> Result<(), ModelError> {
+        remove_node(&self.ui_tree(), id)
+    }
+
+    /// Interfaces: the nodes in document order.
+    pub fn ui_nodes(&self) -> Result<Vec<UiNode>, ModelError> {
+        walk_tree(&self.ui_tree(), |id, parent_id, index, meta| {
+            let text = |key: &str| match meta.get(key) {
+                Some(ValueOrContainer::Value(LoroValue::String(s))) => s.to_string(),
+                _ => String::new(),
+            };
+            Ok(UiNode {
+                id,
+                parent_id,
+                index,
+                r#type: text("type"),
+                props_json: text("props"),
+                bindings_json: text("bindings"),
+                handlers_json: text("handlers"),
+            })
+        })
     }
 
     /// Sets a field. Scalars replace the previous value; a text applies the
@@ -764,6 +768,104 @@ impl ObjectDoc {
 fn placement_id(id: &str) -> Result<TreeID, ModelError> {
     TreeID::try_from(id)
         .map_err(|_| ModelError::Placement(id.to_owned(), "not a placement id".to_owned()))
+}
+
+fn tree_parent(tree: &LoroTree, parent_id: &str) -> Result<TreeParentId, ModelError> {
+    if parent_id.is_empty() {
+        return Ok(TreeParentId::Root);
+    }
+    Ok(TreeParentId::Node(live_node(tree, parent_id)?))
+}
+
+/// Resolves an id that must name a live node of the tree.
+fn live_node(tree: &LoroTree, id: &str) -> Result<TreeID, ModelError> {
+    let target = placement_id(id)?;
+    if !tree.contains(target) || tree.is_node_deleted(&target).unwrap_or(true) {
+        return Err(ModelError::Placement(
+            id.to_owned(),
+            "node does not exist".to_owned(),
+        ));
+    }
+    Ok(target)
+}
+
+fn create_node(tree: &LoroTree, parent_id: &str, index: usize) -> Result<TreeID, ModelError> {
+    let parent = tree_parent(tree, parent_id)?;
+    let index = index.min(tree.children_num(parent).unwrap_or(0));
+    tree.create_at(parent, index)
+        .map_err(|e| ModelError::Placement(parent_id.to_owned(), e.to_string()))
+}
+
+fn move_node(tree: &LoroTree, id: &str, parent_id: &str, index: usize) -> Result<(), ModelError> {
+    let target = live_node(tree, id)?;
+    let parent = tree_parent(tree, parent_id)?;
+    let mut siblings = tree.children_num(parent).unwrap_or(0);
+    if tree.parent(target) == Some(parent) {
+        siblings = siblings.saturating_sub(1);
+    }
+    tree.mov_to(target, parent, index.min(siblings))
+        .map_err(|e| ModelError::Placement(id.to_owned(), e.to_string()))
+}
+
+fn remove_node(tree: &LoroTree, id: &str) -> Result<(), ModelError> {
+    let target = live_node(tree, id)?;
+    tree.delete(target)
+        .map_err(|e| ModelError::Placement(id.to_owned(), e.to_string()))
+}
+
+/// Visits every live node in document order: each sibling group whole,
+/// then its subtrees in order.
+fn walk_tree<T>(
+    tree: &LoroTree,
+    mut make: impl FnMut(String, String, i32, &LoroMap) -> Result<T, ModelError>,
+) -> Result<Vec<T>, ModelError> {
+    if tree.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut by_parent: HashMap<TreeParentId, Vec<(usize, TreeID)>> = HashMap::new();
+    for node in tree.get_nodes(false) {
+        by_parent
+            .entry(node.parent)
+            .or_default()
+            .push((node.index, node.id));
+    }
+    for children in by_parent.values_mut() {
+        children.sort_unstable();
+    }
+    let mut out = Vec::new();
+    let mut stack: Vec<(TreeParentId, String)> = vec![(TreeParentId::Root, String::new())];
+    while let Some((parent, parent_id)) = stack.pop() {
+        let Some(children) = by_parent.get(&parent) else {
+            continue;
+        };
+        for &(index, id) in children {
+            let index = i32::try_from(index).map_err(|_| ModelError::Malformed("node index"))?;
+            out.push(make(
+                id.to_string(),
+                parent_id.clone(),
+                index,
+                &tree.get_meta(id)?,
+            )?);
+        }
+        for &(_, id) in children.iter().rev() {
+            stack.push((TreeParentId::Node(id), id.to_string()));
+        }
+    }
+    Ok(out)
+}
+
+fn write_ui_meta(meta: &LoroMap, node: &UiNode) -> Result<(), ModelError> {
+    if node.r#type.trim().is_empty() {
+        return Err(ModelError::Placement(
+            node.id.clone(),
+            "a node needs a type".to_owned(),
+        ));
+    }
+    meta.insert("type", node.r#type.trim())?;
+    meta.insert("props", node.props_json.as_str())?;
+    meta.insert("bindings", node.bindings_json.as_str())?;
+    meta.insert("handlers", node.handlers_json.as_str())?;
+    Ok(())
 }
 
 /// Turns `list` into `target` with the fewest insertions and deletions, so
