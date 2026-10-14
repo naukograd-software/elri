@@ -15,7 +15,7 @@ use std::sync::Arc;
 
 use elri_proto::elri::v1::change::{Change, ChangePart, ChangeStatus};
 use elri_proto::elri::v1::definition::FieldKind;
-use elri_proto::elri::v1::definition::{Pin, Schema};
+use elri_proto::elri::v1::definition::{Constraint, Pin, Schema, Violation};
 use elri_proto::elri::v1::events::{
     event, ChangeEvent, Event, ObjectEvent, RemoteEvent, SpaceEvent,
 };
@@ -34,7 +34,7 @@ use crate::blobs::Blobs;
 use crate::change::{accepted, rejected, Outcome, Reason};
 use crate::device::DeviceId;
 use crate::model::{
-    field_def_kind, now_ms, publication_of, ModelError, ObjectDoc, ObjectId, SpaceId,
+    constraint_of, field_def_kind, now_ms, publication_of, ModelError, ObjectDoc, ObjectId, SpaceId,
 };
 use models::{
     BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, ExtensionRow,
@@ -94,6 +94,18 @@ pub enum StoreError {
     /// Not a publication Object.
     #[error("object {0} is not a publication")]
     NotPublication(ObjectId),
+    /// A strict constraint refuses the write.
+    #[error("constraint {constraint}: field {field} value {value} is already used by {other}")]
+    Constraint {
+        /// The constraint.
+        constraint: String,
+        /// The field.
+        field: String,
+        /// The value, as text.
+        value: String,
+        /// The Object holding it.
+        other: String,
+    },
     /// The Space's initial download is not finished; it is read-only.
     #[error("space is downloading: {received} of {target} accepted changes received")]
     Downloading {
@@ -1142,6 +1154,7 @@ impl SpaceStore {
         if is_purged(&mut db, doc.id().uuid()).await? {
             return Err(StoreError::Purged(doc.id()));
         }
+        check_strict(&mut db, std::slice::from_ref(&rec)).await?;
         let deps = dependencies(&mut db, &rec).await?;
         let mut tx = db.transaction().await?;
         write_change(&mut tx, &env, ChangeStatus::Local, None, "").await?;
@@ -1194,6 +1207,7 @@ impl SpaceStore {
         edit(&doc)?;
         doc.touch(now_ms())?;
         let rec = doc.read()?;
+        check_strict(&mut db, std::slice::from_ref(&rec)).await?;
         let bytes = doc.updates_since(&before)?;
         let part = Part {
             object_id: id.to_string(),
@@ -1318,6 +1332,58 @@ impl SpaceStore {
             self.purge_object(*id).await?;
         }
         Ok(expired)
+    }
+
+    // --- constraints ----------------------------------------------------
+
+    /// Live constraints of the Space.
+    pub async fn constraints(&self) -> Result<Vec<Constraint>, StoreError> {
+        let mut db = self.db.lock().await;
+        constraints(&mut db).await
+    }
+
+    /// Where the live state contradicts a unique constraint, strict or not.
+    pub async fn violations(&self) -> Result<Vec<Violation>, StoreError> {
+        let mut db = self.db.lock().await;
+        let mut out = Vec::new();
+        for c in constraints(&mut db).await? {
+            if !c.unique {
+                continue;
+            }
+            let rows = toasty::sql::query(
+                "SELECT f.object_id, f.v_bool, f.v_int, f.v_real, f.v_text, f.v_time, f.v_ref \
+                 FROM field_values f JOIN objects o ON o.object_id = f.object_id \
+                 WHERE f.field_id = ?1 AND o.deleted_at IS NULL",
+            )
+            .bind(Value::String(c.field_id.clone()))
+            .exec(&mut *db)
+            .await?;
+            let mut by_value: std::collections::BTreeMap<String, Vec<String>> =
+                std::collections::BTreeMap::new();
+            for row in rows {
+                let Value::Record(rec) = row else {
+                    continue;
+                };
+                let object = uuid_of(&rec[0], "field_values", "object_id")?;
+                if let Some(key) = canonical_row(&rec[1..]) {
+                    by_value
+                        .entry(key)
+                        .or_default()
+                        .push(ObjectId::from_uuid(object).to_string());
+                }
+            }
+            for (value, object_ids) in by_value {
+                if object_ids.len() > 1 {
+                    out.push(Violation {
+                        constraint_id: c.id.clone(),
+                        field_id: c.field_id.clone(),
+                        value,
+                        object_ids,
+                    });
+                }
+            }
+        }
+        Ok(out)
     }
 
     // --- schema pins ----------------------------------------------------
@@ -1924,6 +1990,10 @@ impl SpaceStore {
             staged.push((doc, rec, pending));
         }
 
+        let recs: Vec<Object> = staged.iter().map(|(_, r, _)| r.clone()).collect();
+        if let Some(outcome) = strict_rejection(&mut db, &recs).await? {
+            return Ok(outcome);
+        }
         let seq = last_seq(&mut db).await? + 1;
         let mut tx = db.transaction().await?;
         write_change(&mut tx, env, ChangeStatus::Accepted, Some(seq), "").await?;
@@ -2623,6 +2693,151 @@ async fn write_state(db: &mut Db, key: &str, value: i64) -> Result<(), StoreErro
 
 async fn read_cursor(db: &mut Db) -> Result<i64, StoreError> {
     read_state(db, CURSOR).await
+}
+
+/// Live constraint Objects of the Space.
+async fn constraints(db: &mut Db) -> Result<Vec<Constraint>, StoreError> {
+    let rows = ObjectRow::filter(
+        ObjectRow::fields()
+            .kind()
+            .eq(i64::from(ObjectKind::Constraint as i32)),
+    )
+    .exec(&mut *db)
+    .await?;
+    let mut out = Vec::new();
+    for r in rows {
+        if r.deleted_at.is_some() {
+            continue;
+        }
+        let (doc, _) = load_doc(db, ObjectId::from_uuid(r.object_id)).await?;
+        if let Some(c) = constraint_of(&doc.read()?) {
+            out.push(c);
+        }
+    }
+    Ok(out)
+}
+
+/// The canonical text of a scalar value: its type, then its text.
+fn canonical(v: &PbValue) -> Option<String> {
+    Some(match v.value.as_ref()? {
+        value::Value::Bool(b) => format!("bool:{b}"),
+        value::Value::Int(i) => format!("int:{i}"),
+        value::Value::Double(d) => format!("real:{d}"),
+        value::Value::String(s) => format!("text:{}", s.trim()),
+        value::Value::TimeMs(t) => format!("time:{t}"),
+        value::Value::Ref(r) => format!("ref:{r}"),
+        value::Value::Text(_)
+        | value::Value::Rich(_)
+        | value::Value::List(_)
+        | value::Value::Map(_) => return None,
+    })
+}
+
+/// The canonical text of a projected row's typed columns.
+fn canonical_row(cols: &[Value]) -> Option<String> {
+    let [v_bool, v_int, v_real, v_text, v_time, v_ref] = cols else {
+        return None;
+    };
+    Some(match (v_bool, v_int, v_real, v_text, v_time, v_ref) {
+        (Value::Bool(flag), ..) => format!("bool:{flag}"),
+        (_, Value::I64(int), ..) => format!("int:{int}"),
+        (_, _, Value::F64(real), ..) => format!("real:{real}"),
+        (_, _, _, Value::String(text), ..) => format!("text:{}", text.trim()),
+        (_, _, _, _, Value::I64(time), _) => format!("time:{time}"),
+        (_, _, _, _, _, Value::Bytes(_) | Value::String(_)) => {
+            format!("ref:{}", uuid_of(v_ref, "field_values", "v_ref").ok()?)
+        }
+        _ => return None,
+    })
+}
+
+/// The rejection a Change earns from [`check_strict`], if any.
+pub(super) async fn strict_rejection(
+    db: &mut Db,
+    recs: &[Object],
+) -> Result<Option<Outcome>, StoreError> {
+    match check_strict(db, recs).await {
+        Ok(()) => Ok(None),
+        Err(StoreError::Constraint {
+            constraint,
+            field,
+            value,
+            other,
+        }) => Ok(Some(rejected(
+            Reason::Constraint,
+            format!(
+                "constraint {constraint}: field {field} value {value} is already used by {other}"
+            ),
+        ))),
+        Err(e) => Err(e),
+    }
+}
+
+/// Refuses writes that would break a strict unique constraint: a value
+/// another live Object already holds, or two of the given records holding
+/// the same value.
+pub(super) async fn check_strict(db: &mut Db, recs: &[Object]) -> Result<(), StoreError> {
+    let constraints = constraints(db).await?;
+    let strict: Vec<&Constraint> = constraints
+        .iter()
+        .filter(|c| c.unique && c.strict)
+        .collect();
+    if strict.is_empty() {
+        return Ok(());
+    }
+    for c in strict {
+        let mut claimed: HashMap<String, String> = HashMap::new();
+        for rec in recs {
+            if rec.deleted_at_ms.is_some() {
+                continue;
+            }
+            let Some(v) = rec.fields.get(&c.field_id) else {
+                continue;
+            };
+            let Some(key) = canonical(v) else {
+                continue;
+            };
+            let conflict = |other: String| StoreError::Constraint {
+                constraint: c.id.clone(),
+                field: c.field_id.clone(),
+                value: key.clone(),
+                other,
+            };
+            if let Some(other) = claimed.get(&key) {
+                if other != &rec.id {
+                    return Err(conflict(other.clone()));
+                }
+            }
+            claimed.insert(key.clone(), rec.id.clone());
+            let rows = toasty::sql::query(
+                "SELECT f.object_id, f.v_bool, f.v_int, f.v_real, f.v_text, f.v_time, f.v_ref \
+                 FROM field_values f JOIN objects o ON o.object_id = f.object_id \
+                 WHERE f.field_id = ?1 AND o.deleted_at IS NULL AND f.object_id != ?2",
+            )
+            .bind(Value::String(c.field_id.clone()))
+            .bind(uuid_param(uuid_arg(&rec.id)?))
+            .exec(&mut *db)
+            .await?;
+            for row in rows {
+                let Value::Record(cols) = row else {
+                    continue;
+                };
+                if canonical_row(&cols[1..]).as_deref() == Some(key.as_str()) {
+                    let other = uuid_of(&cols[0], "field_values", "object_id")?;
+                    // Another record in this batch may be rewriting that
+                    // Object's value away; only the live projection counts.
+                    if recs
+                        .iter()
+                        .any(|r| r.id == ObjectId::from_uuid(other).to_string())
+                    {
+                        continue;
+                    }
+                    return Err(conflict(ObjectId::from_uuid(other).to_string()));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 async fn pending_counts(db: &mut Db) -> Result<(usize, usize), StoreError> {

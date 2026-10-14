@@ -172,6 +172,8 @@ pub enum ObjectKind {
     Publication = 11,
     /// A selection of Spaces, Layers, filters, and Views; see elri.v1.context. 
     Context = 12,
+    /// A declarative constraint over a field; see elri.v1.definition. 
+    Constraint = 13,
 }
 impl ObjectKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -193,6 +195,7 @@ impl ObjectKind {
             Self::Interface => "OBJECT_KIND_INTERFACE",
             Self::Publication => "OBJECT_KIND_PUBLICATION",
             Self::Context => "OBJECT_KIND_CONTEXT",
+            Self::Constraint => "OBJECT_KIND_CONSTRAINT",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -211,6 +214,7 @@ impl ObjectKind {
             "OBJECT_KIND_INTERFACE" => Some(Self::Interface),
             "OBJECT_KIND_PUBLICATION" => Some(Self::Publication),
             "OBJECT_KIND_CONTEXT" => Some(Self::Context),
+            "OBJECT_KIND_CONSTRAINT" => Some(Self::Constraint),
             _ => None,
         }
     }

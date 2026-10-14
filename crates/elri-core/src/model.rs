@@ -22,7 +22,7 @@
 
 use std::collections::HashMap;
 
-use elri_proto::elri::v1::definition::{FieldKind, Publication, TypeField};
+use elri_proto::elri::v1::definition::{Constraint, FieldKind, Publication, TypeField};
 use elri_proto::elri::v1::object::{
     value, Mark, Object, ObjectKind, Participant, Placement, RichText, Value, ValueList, ValueMap,
 };
@@ -98,7 +98,38 @@ pub fn is_managed(kind: ObjectKind) -> bool {
                 | ObjectKind::Interface
                 | ObjectKind::Publication
                 | ObjectKind::Context
+                | ObjectKind::Constraint
         )
+}
+
+/// A boolean field, if present.
+pub fn bool_field(o: &Object, id: &str) -> Option<bool> {
+    match o.fields.get(id).and_then(|v| v.value.as_ref()) {
+        Some(value::Value::Bool(b)) => Some(*b),
+        _ => None,
+    }
+}
+
+/// The protocol view of a constraint Object.
+pub fn constraint_of(o: &Object) -> Option<Constraint> {
+    if o.kind() != ObjectKind::Constraint {
+        return None;
+    }
+    Some(Constraint {
+        id: o.id.clone(),
+        space_id: o.space_id.clone(),
+        name: string_field(o, reserved::NAME)
+            .unwrap_or_default()
+            .to_owned(),
+        field_id: string_field(o, reserved::FIELD)
+            .unwrap_or_default()
+            .to_owned(),
+        unique: bool_field(o, reserved::UNIQUE).unwrap_or(false),
+        strict: bool_field(o, reserved::STRICT).unwrap_or(false),
+        created_at_ms: o.created_at_ms,
+        updated_at_ms: o.updated_at_ms,
+        deleted_at_ms: o.deleted_at_ms,
+    })
 }
 
 /// The protocol view of a publication Object.
@@ -198,6 +229,12 @@ pub mod reserved {
     pub const DEPS: &str = "$deps";
     /// Publications: hex SHA-256 over snapshot and dependencies.
     pub const DIGEST: &str = "$digest";
+    /// Constraints: the field constrained.
+    pub const FIELD: &str = "$field";
+    /// Constraints: values must be unique.
+    pub const UNIQUE: &str = "$unique";
+    /// Constraints: refuse writes instead of reporting.
+    pub const STRICT: &str = "$strict";
 }
 
 const REF_TAG: &str = "$ref";

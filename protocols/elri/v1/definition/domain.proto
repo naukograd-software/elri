@@ -102,3 +102,35 @@ message Schema {
     int64 epoch = 1;
     repeated Pin pins = 2;
 }
+
+/*
+A declarative constraint over one field of a Space, from the built-in
+validator set: uniqueness of a scalar value among live Objects. By default
+a constraint is diagnostic: violations are listed, nothing is refused.
+A strict constraint refuses the write; on a server Space only an Owner or
+Admin may make one strict, and offline checks stay provisional: of two
+offline claims the server accepts one and rejects the other.
+*/
+message Constraint {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    /* The field definition the constraint is about. */
+    string field_id = 4;
+    /* Values must be unique among live Objects; empty values are ignored. */
+    bool unique = 5;
+    /* Refuse writes instead of reporting. */
+    bool strict = 6;
+    int64 created_at_ms = 7;
+    int64 updated_at_ms = 8;
+    optional int64 deleted_at_ms = 9;
+}
+
+/* Objects that share a value a constraint says must be unique. */
+message Violation {
+    string constraint_id = 1;
+    string field_id = 2;
+    /* The shared value, as text. */
+    string value = 3;
+    repeated string object_ids = 4;
+}

@@ -32,6 +32,52 @@ service DefinitionService {
     */
     rpc PinDefinition(PinDefinitionRequest) returns (PinDefinitionResponse);
     rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+    rpc CreateConstraint(CreateConstraintRequest) returns (CreateConstraintResponse);
+    rpc UpdateConstraint(UpdateConstraintRequest) returns (UpdateConstraintResponse);
+    rpc ListConstraints(ListConstraintsRequest) returns (ListConstraintsResponse);
+    /* Where the live state contradicts the Space's constraints, strict or
+       not: what a user repairs by hand. */
+    rpc ListViolations(ListViolationsRequest) returns (ListViolationsResponse);
+}
+
+message CreateConstraintRequest {
+    string space_id = 1;
+    string name = 2;
+    string field_id = 3;
+    bool unique = 4;
+    bool strict = 5;
+}
+
+message CreateConstraintResponse {
+    Constraint constraint = 1;
+}
+
+message UpdateConstraintRequest {
+    string space_id = 1;
+    string id = 2;
+    optional string name = 3;
+    optional bool strict = 4;
+}
+
+message UpdateConstraintResponse {
+    Constraint constraint = 1;
+}
+
+message ListConstraintsRequest {
+    string space_id = 1;
+    bool include_deleted = 2;
+}
+
+message ListConstraintsResponse {
+    repeated Constraint constraints = 1;
+}
+
+message ListViolationsRequest {
+    string space_id = 1;
+}
+
+message ListViolationsResponse {
+    repeated Violation violations = 1;
 }
 
 message PublishDefinitionRequest {

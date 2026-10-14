@@ -135,6 +135,8 @@ message Rejection {
         REASON_PROTECTED = 4;
         /* An Object in the Change was purged; its identity cannot be reused. */
         REASON_PURGED = 5;
+        /* A strict constraint of the Space is violated. */
+        REASON_CONSTRAINT = 6;
     }
     Reason reason = 1;
     string message = 2;

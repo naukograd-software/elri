@@ -13,6 +13,10 @@ use elri_proto::elri::v1::attachment::{
 };
 use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
 use elri_proto::elri::v1::change::{ChangeStatus, ListChangesRequest};
+use elri_proto::elri::v1::definition::definition_service_ws::DefinitionServiceClient;
+use elri_proto::elri::v1::definition::{
+    CreateConstraintRequest, CreateFieldDefinitionRequest, FieldKind,
+};
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, write, CommitRequest, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest,
@@ -51,6 +55,7 @@ struct Device {
     remote: RemoteServiceClient,
     changes: ChangeServiceClient,
     attachments: AttachmentServiceClient,
+    defs: DefinitionServiceClient,
 }
 
 impl Device {
@@ -69,7 +74,8 @@ impl Device {
             objects: ObjectServiceClient::new(conn.clone()),
             remote: RemoteServiceClient::new(conn.clone()),
             changes: ChangeServiceClient::new(conn.clone()),
-            attachments: AttachmentServiceClient::new(conn),
+            attachments: AttachmentServiceClient::new(conn.clone()),
+            defs: DefinitionServiceClient::new(conn),
         }
     }
 
@@ -553,6 +559,143 @@ async fn changes_flow_between_devices_through_the_server() {
         .attachment
         .expect("attachment");
     assert!(now_local.available);
+
+    // A strict constraint: Bob, an editor, may not set one; Alice, the
+    // owner, may. Then two offline claims of one value: the server accepts
+    // the first and rejects the second as a whole.
+    let email = a
+        .defs
+        .create_field_definition(a.authed(CreateFieldDefinitionRequest {
+            space_id: space.id.clone(),
+            name: "Email".into(),
+            description: String::new(),
+            kind: FieldKind::String.into(),
+        }))
+        .await
+        .expect("field")
+        .msg
+        .definition
+        .expect("definition");
+    eventually("bob to receive the field", || async {
+        b.objects
+            .get_object(b.authed(GetObjectRequest {
+                space_id: space.id.clone(),
+                id: email.id.clone(),
+            }))
+            .await
+            .is_ok()
+    })
+    .await;
+    let bobs = b
+        .defs
+        .create_constraint(b.authed(CreateConstraintRequest {
+            space_id: space.id.clone(),
+            name: "bob's strict".into(),
+            field_id: email.id.clone(),
+            unique: true,
+            strict: true,
+        }))
+        .await
+        .expect("local write succeeds")
+        .msg
+        .constraint
+        .expect("constraint");
+    eventually(
+        "bob's strict constraint to be rejected by the server",
+        || async {
+            b.changes
+                .list_changes(b.authed(ListChangesRequest {
+                    space_id: space.id.clone(),
+                    limit: 20,
+                    object_id: bobs.id.clone(),
+                }))
+                .await
+                .is_ok_and(|r| {
+                    r.msg
+                        .changes
+                        .iter()
+                        .any(|c| c.status() == ChangeStatus::Rejected)
+                })
+        },
+    )
+    .await;
+    let strict = a
+        .defs
+        .create_constraint(a.authed(CreateConstraintRequest {
+            space_id: space.id.clone(),
+            name: "unique email".into(),
+            field_id: email.id.clone(),
+            unique: true,
+            strict: true,
+        }))
+        .await
+        .expect("owner sets strict")
+        .msg
+        .constraint
+        .expect("constraint");
+    eventually("bob to receive the constraint", || async {
+        b.objects
+            .get_object(b.authed(GetObjectRequest {
+                space_id: space.id.clone(),
+                id: strict.id.clone(),
+            }))
+            .await
+            .is_ok()
+    })
+    .await;
+    // Both devices claim the same value while the other's claim is not yet
+    // there: each local write passes its provisional check.
+    let claim = |d: &Device| {
+        let mut fields = HashMap::new();
+        fields.insert(email.id.clone(), s("same@x"));
+        let req = d.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: ObjectKind::Entity.into(),
+            fields,
+            ..Default::default()
+        });
+        let objects = d.objects.clone();
+        async move { objects.create_object(req).await }
+    };
+    let (ra, rb) = tokio::join!(claim(&a), claim(&b));
+    let claim_a = ra.expect("alice's local write").msg.object.expect("object");
+    let claim_b = rb.expect("bob's local write").msg.object.expect("object");
+    let outcome = |d: &Device, id: String| {
+        let req = d.authed(ListChangesRequest {
+            space_id: space.id.clone(),
+            limit: 20,
+            object_id: id,
+        });
+        let changes = d.changes.clone();
+        async move {
+            changes.list_changes(req).await.ok().and_then(|r| {
+                r.msg
+                    .changes
+                    .first()
+                    .map(|c| (c.status(), c.rejection.clone()))
+            })
+        }
+    };
+    eventually("both claims to be decided", || async {
+        let oa = outcome(&a, claim_a.id.clone()).await;
+        let ob = outcome(&b, claim_b.id.clone()).await;
+        matches!(
+            (oa.map(|o| o.0), ob.map(|o| o.0)),
+            (Some(ChangeStatus::Accepted), Some(ChangeStatus::Rejected))
+                | (Some(ChangeStatus::Rejected), Some(ChangeStatus::Accepted))
+        )
+    })
+    .await;
+    let rejected_text = [
+        outcome(&a, claim_a.id.clone()).await,
+        outcome(&b, claim_b.id.clone()).await,
+    ]
+    .into_iter()
+    .flatten()
+    .find(|(st, _)| *st == ChangeStatus::Rejected)
+    .map(|(_, text)| text)
+    .expect("one rejection");
+    assert!(rejected_text.contains("CONSTRAINT"), "{rejected_text}");
 
     eventually("alice's coordinated change to be accepted", || async {
         a.changes

@@ -19,6 +19,11 @@ use elri_proto::elri::v1::change::{
 };
 use elri_proto::elri::v1::core::core_service_ws::CoreServiceClient;
 use elri_proto::elri::v1::core::GetInfoRequest;
+use elri_proto::elri::v1::definition::definition_service_ws::DefinitionServiceClient;
+use elri_proto::elri::v1::definition::{
+    Constraint, CreateConstraintRequest, ListConstraintsRequest, ListViolationsRequest,
+    UpdateConstraintRequest,
+};
 use elri_proto::elri::v1::events::event_service_ws::EventServiceClient;
 use elri_proto::elri::v1::events::{event, WatchRequest};
 use elri_proto::elri::v1::extension::extension_service_ws::ExtensionServiceClient;
@@ -105,6 +110,11 @@ enum Cmd {
         kind: Option<ObjectKind>,
         #[arg(long, default_value_t = 20)]
         limit: i32,
+    },
+    /// Constraints: rules over field values that are reported or enforced.
+    Constraint {
+        #[command(subcommand)]
+        cmd: ConstraintCmd,
     },
     /// Luau scripts kept in a Space, run on this device.
     Script {
@@ -221,6 +231,44 @@ enum ScriptCmd {
         id: String,
         #[arg(default_value = "null")]
         args: String,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum ConstraintCmd {
+    /// Constraints of a Space.
+    List {
+        #[arg(long)]
+        space: String,
+        #[arg(long)]
+        include_deleted: bool,
+    },
+    /// Add a unique constraint on a field; diagnostic unless --strict.
+    Add {
+        #[arg(long)]
+        space: String,
+        /// Field definition id.
+        #[arg(long)]
+        field: String,
+        name: String,
+        /// Refuse writes that break it instead of reporting them.
+        #[arg(long)]
+        strict: bool,
+    },
+    /// Rename a constraint or switch it between diagnostic and strict.
+    Set {
+        #[arg(long)]
+        space: String,
+        id: String,
+        #[arg(long)]
+        name: Option<String>,
+        #[arg(long)]
+        strict: Option<bool>,
+    },
+    /// Live Objects that break a constraint of the Space.
+    Violations {
+        #[arg(long)]
+        space: String,
     },
 }
 
@@ -939,6 +987,104 @@ async fn run_script(
                 "labels": r.labels,
                 "grant_id": r.grant_id,
             }))
+        }
+    }
+}
+
+fn constraint_json(c: &Constraint) -> serde_json::Value {
+    json!({
+        "id": c.id, "space_id": c.space_id, "name": c.name, "field_id": c.field_id,
+        "unique": c.unique, "strict": c.strict,
+        "created_at_ms": c.created_at_ms, "updated_at_ms": c.updated_at_ms,
+        "deleted_at_ms": c.deleted_at_ms,
+    })
+}
+
+async fn run_constraint(
+    endpoint: &Endpoint,
+    conn: Client,
+    cmd: ConstraintCmd,
+) -> Result<serde_json::Value> {
+    let client = DefinitionServiceClient::new(conn);
+    match cmd {
+        ConstraintCmd::List {
+            space,
+            include_deleted,
+        } => {
+            let res = client
+                .list_constraints(authed(
+                    endpoint,
+                    ListConstraintsRequest {
+                        space_id: space,
+                        include_deleted,
+                    },
+                ))
+                .await?;
+            Ok(json!(res
+                .msg
+                .constraints
+                .iter()
+                .map(constraint_json)
+                .collect::<Vec<_>>()))
+        }
+        ConstraintCmd::Add {
+            space,
+            field,
+            name,
+            strict,
+        } => {
+            let res = client
+                .create_constraint(authed(
+                    endpoint,
+                    CreateConstraintRequest {
+                        space_id: space,
+                        name,
+                        field_id: field,
+                        unique: true,
+                        strict,
+                    },
+                ))
+                .await?;
+            let Some(c) = res.msg.constraint else {
+                bail!("core returned no constraint");
+            };
+            Ok(constraint_json(&c))
+        }
+        ConstraintCmd::Set {
+            space,
+            id,
+            name,
+            strict,
+        } => {
+            let res = client
+                .update_constraint(authed(
+                    endpoint,
+                    UpdateConstraintRequest {
+                        space_id: space,
+                        id,
+                        name,
+                        strict,
+                    },
+                ))
+                .await?;
+            let Some(c) = res.msg.constraint else {
+                bail!("core returned no constraint");
+            };
+            Ok(constraint_json(&c))
+        }
+        ConstraintCmd::Violations { space } => {
+            let res = client
+                .list_violations(authed(endpoint, ListViolationsRequest { space_id: space }))
+                .await?;
+            Ok(json!(res
+                .msg
+                .violations
+                .iter()
+                .map(|v| json!({
+                    "constraint_id": v.constraint_id, "field_id": v.field_id,
+                    "value": v.value, "object_ids": v.object_ids,
+                }))
+                .collect::<Vec<_>>()))
         }
     }
 }
@@ -1751,6 +1897,7 @@ async fn main() -> Result<()> {
         Cmd::Attachment { cmd } => run_attachment(&endpoint, conn, cmd).await?,
         Cmd::Script { cmd } => run_script(&endpoint, conn, cmd).await?,
         Cmd::Grant { cmd } => run_grant(&endpoint, conn, cmd).await?,
+        Cmd::Constraint { cmd } => run_constraint(&endpoint, conn, cmd).await?,
         Cmd::Rule { cmd } => run_rule(&endpoint, conn, cmd).await?,
         Cmd::Ui { cmd } => run_ui(&endpoint, conn, cmd).await?,
         Cmd::Transfer { cmd } => run_transfer(&endpoint, conn, cmd).await?,

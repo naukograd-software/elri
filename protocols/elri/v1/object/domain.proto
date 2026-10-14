@@ -28,6 +28,8 @@ enum ObjectKind {
     OBJECT_KIND_PUBLICATION = 11;
     /* A selection of Spaces, Layers, filters, and Views; see elri.v1.context. */
     OBJECT_KIND_CONTEXT = 12;
+    /* A declarative constraint over a field; see elri.v1.definition. */
+    OBJECT_KIND_CONSTRAINT = 13;
 }
 
 /* Items of a list value; scalars only. */

@@ -148,7 +148,8 @@ impl From<StoreError> for Status {
             | StoreError::Downloading { .. }
             | StoreError::NotDeleted(_)
             | StoreError::Purged(_)
-            | StoreError::EpochMoved { .. } => Status::new(Code::FailedPrecondition, e.to_string()),
+            | StoreError::EpochMoved { .. }
+            | StoreError::Constraint { .. } => Status::new(Code::FailedPrecondition, e.to_string()),
             StoreError::Model(
                 ModelError::InvalidId(_)
                 | ModelError::EmptyValue(_)

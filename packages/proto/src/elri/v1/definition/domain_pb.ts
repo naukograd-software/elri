@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/definition/domain.proto.
  */
 export const file_elri_v1_definition_domain: GenFile = /*@__PURE__*/
-  fileDesc("Ch9lbHJpL3YxL2RlZmluaXRpb24vZG9tYWluLnByb3RvEhJlbHJpLnYxLmRlZmluaXRpb24i2wEKD0ZpZWxkRGVmaW5pdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEisKBGtpbmQYBSABKA4yHS5lbHJpLnYxLmRlZmluaXRpb24uRmllbGRLaW5kEhUKDWNyZWF0ZWRfYXRfbXMYBiABKAMSFQoNdXBkYXRlZF9hdF9tcxgHIAEoAxIaCg1kZWxldGVkX2F0X21zGAggASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMiLwoJVHlwZUZpZWxkEhAKCGZpZWxkX2lkGAEgASgJEhAKCHJlcXVpcmVkGAIgASgIItwBCg5UeXBlRGVmaW5pdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEi0KBmZpZWxkcxgFIAMoCzIdLmVscmkudjEuZGVmaW5pdGlvbi5UeXBlRmllbGQSFQoNY3JlYXRlZF9hdF9tcxgGIAEoAxIVCg11cGRhdGVkX2F0X21zGAcgASgDEhoKDWRlbGV0ZWRfYXRfbXMYCCABKANIAIgBAUIQCg5fZGVsZXRlZF9hdF9tcyKtAQoOUm9sZURlZmluaXRpb24SCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIVCg1jcmVhdGVkX2F0X21zGAUgASgDEhUKDXVwZGF0ZWRfYXRfbXMYBiABKAMSGgoNZGVsZXRlZF9hdF9tcxgHIAEoA0gAiAEBQhAKDl9kZWxldGVkX2F0X21zIo8CCgtQdWJsaWNhdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIVCg1kZWZpbml0aW9uX2lkGAMgASgJEg8KB3ZlcnNpb24YBCABKAUSFQoNc25hcHNob3RfanNvbhgFIAEoCRJHCgxkZXBlbmRlbmNpZXMYBiADKAsyMS5lbHJpLnYxLmRlZmluaXRpb24uUHVibGljYXRpb24uRGVwZW5kZW5jaWVzRW50cnkSDgoGZGlnZXN0GAcgASgJEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMaMwoRRGVwZW5kZW5jaWVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgFOgI4ASJUCgNQaW4SFQoNZGVmaW5pdGlvbl9pZBgBIAEoCRIWCg5wdWJsaWNhdGlvbl9pZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFEg0KBWVwb2NoGAQgASgDIj4KBlNjaGVtYRINCgVlcG9jaBgBIAEoAxIlCgRwaW5zGAIgAygLMhcuZWxyaS52MS5kZWZpbml0aW9uLlBpbir/AQoJRmllbGRLaW5kEhoKFkZJRUxEX0tJTkRfVU5TUEVDSUZJRUQQABITCg9GSUVMRF9LSU5EX0JPT0wQARISCg5GSUVMRF9LSU5EX0lOVBACEhUKEUZJRUxEX0tJTkRfRE9VQkxFEAMSFQoRRklFTERfS0lORF9TVFJJTkcQBBITCg9GSUVMRF9LSU5EX1RJTUUQBRISCg5GSUVMRF9LSU5EX1JFRhAGEhMKD0ZJRUxEX0tJTkRfVEVYVBAHEhMKD0ZJRUxEX0tJTkRfTElTVBAIEhIKDkZJRUxEX0tJTkRfTUFQEAkSGAoURklFTERfS0lORF9SSUNIX1RFWFQQCmIGcHJvdG8z");
+  fileDesc("Ch9lbHJpL3YxL2RlZmluaXRpb24vZG9tYWluLnByb3RvEhJlbHJpLnYxLmRlZmluaXRpb24i2wEKD0ZpZWxkRGVmaW5pdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEisKBGtpbmQYBSABKA4yHS5lbHJpLnYxLmRlZmluaXRpb24uRmllbGRLaW5kEhUKDWNyZWF0ZWRfYXRfbXMYBiABKAMSFQoNdXBkYXRlZF9hdF9tcxgHIAEoAxIaCg1kZWxldGVkX2F0X21zGAggASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMiLwoJVHlwZUZpZWxkEhAKCGZpZWxkX2lkGAEgASgJEhAKCHJlcXVpcmVkGAIgASgIItwBCg5UeXBlRGVmaW5pdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEi0KBmZpZWxkcxgFIAMoCzIdLmVscmkudjEuZGVmaW5pdGlvbi5UeXBlRmllbGQSFQoNY3JlYXRlZF9hdF9tcxgGIAEoAxIVCg11cGRhdGVkX2F0X21zGAcgASgDEhoKDWRlbGV0ZWRfYXRfbXMYCCABKANIAIgBAUIQCg5fZGVsZXRlZF9hdF9tcyKtAQoOUm9sZURlZmluaXRpb24SCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIVCg1jcmVhdGVkX2F0X21zGAUgASgDEhUKDXVwZGF0ZWRfYXRfbXMYBiABKAMSGgoNZGVsZXRlZF9hdF9tcxgHIAEoA0gAiAEBQhAKDl9kZWxldGVkX2F0X21zIo8CCgtQdWJsaWNhdGlvbhIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIVCg1kZWZpbml0aW9uX2lkGAMgASgJEg8KB3ZlcnNpb24YBCABKAUSFQoNc25hcHNob3RfanNvbhgFIAEoCRJHCgxkZXBlbmRlbmNpZXMYBiADKAsyMS5lbHJpLnYxLmRlZmluaXRpb24uUHVibGljYXRpb24uRGVwZW5kZW5jaWVzRW50cnkSDgoGZGlnZXN0GAcgASgJEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMaMwoRRGVwZW5kZW5jaWVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgFOgI4ASJUCgNQaW4SFQoNZGVmaW5pdGlvbl9pZBgBIAEoCRIWCg5wdWJsaWNhdGlvbl9pZBgCIAEoCRIPCgd2ZXJzaW9uGAMgASgFEg0KBWVwb2NoGAQgASgDIj4KBlNjaGVtYRINCgVlcG9jaBgBIAEoAxIlCgRwaW5zGAIgAygLMhcuZWxyaS52MS5kZWZpbml0aW9uLlBpbiLGAQoKQ29uc3RyYWludBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhAKCGZpZWxkX2lkGAQgASgJEg4KBnVuaXF1ZRgFIAEoCBIOCgZzdHJpY3QYBiABKAgSFQoNY3JlYXRlZF9hdF9tcxgHIAEoAxIVCg11cGRhdGVkX2F0X21zGAggASgDEhoKDWRlbGV0ZWRfYXRfbXMYCSABKANIAIgBAUIQCg5fZGVsZXRlZF9hdF9tcyJXCglWaW9sYXRpb24SFQoNY29uc3RyYWludF9pZBgBIAEoCRIQCghmaWVsZF9pZBgCIAEoCRINCgV2YWx1ZRgDIAEoCRISCgpvYmplY3RfaWRzGAQgAygJKv8BCglGaWVsZEtpbmQSGgoWRklFTERfS0lORF9VTlNQRUNJRklFRBAAEhMKD0ZJRUxEX0tJTkRfQk9PTBABEhIKDkZJRUxEX0tJTkRfSU5UEAISFQoRRklFTERfS0lORF9ET1VCTEUQAxIVChFGSUVMRF9LSU5EX1NUUklORxAEEhMKD0ZJRUxEX0tJTkRfVElNRRAFEhIKDkZJRUxEX0tJTkRfUkVGEAYSEwoPRklFTERfS0lORF9URVhUEAcSEwoPRklFTERfS0lORF9MSVNUEAgSEgoORklFTERfS0lORF9NQVAQCRIYChRGSUVMRF9LSU5EX1JJQ0hfVEVYVBAKYgZwcm90bzM");
 
 /**
  * @generated from message elri.v1.definition.FieldDefinition
@@ -568,6 +568,206 @@ export type SchemaJson = {
  */
 export const SchemaSchema: GenMessage<Schema, {jsonType: SchemaJson}> = /*@__PURE__*/
   messageDesc(file_elri_v1_definition_domain, 6);
+
+/**
+ *
+ * A declarative constraint over one field of a Space, from the built-in
+ * validator set: uniqueness of a scalar value among live Objects. By default
+ * a constraint is diagnostic: violations are listed, nothing is refused.
+ * A strict constraint refuses the write; on a server Space only an Owner or
+ * Admin may make one strict, and offline checks stay provisional: of two
+ * offline claims the server accepts one and rejects the other.
+ *
+ * @generated from message elri.v1.definition.Constraint
+ */
+export type Constraint = Message<"elri.v1.definition.Constraint"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string space_id = 2;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * The field definition the constraint is about. 
+   *
+   * @generated from field: string field_id = 4;
+   */
+  fieldId: string;
+
+  /**
+   * Values must be unique among live Objects; empty values are ignored. 
+   *
+   * @generated from field: bool unique = 5;
+   */
+  unique: boolean;
+
+  /**
+   * Refuse writes instead of reporting. 
+   *
+   * @generated from field: bool strict = 6;
+   */
+  strict: boolean;
+
+  /**
+   * @generated from field: int64 created_at_ms = 7;
+   */
+  createdAtMs: bigint;
+
+  /**
+   * @generated from field: int64 updated_at_ms = 8;
+   */
+  updatedAtMs: bigint;
+
+  /**
+   * @generated from field: optional int64 deleted_at_ms = 9;
+   */
+  deletedAtMs?: bigint | undefined;
+};
+
+/**
+ *
+ * A declarative constraint over one field of a Space, from the built-in
+ * validator set: uniqueness of a scalar value among live Objects. By default
+ * a constraint is diagnostic: violations are listed, nothing is refused.
+ * A strict constraint refuses the write; on a server Space only an Owner or
+ * Admin may make one strict, and offline checks stay provisional: of two
+ * offline claims the server accepts one and rejects the other.
+ *
+ * @generated from message elri.v1.definition.Constraint
+ */
+export type ConstraintJson = {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * @generated from field: string space_id = 2;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name?: string;
+
+  /**
+   * The field definition the constraint is about. 
+   *
+   * @generated from field: string field_id = 4;
+   */
+  fieldId?: string;
+
+  /**
+   * Values must be unique among live Objects; empty values are ignored. 
+   *
+   * @generated from field: bool unique = 5;
+   */
+  unique?: boolean;
+
+  /**
+   * Refuse writes instead of reporting. 
+   *
+   * @generated from field: bool strict = 6;
+   */
+  strict?: boolean;
+
+  /**
+   * @generated from field: int64 created_at_ms = 7;
+   */
+  createdAtMs?: string;
+
+  /**
+   * @generated from field: int64 updated_at_ms = 8;
+   */
+  updatedAtMs?: string;
+
+  /**
+   * @generated from field: optional int64 deleted_at_ms = 9;
+   */
+  deletedAtMs?: string;
+};
+
+/**
+ * Describes the message elri.v1.definition.Constraint.
+ * Use `create(ConstraintSchema)` to create a new message.
+ */
+export const ConstraintSchema: GenMessage<Constraint, {jsonType: ConstraintJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_domain, 7);
+
+/**
+ * Objects that share a value a constraint says must be unique. 
+ *
+ * @generated from message elri.v1.definition.Violation
+ */
+export type Violation = Message<"elri.v1.definition.Violation"> & {
+  /**
+   * @generated from field: string constraint_id = 1;
+   */
+  constraintId: string;
+
+  /**
+   * @generated from field: string field_id = 2;
+   */
+  fieldId: string;
+
+  /**
+   * The shared value, as text. 
+   *
+   * @generated from field: string value = 3;
+   */
+  value: string;
+
+  /**
+   * @generated from field: repeated string object_ids = 4;
+   */
+  objectIds: string[];
+};
+
+/**
+ * Objects that share a value a constraint says must be unique. 
+ *
+ * @generated from message elri.v1.definition.Violation
+ */
+export type ViolationJson = {
+  /**
+   * @generated from field: string constraint_id = 1;
+   */
+  constraintId?: string;
+
+  /**
+   * @generated from field: string field_id = 2;
+   */
+  fieldId?: string;
+
+  /**
+   * The shared value, as text. 
+   *
+   * @generated from field: string value = 3;
+   */
+  value?: string;
+
+  /**
+   * @generated from field: repeated string object_ids = 4;
+   */
+  objectIds?: string[];
+};
+
+/**
+ * Describes the message elri.v1.definition.Violation.
+ * Use `create(ViolationSchema)` to create a new message.
+ */
+export const ViolationSchema: GenMessage<Violation, {jsonType: ViolationJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_definition_domain, 8);
 
 /**
  * Storage kind of a field; fixed for the life of the definition. 

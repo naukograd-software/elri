@@ -66,7 +66,7 @@ fn storage(e: elri_core::store::StoreError) -> Status {
     use elri_core::store::StoreError as E;
     match e {
         E::SpaceNotFound(_) | E::ObjectNotFound(_) => Status::new(Code::NotFound, e.to_string()),
-        E::NotDeleted(_) | E::Purged(_) | E::EpochMoved { .. } => {
+        E::NotDeleted(_) | E::Purged(_) | E::EpochMoved { .. } | E::Constraint { .. } => {
             Status::new(Code::FailedPrecondition, e.to_string())
         }
         E::NotPublication(_) => invalid(e.to_string()),
@@ -460,9 +460,27 @@ impl SyncServiceHandler for State {
                 ));
             }
         }
-        // An accepted attachment must name bytes this server holds.
+        // An accepted attachment must name bytes this server holds; a strict
+        // constraint may only be set by an Owner or Admin of its Space.
         let blobs = self.blobs.clone();
+        let mut managers: Vec<Uuid> = Vec::new();
+        for space_id in &spaces {
+            if self
+                .registry
+                .role(space_id.uuid(), user.id)
+                .await?
+                .is_some_and(Role::can_manage)
+            {
+                managers.push(space_id.uuid());
+            }
+        }
         let check = move |o: &elri_proto::elri::v1::object::Object| -> Result<(), String> {
+            if let Some(c) = elri_core::model::constraint_of(o) {
+                let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
+                if c.strict && !managers.contains(&space.uuid()) {
+                    return Err("a strict constraint needs an owner or admin".to_owned());
+                }
+            }
             if let Some(sha) = attachment_sha256(o) {
                 let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
                 if !blobs.exists(space, sha) {

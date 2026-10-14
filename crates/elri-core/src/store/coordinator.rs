@@ -129,6 +129,8 @@ impl Store {
                 written[i] = Some(d.rec.clone());
                 docs.push(d);
             }
+            let recs: Vec<Object> = docs.iter().map(|d| d.rec.clone()).collect();
+            super::check_strict(guard, &recs).await?;
             staged.push(docs);
         }
         let env = Envelope {
@@ -367,6 +369,10 @@ impl Store {
                         if let Err(msg) = check(&d.rec) {
                             return Ok(Err(rejected(Reason::Invalid, msg)));
                         }
+                    }
+                    let recs: Vec<Object> = docs.iter().map(|d| d.rec.clone()).collect();
+                    if let Some(outcome) = super::strict_rejection(guard, &recs).await? {
+                        return Ok(Err(outcome));
                     }
                     staged.push(docs);
                 }

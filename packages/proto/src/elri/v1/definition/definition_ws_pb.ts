@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CreateFieldDefinitionRequest, CreateFieldDefinitionResponse, CreateRoleDefinitionRequest, CreateRoleDefinitionResponse, CreateTypeDefinitionRequest, CreateTypeDefinitionResponse, GetSchemaRequest, GetSchemaResponse, ListFieldDefinitionsRequest, ListFieldDefinitionsResponse, ListPublicationsRequest, ListPublicationsResponse, ListRoleDefinitionsRequest, ListRoleDefinitionsResponse, ListTypeDefinitionsRequest, ListTypeDefinitionsResponse, PinDefinitionRequest, PinDefinitionResponse, PublishDefinitionRequest, PublishDefinitionResponse, UpdateFieldDefinitionRequest, UpdateFieldDefinitionResponse, UpdateTypeDefinitionRequest, UpdateTypeDefinitionResponse } from "./definition_pb.ts";
-import { CreateFieldDefinitionRequestSchema, CreateFieldDefinitionResponseSchema, CreateRoleDefinitionRequestSchema, CreateRoleDefinitionResponseSchema, CreateTypeDefinitionRequestSchema, CreateTypeDefinitionResponseSchema, GetSchemaRequestSchema, GetSchemaResponseSchema, ListFieldDefinitionsRequestSchema, ListFieldDefinitionsResponseSchema, ListPublicationsRequestSchema, ListPublicationsResponseSchema, ListRoleDefinitionsRequestSchema, ListRoleDefinitionsResponseSchema, ListTypeDefinitionsRequestSchema, ListTypeDefinitionsResponseSchema, PinDefinitionRequestSchema, PinDefinitionResponseSchema, PublishDefinitionRequestSchema, PublishDefinitionResponseSchema, UpdateFieldDefinitionRequestSchema, UpdateFieldDefinitionResponseSchema, UpdateTypeDefinitionRequestSchema, UpdateTypeDefinitionResponseSchema } from "./definition_pb.ts";
+import type { CreateConstraintRequest, CreateConstraintResponse, CreateFieldDefinitionRequest, CreateFieldDefinitionResponse, CreateRoleDefinitionRequest, CreateRoleDefinitionResponse, CreateTypeDefinitionRequest, CreateTypeDefinitionResponse, GetSchemaRequest, GetSchemaResponse, ListConstraintsRequest, ListConstraintsResponse, ListFieldDefinitionsRequest, ListFieldDefinitionsResponse, ListPublicationsRequest, ListPublicationsResponse, ListRoleDefinitionsRequest, ListRoleDefinitionsResponse, ListTypeDefinitionsRequest, ListTypeDefinitionsResponse, ListViolationsRequest, ListViolationsResponse, PinDefinitionRequest, PinDefinitionResponse, PublishDefinitionRequest, PublishDefinitionResponse, UpdateConstraintRequest, UpdateConstraintResponse, UpdateFieldDefinitionRequest, UpdateFieldDefinitionResponse, UpdateTypeDefinitionRequest, UpdateTypeDefinitionResponse } from "./definition_pb.ts";
+import { CreateConstraintRequestSchema, CreateConstraintResponseSchema, CreateFieldDefinitionRequestSchema, CreateFieldDefinitionResponseSchema, CreateRoleDefinitionRequestSchema, CreateRoleDefinitionResponseSchema, CreateTypeDefinitionRequestSchema, CreateTypeDefinitionResponseSchema, GetSchemaRequestSchema, GetSchemaResponseSchema, ListConstraintsRequestSchema, ListConstraintsResponseSchema, ListFieldDefinitionsRequestSchema, ListFieldDefinitionsResponseSchema, ListPublicationsRequestSchema, ListPublicationsResponseSchema, ListRoleDefinitionsRequestSchema, ListRoleDefinitionsResponseSchema, ListTypeDefinitionsRequestSchema, ListTypeDefinitionsResponseSchema, ListViolationsRequestSchema, ListViolationsResponseSchema, PinDefinitionRequestSchema, PinDefinitionResponseSchema, PublishDefinitionRequestSchema, PublishDefinitionResponseSchema, UpdateConstraintRequestSchema, UpdateConstraintResponseSchema, UpdateFieldDefinitionRequestSchema, UpdateFieldDefinitionResponseSchema, UpdateTypeDefinitionRequestSchema, UpdateTypeDefinitionResponseSchema } from "./definition_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -113,6 +113,38 @@ const DefinitionService_GetSchema: MethodInfo<GetSchemaRequest, GetSchemaRespons
   kind: "unary",
   input: GetSchemaRequestSchema,
   output: GetSchemaResponseSchema,
+};
+
+const DefinitionService_CreateConstraint: MethodInfo<CreateConstraintRequest, CreateConstraintResponse> = {
+  typeName: "elri.v1.definition.DefinitionService",
+  name: "CreateConstraint",
+  kind: "unary",
+  input: CreateConstraintRequestSchema,
+  output: CreateConstraintResponseSchema,
+};
+
+const DefinitionService_UpdateConstraint: MethodInfo<UpdateConstraintRequest, UpdateConstraintResponse> = {
+  typeName: "elri.v1.definition.DefinitionService",
+  name: "UpdateConstraint",
+  kind: "unary",
+  input: UpdateConstraintRequestSchema,
+  output: UpdateConstraintResponseSchema,
+};
+
+const DefinitionService_ListConstraints: MethodInfo<ListConstraintsRequest, ListConstraintsResponse> = {
+  typeName: "elri.v1.definition.DefinitionService",
+  name: "ListConstraints",
+  kind: "unary",
+  input: ListConstraintsRequestSchema,
+  output: ListConstraintsResponseSchema,
+};
+
+const DefinitionService_ListViolations: MethodInfo<ListViolationsRequest, ListViolationsResponse> = {
+  typeName: "elri.v1.definition.DefinitionService",
+  name: "ListViolations",
+  kind: "unary",
+  input: ListViolationsRequestSchema,
+  output: ListViolationsResponseSchema,
 };
 
 /**
@@ -229,6 +261,41 @@ export class DefinitionServiceClient {
    */
   async getSchema(req: GetSchemaRequest, options?: CallOptions): Promise<GetSchemaResponse> {
     const res = await this.transport.unary(DefinitionService_GetSchema, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * @generated from rpc elri.v1.definition.DefinitionService.CreateConstraint
+   */
+  async createConstraint(req: CreateConstraintRequest, options?: CallOptions): Promise<CreateConstraintResponse> {
+    const res = await this.transport.unary(DefinitionService_CreateConstraint, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * @generated from rpc elri.v1.definition.DefinitionService.UpdateConstraint
+   */
+  async updateConstraint(req: UpdateConstraintRequest, options?: CallOptions): Promise<UpdateConstraintResponse> {
+    const res = await this.transport.unary(DefinitionService_UpdateConstraint, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * @generated from rpc elri.v1.definition.DefinitionService.ListConstraints
+   */
+  async listConstraints(req: ListConstraintsRequest, options?: CallOptions): Promise<ListConstraintsResponse> {
+    const res = await this.transport.unary(DefinitionService_ListConstraints, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Where the live state contradicts the Space's constraints, strict or
+   * not: what a user repairs by hand. 
+   *
+   * @generated from rpc elri.v1.definition.DefinitionService.ListViolations
+   */
+  async listViolations(req: ListViolationsRequest, options?: CallOptions): Promise<ListViolationsResponse> {
+    const res = await this.transport.unary(DefinitionService_ListViolations, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

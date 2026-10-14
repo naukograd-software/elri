@@ -61,6 +61,22 @@ pub mod definition_service_ws {
         route: "/elri.v1.definition.DefinitionService/GetSchema",
         kind: StreamKind::Unary,
     };
+    pub const CREATE_CONSTRAINT: MethodSpec = MethodSpec {
+        route: "/elri.v1.definition.DefinitionService/CreateConstraint",
+        kind: StreamKind::Unary,
+    };
+    pub const UPDATE_CONSTRAINT: MethodSpec = MethodSpec {
+        route: "/elri.v1.definition.DefinitionService/UpdateConstraint",
+        kind: StreamKind::Unary,
+    };
+    pub const LIST_CONSTRAINTS: MethodSpec = MethodSpec {
+        route: "/elri.v1.definition.DefinitionService/ListConstraints",
+        kind: StreamKind::Unary,
+    };
+    pub const LIST_VIOLATIONS: MethodSpec = MethodSpec {
+        route: "/elri.v1.definition.DefinitionService/ListViolations",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `DefinitionService` service. Implement with `async fn`.
     pub trait DefinitionServiceHandler: Send + Sync + 'static {
         fn create_field_definition(
@@ -142,6 +158,32 @@ pub mod definition_service_ws {
             req: Request<super::GetSchemaRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::GetSchemaResponse>, Status>,
+        > + Send;
+        fn create_constraint(
+            &self,
+            req: Request<super::CreateConstraintRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::CreateConstraintResponse>, Status>,
+        > + Send;
+        fn update_constraint(
+            &self,
+            req: Request<super::UpdateConstraintRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::UpdateConstraintResponse>, Status>,
+        > + Send;
+        fn list_constraints(
+            &self,
+            req: Request<super::ListConstraintsRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::ListConstraintsResponse>, Status>,
+        > + Send;
+        ///  Where the live state contradicts the Space's constraints, strict or
+        /// not: what a user repairs by hand.
+        fn list_violations(
+            &self,
+            req: Request<super::ListViolationsRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::ListViolationsResponse>, Status>,
         > + Send;
     }
     /// Registers `handler` on `server` for every `DefinitionService` method.
@@ -288,6 +330,50 @@ pub mod definition_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    CREATE_CONSTRAINT.route,
+                    move |req: Request<super::CreateConstraintRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.create_constraint(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    UPDATE_CONSTRAINT.route,
+                    move |req: Request<super::UpdateConstraintRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.update_constraint(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    LIST_CONSTRAINTS.route,
+                    move |req: Request<super::ListConstraintsRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.list_constraints(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    LIST_VIOLATIONS.route,
+                    move |req: Request<super::ListViolationsRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.list_violations(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `DefinitionService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -381,6 +467,32 @@ pub mod definition_service_ws {
             req: impl Into<Request<super::GetSchemaRequest>>,
         ) -> Result<Response<super::GetSchemaResponse>, Status> {
             self.conn.invoke_unary(GET_SCHEMA, req.into()).await
+        }
+        pub async fn create_constraint(
+            &self,
+            req: impl Into<Request<super::CreateConstraintRequest>>,
+        ) -> Result<Response<super::CreateConstraintResponse>, Status> {
+            self.conn.invoke_unary(CREATE_CONSTRAINT, req.into()).await
+        }
+        pub async fn update_constraint(
+            &self,
+            req: impl Into<Request<super::UpdateConstraintRequest>>,
+        ) -> Result<Response<super::UpdateConstraintResponse>, Status> {
+            self.conn.invoke_unary(UPDATE_CONSTRAINT, req.into()).await
+        }
+        pub async fn list_constraints(
+            &self,
+            req: impl Into<Request<super::ListConstraintsRequest>>,
+        ) -> Result<Response<super::ListConstraintsResponse>, Status> {
+            self.conn.invoke_unary(LIST_CONSTRAINTS, req.into()).await
+        }
+        ///  Where the live state contradicts the Space's constraints, strict or
+        /// not: what a user repairs by hand.
+        pub async fn list_violations(
+            &self,
+            req: impl Into<Request<super::ListViolationsRequest>>,
+        ) -> Result<Response<super::ListViolationsResponse>, Status> {
+            self.conn.invoke_unary(LIST_VIOLATIONS, req.into()).await
         }
     }
 }

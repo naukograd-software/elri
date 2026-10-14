@@ -201,6 +201,8 @@ pub mod rejection {
         Protected = 4,
         /// An Object in the Change was purged; its identity cannot be reused. 
         Purged = 5,
+        /// A strict constraint of the Space is violated. 
+        Constraint = 6,
     }
     impl Reason {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -215,6 +217,7 @@ pub mod rejection {
                 Self::Invalid => "REASON_INVALID",
                 Self::Protected => "REASON_PROTECTED",
                 Self::Purged => "REASON_PURGED",
+                Self::Constraint => "REASON_CONSTRAINT",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -226,6 +229,7 @@ pub mod rejection {
                 "REASON_INVALID" => Some(Self::Invalid),
                 "REASON_PROTECTED" => Some(Self::Protected),
                 "REASON_PURGED" => Some(Self::Purged),
+                "REASON_CONSTRAINT" => Some(Self::Constraint),
                 _ => None,
             }
         }

@@ -8,14 +8,16 @@ use std::collections::HashMap;
 use elri_core::{BuildInfo, Config, Core, Endpoint};
 use elri_proto::elri::v1::definition::definition_service_ws::DefinitionServiceClient;
 use elri_proto::elri::v1::definition::{
-    CreateFieldDefinitionRequest, CreateTypeDefinitionRequest, FieldKind, GetSchemaRequest,
-    ListFieldDefinitionsRequest, ListPublicationsRequest, ListTypeDefinitionsRequest,
-    PinDefinitionRequest, PublishDefinitionRequest, TypeField, UpdateFieldDefinitionRequest,
+    CreateConstraintRequest, CreateFieldDefinitionRequest, CreateTypeDefinitionRequest, FieldKind,
+    GetSchemaRequest, ListFieldDefinitionsRequest, ListPublicationsRequest,
+    ListTypeDefinitionsRequest, ListViolationsRequest, PinDefinitionRequest,
+    PublishDefinitionRequest, TypeField, UpdateConstraintRequest, UpdateFieldDefinitionRequest,
     UpdateTypeDefinitionRequest,
 };
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
-    value, CreateObjectRequest, DeleteObjectRequest, ListObjectsRequest, ObjectKind, Value,
+    value, CreateObjectRequest, DeleteObjectRequest, ListObjectsRequest, ObjectKind,
+    UpdateObjectRequest, Value,
 };
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::CreateSpaceRequest;
@@ -472,4 +474,163 @@ async fn publications_are_immutable_and_pins_move_the_epoch() {
         .expect_err("kind enforced");
     assert_eq!(err.code, Code::InvalidArgument);
     let _ = t(0);
+}
+
+#[tokio::test]
+async fn constraints_report_by_default_and_refuse_when_strict() {
+    let dir = tmp_dir("constraints");
+    let _core = Core::start(Config::new(
+        &dir,
+        BuildInfo {
+            version: "test",
+            commit: "",
+        },
+    ))
+    .await
+    .expect("start");
+    let endpoint = Endpoint::read(&dir).expect("endpoint");
+    let conn = Client::dial(&endpoint.url, ClientConfig::default())
+        .await
+        .expect("dial");
+    let sess = Session {
+        endpoint,
+        spaces: SpaceServiceClient::new(conn.clone()),
+        objects: ObjectServiceClient::new(conn.clone()),
+        defs: DefinitionServiceClient::new(conn),
+    };
+    let space = sess
+        .spaces
+        .create_space(sess.authed(CreateSpaceRequest { name: "s".into() }))
+        .await
+        .expect("space")
+        .msg
+        .space
+        .expect("space");
+    let email = sess
+        .defs
+        .create_field_definition(sess.authed(CreateFieldDefinitionRequest {
+            space_id: space.id.clone(),
+            name: "Email".into(),
+            description: String::new(),
+            kind: FieldKind::String.into(),
+        }))
+        .await
+        .expect("field")
+        .msg
+        .definition
+        .expect("definition");
+    let create = |value: &str| {
+        let mut fields = HashMap::new();
+        fields.insert(email.id.clone(), s(value));
+        let req = sess.authed(CreateObjectRequest {
+            space_id: space.id.clone(),
+            kind: ObjectKind::Entity.into(),
+            fields,
+            ..Default::default()
+        });
+        let objects = sess.objects.clone();
+        async move { objects.create_object(req).await }
+    };
+    // Two objects already share a value when the constraint arrives.
+    let first = create("a@x")
+        .await
+        .expect("first")
+        .msg
+        .object
+        .expect("object");
+    let second = create(" a@x ")
+        .await
+        .expect("second")
+        .msg
+        .object
+        .expect("object");
+
+    // Diagnostic: both are listed as a violation; nothing is refused.
+    let c = sess
+        .defs
+        .create_constraint(sess.authed(CreateConstraintRequest {
+            space_id: space.id.clone(),
+            name: "unique email".into(),
+            field_id: email.id.clone(),
+            unique: true,
+            strict: false,
+        }))
+        .await
+        .expect("constraint")
+        .msg
+        .constraint
+        .expect("constraint");
+    assert!(!c.strict);
+    let v = sess
+        .defs
+        .list_violations(sess.authed(ListViolationsRequest {
+            space_id: space.id.clone(),
+        }))
+        .await
+        .expect("violations")
+        .msg
+        .violations;
+    assert_eq!(v.len(), 1);
+    assert_eq!(v[0].value, "text:a@x");
+    let mut ids = v[0].object_ids.clone();
+    ids.sort();
+    let mut expected = vec![first.id.clone(), second.id.clone()];
+    expected.sort();
+    assert_eq!(ids, expected);
+    create("a@x").await.expect("diagnostic does not refuse");
+
+    // Strict: a new claim is refused; a different value passes; the same
+    // object keeping its value passes; a deleted holder frees the value.
+    sess.defs
+        .update_constraint(sess.authed(UpdateConstraintRequest {
+            space_id: space.id.clone(),
+            id: c.id.clone(),
+            name: None,
+            strict: Some(true),
+        }))
+        .await
+        .expect("strict");
+    let refused = create("a@x").await.expect_err("strict refuses");
+    assert_eq!(refused.code, Code::FailedPrecondition);
+    assert!(
+        refused.message.contains("constraint"),
+        "{}",
+        refused.message
+    );
+    let third = create("b@x")
+        .await
+        .expect("other value")
+        .msg
+        .object
+        .expect("object");
+    let mut same = HashMap::new();
+    same.insert(email.id.clone(), s("b@x"));
+    sess.objects
+        .update_object(sess.authed(UpdateObjectRequest {
+            space_id: space.id.clone(),
+            id: third.id.clone(),
+            set_fields: same.clone(),
+            ..Default::default()
+        }))
+        .await
+        .expect("same object keeps its value");
+    let taken = sess
+        .objects
+        .update_object(sess.authed(UpdateObjectRequest {
+            space_id: space.id.clone(),
+            id: first.id.clone(),
+            set_fields: same,
+            ..Default::default()
+        }))
+        .await
+        .expect_err("value taken by third");
+    assert_eq!(taken.code, Code::FailedPrecondition);
+    sess.objects
+        .delete_object(sess.authed(DeleteObjectRequest {
+            space_id: space.id.clone(),
+            id: third.id.clone(),
+        }))
+        .await
+        .expect("delete");
+    create("b@x").await.expect("freed by the tombstone");
 }

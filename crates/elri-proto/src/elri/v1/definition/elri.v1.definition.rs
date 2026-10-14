@@ -113,6 +113,50 @@ pub struct Schema {
     #[prost(message, repeated, tag = "2")]
     pub pins: ::prost::alloc::vec::Vec<Pin>,
 }
+///
+/// A declarative constraint over one field of a Space, from the built-in
+/// validator set: uniqueness of a scalar value among live Objects. By default
+/// a constraint is diagnostic: violations are listed, nothing is refused.
+/// A strict constraint refuses the write; on a server Space only an Owner or
+/// Admin may make one strict, and offline checks stay provisional: of two
+/// offline claims the server accepts one and rejects the other.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Constraint {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub name: ::prost::alloc::string::String,
+    /// The field definition the constraint is about. 
+    #[prost(string, tag = "4")]
+    pub field_id: ::prost::alloc::string::String,
+    /// Values must be unique among live Objects; empty values are ignored. 
+    #[prost(bool, tag = "5")]
+    pub unique: bool,
+    /// Refuse writes instead of reporting. 
+    #[prost(bool, tag = "6")]
+    pub strict: bool,
+    #[prost(int64, tag = "7")]
+    pub created_at_ms: i64,
+    #[prost(int64, tag = "8")]
+    pub updated_at_ms: i64,
+    #[prost(int64, optional, tag = "9")]
+    pub deleted_at_ms: ::core::option::Option<i64>,
+}
+/// Objects that share a value a constraint says must be unique. 
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Violation {
+    #[prost(string, tag = "1")]
+    pub constraint_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub field_id: ::prost::alloc::string::String,
+    /// The shared value, as text. 
+    #[prost(string, tag = "3")]
+    pub value: ::prost::alloc::string::String,
+    #[prost(string, repeated, tag = "4")]
+    pub object_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
 //
 // Definitions are Objects: a field definition fixes the kind of value a field
 // holds, a type definition groups field definitions, a role definition names a
@@ -176,6 +220,62 @@ impl FieldKind {
             _ => None,
         }
     }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CreateConstraintRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(string, tag = "3")]
+    pub field_id: ::prost::alloc::string::String,
+    #[prost(bool, tag = "4")]
+    pub unique: bool,
+    #[prost(bool, tag = "5")]
+    pub strict: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CreateConstraintResponse {
+    #[prost(message, optional, tag = "1")]
+    pub constraint: ::core::option::Option<Constraint>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UpdateConstraintRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub id: ::prost::alloc::string::String,
+    #[prost(string, optional, tag = "3")]
+    pub name: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(bool, optional, tag = "4")]
+    pub strict: ::core::option::Option<bool>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UpdateConstraintResponse {
+    #[prost(message, optional, tag = "1")]
+    pub constraint: ::core::option::Option<Constraint>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListConstraintsRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(bool, tag = "2")]
+    pub include_deleted: bool,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListConstraintsResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub constraints: ::prost::alloc::vec::Vec<Constraint>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListViolationsRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListViolationsResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub violations: ::prost::alloc::vec::Vec<Violation>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PublishDefinitionRequest {

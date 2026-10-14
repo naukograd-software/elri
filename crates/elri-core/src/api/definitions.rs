@@ -7,14 +7,17 @@ use elri_proto::elri::v1::definition::definition_service_ws::{
     register_definition_service_arc, DefinitionServiceHandler,
 };
 use elri_proto::elri::v1::definition::{
-    self as dpb, CreateFieldDefinitionRequest, CreateFieldDefinitionResponse,
-    CreateRoleDefinitionRequest, CreateRoleDefinitionResponse, CreateTypeDefinitionRequest,
-    CreateTypeDefinitionResponse, GetSchemaRequest, GetSchemaResponse, ListFieldDefinitionsRequest,
-    ListFieldDefinitionsResponse, ListPublicationsRequest, ListPublicationsResponse,
-    ListRoleDefinitionsRequest, ListRoleDefinitionsResponse, ListTypeDefinitionsRequest,
-    ListTypeDefinitionsResponse, PinDefinitionRequest, PinDefinitionResponse, Publication,
-    PublishDefinitionRequest, PublishDefinitionResponse, UpdateFieldDefinitionRequest,
-    UpdateFieldDefinitionResponse, UpdateTypeDefinitionRequest, UpdateTypeDefinitionResponse,
+    self as dpb, Constraint, CreateConstraintRequest, CreateConstraintResponse,
+    CreateFieldDefinitionRequest, CreateFieldDefinitionResponse, CreateRoleDefinitionRequest,
+    CreateRoleDefinitionResponse, CreateTypeDefinitionRequest, CreateTypeDefinitionResponse,
+    GetSchemaRequest, GetSchemaResponse, ListConstraintsRequest, ListConstraintsResponse,
+    ListFieldDefinitionsRequest, ListFieldDefinitionsResponse, ListPublicationsRequest,
+    ListPublicationsResponse, ListRoleDefinitionsRequest, ListRoleDefinitionsResponse,
+    ListTypeDefinitionsRequest, ListTypeDefinitionsResponse, ListViolationsRequest,
+    ListViolationsResponse, PinDefinitionRequest, PinDefinitionResponse, Publication,
+    PublishDefinitionRequest, PublishDefinitionResponse, UpdateConstraintRequest,
+    UpdateConstraintResponse, UpdateFieldDefinitionRequest, UpdateFieldDefinitionResponse,
+    UpdateTypeDefinitionRequest, UpdateTypeDefinitionResponse,
 };
 use ws_proto::{Request, Response, Server, Status};
 
@@ -23,8 +26,8 @@ use elri_proto::elri::v1::object::{Object, ObjectKind};
 
 use super::{invalid, parse_id, Services};
 use crate::model::{
-    field_def_kind, int_value, is_definition, now_ms, publication_of, reserved, string_field,
-    string_value, ModelError, ObjectDoc, ObjectId, SpaceId,
+    bool_value, constraint_of, field_def_kind, int_value, is_definition, now_ms, publication_of,
+    reserved, string_field, string_value, ModelError, ObjectDoc, ObjectId, SpaceId,
 };
 use crate::store::SpaceStore;
 use crate::store::{ObjectFilter, StoreError};
@@ -343,7 +346,115 @@ impl Services {
     }
 }
 
+impl Services {
+    async fn constraint_object(
+        &self,
+        space_id: SpaceId,
+        id: ObjectId,
+    ) -> Result<Constraint, Status> {
+        let o = self.store.space(space_id).await?.get(id).await?;
+        constraint_of(&o).ok_or_else(|| Status::new(ws_proto::Code::NotFound, "not a constraint"))
+    }
+}
+
 impl DefinitionServiceHandler for Services {
+    async fn create_constraint(
+        &self,
+        req: Request<CreateConstraintRequest>,
+    ) -> Result<Response<CreateConstraintResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        let name = require_name(&m.name)?;
+        let field = parse_id(&m.field_id, "field_id")?;
+        if !m.unique {
+            return Err(invalid("a constraint must constrain something: unique"));
+        }
+        let space = self.store.space(space_id).await?;
+        if space.field_kind(&m.field_id).await?.is_none() {
+            return Err(invalid("field_id must name a live field definition"));
+        }
+        let doc = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Constraint, now_ms())
+            .map_err(StoreError::from)?;
+        doc.set_field(reserved::NAME, &string_value(name))
+            .map_err(StoreError::from)?;
+        doc.set_field(reserved::FIELD, &string_value(field.to_string()))
+            .map_err(StoreError::from)?;
+        doc.set_field(reserved::UNIQUE, &bool_value(true))
+            .map_err(StoreError::from)?;
+        doc.set_field(reserved::STRICT, &bool_value(m.strict))
+            .map_err(StoreError::from)?;
+        doc.touch(now_ms()).map_err(StoreError::from)?;
+        let rec = space.insert(&doc).await?;
+        Ok(Response::new(CreateConstraintResponse {
+            constraint: constraint_of(&rec),
+        }))
+    }
+
+    async fn update_constraint(
+        &self,
+        req: Request<UpdateConstraintRequest>,
+    ) -> Result<Response<UpdateConstraintResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        let id = parse_id(&m.id, "id")?;
+        self.constraint_object(space_id, id).await?;
+        let name = m
+            .name
+            .as_deref()
+            .map(require_name)
+            .transpose()?
+            .map(str::to_owned);
+        let strict = m.strict;
+        let rec = self
+            .store
+            .space(space_id)
+            .await?
+            .update(id, move |doc| {
+                if let Some(n) = name {
+                    doc.set_field(reserved::NAME, &string_value(n))?;
+                }
+                if let Some(s) = strict {
+                    doc.set_field(reserved::STRICT, &bool_value(s))?;
+                }
+                Ok(())
+            })
+            .await?;
+        Ok(Response::new(UpdateConstraintResponse {
+            constraint: constraint_of(&rec),
+        }))
+    }
+
+    async fn list_constraints(
+        &self,
+        req: Request<ListConstraintsRequest>,
+    ) -> Result<Response<ListConstraintsResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let objects = self
+            .store
+            .space(space_id)
+            .await?
+            .list(&ObjectFilter {
+                kind: Some(ObjectKind::Constraint),
+                include_deleted: req.msg.include_deleted,
+                limit: 1000,
+                ..ObjectFilter::default()
+            })
+            .await?;
+        Ok(Response::new(ListConstraintsResponse {
+            constraints: objects.iter().filter_map(constraint_of).collect(),
+        }))
+    }
+
+    async fn list_violations(
+        &self,
+        req: Request<ListViolationsRequest>,
+    ) -> Result<Response<ListViolationsResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        Ok(Response::new(ListViolationsResponse {
+            violations: self.store.space(space_id).await?.violations().await?,
+        }))
+    }
+
     async fn publish_definition(
         &self,
         req: Request<PublishDefinitionRequest>,
