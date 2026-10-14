@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/object/object.proto.
  */
 export const file_elri_v1_object_object: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9vYmplY3QucHJvdG8SDmVscmkudjEub2JqZWN0Iq0CChNDcmVhdGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAMgAygJEj8KBmZpZWxkcxgEIAMoCzIvLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QuRmllbGRzRW50cnkSMQoMcGFydGljaXBhbnRzGAUgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSEQoJdGFyZ2V0X2lkGAYgASgJGkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRDcmVhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMAoQR2V0T2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI7ChFHZXRPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QipgMKE1VwZGF0ZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSRgoKc2V0X2ZpZWxkcxgDIAMoCzIyLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QuU2V0RmllbGRzRW50cnkSFQoNcmVtb3ZlX2ZpZWxkcxgEIAMoCRIRCglhZGRfdHlwZXMYBSADKAkSFAoMcmVtb3ZlX3R5cGVzGAYgAygJEjUKEHNldF9wYXJ0aWNpcGFudHMYByADKAsyGy5lbHJpLnYxLm9iamVjdC5QYXJ0aWNpcGFudBIbChNyZW1vdmVfcGFydGljaXBhbnRzGAggAygJEjEKDnNldF9wbGFjZW1lbnRzGAkgAygLMhkuZWxyaS52MS5vYmplY3QuUGxhY2VtZW50EhkKEXJlbW92ZV9wbGFjZW1lbnRzGAogAygJGkcKDlNldEZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRVcGRhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMwoTRGVsZXRlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIWChREZWxldGVPYmplY3RSZXNwb25zZSIyChJQdXJnZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkiFQoTUHVyZ2VPYmplY3RSZXNwb25zZSLUAQoSTGlzdE9iamVjdHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg8KB3R5cGVfaWQYAyABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAQgASgIEg0KBWxpbWl0GAUgASgFEh0KFXBhcnRpY2lwYW50X29iamVjdF9pZBgGIAEoCRIRCgl0YXJnZXRfaWQYByABKAkSFwoPcGxhY2VkX2Jsb2NrX2lkGAggASgJIj4KE0xpc3RPYmplY3RzUmVzcG9uc2USJwoHb2JqZWN0cxgBIAMoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdDKiBAoNT2JqZWN0U2VydmljZRJZCgxDcmVhdGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5DcmVhdGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuQ3JlYXRlT2JqZWN0UmVzcG9uc2USUAoJR2V0T2JqZWN0EiAuZWxyaS52MS5vYmplY3QuR2V0T2JqZWN0UmVxdWVzdBohLmVscmkudjEub2JqZWN0LkdldE9iamVjdFJlc3BvbnNlElkKDFVwZGF0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5VcGRhdGVPYmplY3RSZXNwb25zZRJZCgxEZWxldGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuRGVsZXRlT2JqZWN0UmVzcG9uc2USVgoLUHVyZ2VPYmplY3QSIi5lbHJpLnYxLm9iamVjdC5QdXJnZU9iamVjdFJlcXVlc3QaIy5lbHJpLnYxLm9iamVjdC5QdXJnZU9iamVjdFJlc3BvbnNlElYKC0xpc3RPYmplY3RzEiIuZWxyaS52MS5vYmplY3QuTGlzdE9iamVjdHNSZXF1ZXN0GiMuZWxyaS52MS5vYmplY3QuTGlzdE9iamVjdHNSZXNwb25zZWIGcHJvdG8z", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9vYmplY3QucHJvdG8SDmVscmkudjEub2JqZWN0Iq0CChNDcmVhdGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAMgAygJEj8KBmZpZWxkcxgEIAMoCzIvLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QuRmllbGRzRW50cnkSMQoMcGFydGljaXBhbnRzGAUgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSEQoJdGFyZ2V0X2lkGAYgASgJGkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRDcmVhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMAoQR2V0T2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI7ChFHZXRPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QipgMKE1VwZGF0ZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSRgoKc2V0X2ZpZWxkcxgDIAMoCzIyLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QuU2V0RmllbGRzRW50cnkSFQoNcmVtb3ZlX2ZpZWxkcxgEIAMoCRIRCglhZGRfdHlwZXMYBSADKAkSFAoMcmVtb3ZlX3R5cGVzGAYgAygJEjUKEHNldF9wYXJ0aWNpcGFudHMYByADKAsyGy5lbHJpLnYxLm9iamVjdC5QYXJ0aWNpcGFudBIbChNyZW1vdmVfcGFydGljaXBhbnRzGAggAygJEjEKDnNldF9wbGFjZW1lbnRzGAkgAygLMhkuZWxyaS52MS5vYmplY3QuUGxhY2VtZW50EhkKEXJlbW92ZV9wbGFjZW1lbnRzGAogAygJGkcKDlNldEZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRVcGRhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMwoTRGVsZXRlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIWChREZWxldGVPYmplY3RSZXNwb25zZSIyChJQdXJnZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkiFQoTUHVyZ2VPYmplY3RSZXNwb25zZSK1AQoFV3JpdGUSNQoGY3JlYXRlGAEgASgLMiMuZWxyaS52MS5vYmplY3QuQ3JlYXRlT2JqZWN0UmVxdWVzdEgAEjUKBnVwZGF0ZRgCIAEoCzIjLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3RIABI1CgZkZWxldGUYAyABKAsyIy5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXF1ZXN0SABCBwoFd3JpdGUiNgoNQ29tbWl0UmVxdWVzdBIlCgZ3cml0ZXMYASADKAsyFS5lbHJpLnYxLm9iamVjdC5Xcml0ZSJMCg5Db21taXRSZXNwb25zZRIRCgljaGFuZ2VfaWQYASABKAkSJwoHb2JqZWN0cxgCIAMoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdCLUAQoSTGlzdE9iamVjdHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg8KB3R5cGVfaWQYAyABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAQgASgIEg0KBWxpbWl0GAUgASgFEh0KFXBhcnRpY2lwYW50X29iamVjdF9pZBgGIAEoCRIRCgl0YXJnZXRfaWQYByABKAkSFwoPcGxhY2VkX2Jsb2NrX2lkGAggASgJIj4KE0xpc3RPYmplY3RzUmVzcG9uc2USJwoHb2JqZWN0cxgBIAMoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdDLrBAoNT2JqZWN0U2VydmljZRJZCgxDcmVhdGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5DcmVhdGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuQ3JlYXRlT2JqZWN0UmVzcG9uc2USUAoJR2V0T2JqZWN0EiAuZWxyaS52MS5vYmplY3QuR2V0T2JqZWN0UmVxdWVzdBohLmVscmkudjEub2JqZWN0LkdldE9iamVjdFJlc3BvbnNlElkKDFVwZGF0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5VcGRhdGVPYmplY3RSZXNwb25zZRJZCgxEZWxldGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuRGVsZXRlT2JqZWN0UmVzcG9uc2USVgoLUHVyZ2VPYmplY3QSIi5lbHJpLnYxLm9iamVjdC5QdXJnZU9iamVjdFJlcXVlc3QaIy5lbHJpLnYxLm9iamVjdC5QdXJnZU9iamVjdFJlc3BvbnNlEkcKBkNvbW1pdBIdLmVscmkudjEub2JqZWN0LkNvbW1pdFJlcXVlc3QaHi5lbHJpLnYxLm9iamVjdC5Db21taXRSZXNwb25zZRJWCgtMaXN0T2JqZWN0cxIiLmVscmkudjEub2JqZWN0Lkxpc3RPYmplY3RzUmVxdWVzdBojLmVscmkudjEub2JqZWN0Lkxpc3RPYmplY3RzUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_object_domain]);
 
 /**
  * @generated from message elri.v1.object.CreateObjectRequest
@@ -467,6 +467,129 @@ export const PurgeObjectResponseSchema: GenMessage<PurgeObjectResponse, {jsonTyp
   messageDesc(file_elri_v1_object_object, 9);
 
 /**
+ * @generated from message elri.v1.object.Write
+ */
+export type Write = Message<"elri.v1.object.Write"> & {
+  /**
+   * @generated from oneof elri.v1.object.Write.write
+   */
+  write: {
+    /**
+     * @generated from field: elri.v1.object.CreateObjectRequest create = 1;
+     */
+    value: CreateObjectRequest;
+    case: "create";
+  } | {
+    /**
+     * @generated from field: elri.v1.object.UpdateObjectRequest update = 2;
+     */
+    value: UpdateObjectRequest;
+    case: "update";
+  } | {
+    /**
+     * @generated from field: elri.v1.object.DeleteObjectRequest delete = 3;
+     */
+    value: DeleteObjectRequest;
+    case: "delete";
+  } | { case: undefined; value?: undefined };
+};
+
+/**
+ * @generated from message elri.v1.object.Write
+ */
+export type WriteJson = {
+  /**
+   * @generated from field: elri.v1.object.CreateObjectRequest create = 1;
+   */
+  create?: CreateObjectRequestJson;
+
+  /**
+   * @generated from field: elri.v1.object.UpdateObjectRequest update = 2;
+   */
+  update?: UpdateObjectRequestJson;
+
+  /**
+   * @generated from field: elri.v1.object.DeleteObjectRequest delete = 3;
+   */
+  delete?: DeleteObjectRequestJson;
+};
+
+/**
+ * Describes the message elri.v1.object.Write.
+ * Use `create(WriteSchema)` to create a new message.
+ */
+export const WriteSchema: GenMessage<Write, {jsonType: WriteJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_object, 10);
+
+/**
+ * @generated from message elri.v1.object.CommitRequest
+ */
+export type CommitRequest = Message<"elri.v1.object.CommitRequest"> & {
+  /**
+   * @generated from field: repeated elri.v1.object.Write writes = 1;
+   */
+  writes: Write[];
+};
+
+/**
+ * @generated from message elri.v1.object.CommitRequest
+ */
+export type CommitRequestJson = {
+  /**
+   * @generated from field: repeated elri.v1.object.Write writes = 1;
+   */
+  writes?: WriteJson[];
+};
+
+/**
+ * Describes the message elri.v1.object.CommitRequest.
+ * Use `create(CommitRequestSchema)` to create a new message.
+ */
+export const CommitRequestSchema: GenMessage<CommitRequest, {jsonType: CommitRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_object, 11);
+
+/**
+ * @generated from message elri.v1.object.CommitResponse
+ */
+export type CommitResponse = Message<"elri.v1.object.CommitResponse"> & {
+  /**
+   * @generated from field: string change_id = 1;
+   */
+  changeId: string;
+
+  /**
+   * The written Objects, in the order of the writes. 
+   *
+   * @generated from field: repeated elri.v1.object.Object objects = 2;
+   */
+  objects: Object$[];
+};
+
+/**
+ * @generated from message elri.v1.object.CommitResponse
+ */
+export type CommitResponseJson = {
+  /**
+   * @generated from field: string change_id = 1;
+   */
+  changeId?: string;
+
+  /**
+   * The written Objects, in the order of the writes. 
+   *
+   * @generated from field: repeated elri.v1.object.Object objects = 2;
+   */
+  objects?: ObjectJson[];
+};
+
+/**
+ * Describes the message elri.v1.object.CommitResponse.
+ * Use `create(CommitResponseSchema)` to create a new message.
+ */
+export const CommitResponseSchema: GenMessage<CommitResponse, {jsonType: CommitResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_object, 12);
+
+/**
  * @generated from message elri.v1.object.ListObjectsRequest
  */
 export type ListObjectsRequest = Message<"elri.v1.object.ListObjectsRequest"> & {
@@ -589,7 +712,7 @@ export type ListObjectsRequestJson = {
  * Use `create(ListObjectsRequestSchema)` to create a new message.
  */
 export const ListObjectsRequestSchema: GenMessage<ListObjectsRequest, {jsonType: ListObjectsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 10);
+  messageDesc(file_elri_v1_object_object, 13);
 
 /**
  * @generated from message elri.v1.object.ListObjectsResponse
@@ -616,7 +739,7 @@ export type ListObjectsResponseJson = {
  * Use `create(ListObjectsResponseSchema)` to create a new message.
  */
 export const ListObjectsResponseSchema: GenMessage<ListObjectsResponse, {jsonType: ListObjectsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 11);
+  messageDesc(file_elri_v1_object_object, 14);
 
 /**
  * Create, read, and change Objects of a Space. 
@@ -673,6 +796,20 @@ export const ObjectService: GenService<{
     methodKind: "unary";
     input: typeof PurgeObjectRequestSchema;
     output: typeof PurgeObjectResponseSchema;
+  },
+  /**
+   *
+   * Several writes as one Change: all of them land, or none. The writes may
+   * touch Objects of different Spaces; a server accepts or rejects the
+   * whole. Use it for anything whose halves must not be seen apart: moving
+   * a block between documents, splitting one, repointing a relation.
+   *
+   * @generated from rpc elri.v1.object.ObjectService.Commit
+   */
+  commit: {
+    methodKind: "unary";
+    input: typeof CommitRequestSchema;
+    output: typeof CommitResponseSchema;
   },
   /**
    * @generated from rpc elri.v1.object.ObjectService.ListObjects

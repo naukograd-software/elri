@@ -33,9 +33,12 @@ use crate::device::DeviceId;
 use crate::model::{field_def_kind, now_ms, ModelError, ObjectDoc, ObjectId, SpaceId};
 use models::{
     ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, GraveyardRow,
-    ObjectRow, ObjectTypeRow, ParticipantRow, PlacementRow, RemoteRow, SpaceLogRow, SpaceRow,
-    SyncStateRow, TypeFieldRow,
+    JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow, PlacementRow, RemoteRow, SpaceLogRow,
+    SpaceRow, SyncStateRow, TypeFieldRow,
 };
+
+mod coordinator;
+pub use coordinator::{Edit, Journaled};
 
 /// Updates folded into a fresh snapshot once this many accumulate per document.
 const COMPACT_AFTER_UPDATES: usize = 64;
@@ -187,6 +190,13 @@ pub struct Store {
     device: Mutex<Db>,
     spaces: Mutex<HashMap<SpaceId, Arc<SpaceStore>>>,
     events: broadcast::Sender<Event>,
+    /// Visibility gate: held for writing while a coordinated Change is
+    /// being installed across Spaces, so readers see it whole or not at
+    /// all.
+    gate: tokio::sync::RwLock<()>,
+    /// Signalled after every coordinated write, for the coordinator's
+    /// submission worker.
+    dirty: Notify,
 }
 
 /// Events a watcher can miss before it is told it lagged.
@@ -206,16 +216,26 @@ impl Store {
         let root = root.into();
         let (db, _) = open_db(
             &root.join("device.db"),
-            toasty::models!(SpaceRow, RemoteRow),
+            toasty::models!(SpaceRow, RemoteRow, JournalRow),
         )
         .await?;
-        Ok(Self {
+        let store = Self {
             root,
             device_id,
             device: Mutex::new(db),
             spaces: Mutex::new(HashMap::new()),
             events: broadcast::channel(EVENT_BUFFER).0,
-        })
+            gate: tokio::sync::RwLock::new(()),
+            dirty: Notify::new(),
+        };
+        store.recover().await?;
+        Ok(store)
+    }
+
+    /// Resolves after the next coordinated write (or at once if one
+    /// happened since the last call).
+    pub async fn wait_dirty(&self) {
+        self.dirty.notified().await;
     }
 
     /// Writes a compacted copy of every database into `dir` (`device.db`
@@ -351,6 +371,7 @@ impl Store {
 
     /// The storage of one Space, opened on first use.
     pub async fn space(&self, id: SpaceId) -> Result<Arc<SpaceStore>, StoreError> {
+        let _visible = self.gate.read().await;
         if let Some(s) = self.spaces.lock().await.get(&id) {
             return Ok(Arc::clone(s));
         }
@@ -614,6 +635,7 @@ impl SpaceStore {
             from_version: empty.encode().into(),
             to_version: doc.version().into(),
             bytes: doc.updates_since(&empty)?.into(),
+            space_id: String::new(),
         };
         let env = self.new_envelope(vec![part]);
         let mut db = self.db.lock().await;
@@ -667,6 +689,7 @@ impl SpaceStore {
             from_version: before.encode().into(),
             to_version: doc.version().into(),
             bytes: bytes.clone().into(),
+            space_id: String::new(),
         };
         let env = self.new_envelope(vec![part]);
         let deps = dependencies(&mut db, &rec).await?;
@@ -986,7 +1009,8 @@ impl SpaceStore {
         let rows = ChangeRow::filter(
             ChangeRow::fields()
                 .status()
-                .eq(status_code(ChangeStatus::Local)),
+                .eq(status_code(ChangeStatus::Local))
+                .and(ChangeRow::fields().coordinated().eq(false)),
         )
         .order_by(ChangeRow::fields().seq().asc())
         .limit(limit)
@@ -1704,6 +1728,7 @@ async fn read_envelope(
             from_version: p.base_version.into(),
             to_version: p.next_version.into(),
             bytes: p.bytes.into(),
+            space_id: String::new(),
         })
         .collect();
     parts.sort_by(|a, b| a.object_id.cmp(&b.object_id));
@@ -1831,6 +1856,17 @@ async fn write_change(
     accepted_seq: Option<i64>,
     rejection: &str,
 ) -> Result<(), StoreError> {
+    write_change_flagged(tx, env, status, accepted_seq, rejection, false).await
+}
+
+async fn write_change_flagged(
+    tx: &mut toasty::Transaction<'_>,
+    env: &Envelope,
+    status: ChangeStatus,
+    accepted_seq: Option<i64>,
+    rejection: &str,
+    coordinated: bool,
+) -> Result<(), StoreError> {
     let change_id = uuid_arg(&env.id)?;
     toasty::create!(ChangeRow {
         id: change_id,
@@ -1839,6 +1875,7 @@ async fn write_change(
         status: status_code(status),
         accepted_seq,
         rejection: (!rejection.is_empty()).then(|| rejection.to_owned()),
+        coordinated,
     })
     .exec(&mut *tx)
     .await?;

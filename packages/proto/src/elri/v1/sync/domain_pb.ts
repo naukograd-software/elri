@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/sync/domain.proto.
  */
 export const file_elri_v1_sync_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChllbHJpL3YxL3N5bmMvZG9tYWluLnByb3RvEgxlbHJpLnYxLnN5bmMifAoEUGFydBIRCglvYmplY3RfaWQYASABKAkSKAoEa2luZBgCIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSFAoMZnJvbV92ZXJzaW9uGAMgASgMEhIKCnRvX3ZlcnNpb24YBCABKAwSDQoFYnl0ZXMYBSABKAwidQoIRW52ZWxvcGUSCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSEQoJZGV2aWNlX2lkGAMgASgJEhUKDWNyZWF0ZWRfYXRfbXMYBCABKAMSIQoFcGFydHMYBSADKAsyEi5lbHJpLnYxLnN5bmMuUGFydCJuCgVFbnRyeRILCgNzZXEYASABKAMSJgoGY2hhbmdlGAIgASgLMhYuZWxyaS52MS5zeW5jLkVudmVsb3BlEhYKDmFjY2VwdGVkX2F0X21zGAMgASgDEhgKEHB1cmdlZF9vYmplY3RfaWQYBCABKAliBnByb3RvMw", [file_elri_v1_object_domain]);
+  fileDesc("ChllbHJpL3YxL3N5bmMvZG9tYWluLnByb3RvEgxlbHJpLnYxLnN5bmMijgEKBFBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEhQKDGZyb21fdmVyc2lvbhgDIAEoDBISCgp0b192ZXJzaW9uGAQgASgMEg0KBWJ5dGVzGAUgASgMEhAKCHNwYWNlX2lkGAYgASgJInUKCEVudmVsb3BlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIVCg1jcmVhdGVkX2F0X21zGAQgASgDEiEKBXBhcnRzGAUgAygLMhIuZWxyaS52MS5zeW5jLlBhcnQibgoFRW50cnkSCwoDc2VxGAEgASgDEiYKBmNoYW5nZRgCIAEoCzIWLmVscmkudjEuc3luYy5FbnZlbG9wZRIWCg5hY2NlcHRlZF9hdF9tcxgDIAEoAxIYChBwdXJnZWRfb2JqZWN0X2lkGAQgASgJYgZwcm90bzM", [file_elri_v1_object_domain]);
 
 /**
  * The operations a Change added to one document. 
@@ -50,6 +50,14 @@ export type Part = Message<"elri.v1.sync.Part"> & {
    * @generated from field: bytes bytes = 5;
    */
   bytes: Uint8Array;
+
+  /**
+   * Space of this part; empty means the envelope's Space. A Change may
+   * span Spaces: it is accepted or rejected as a whole. 
+   *
+   * @generated from field: string space_id = 6;
+   */
+  spaceId: string;
 };
 
 /**
@@ -88,6 +96,14 @@ export type PartJson = {
    * @generated from field: bytes bytes = 5;
    */
   bytes?: string;
+
+  /**
+   * Space of this part; empty means the envelope's Space. A Change may
+   * span Spaces: it is accepted or rejected as a whole. 
+   *
+   * @generated from field: string space_id = 6;
+   */
+  spaceId?: string;
 };
 
 /**

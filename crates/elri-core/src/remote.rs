@@ -57,6 +57,8 @@ struct Session {
     user_name: String,
     client: Client,
     workers: HashMap<SpaceId, JoinHandle<()>>,
+    /// Submits Changes that span Spaces from the coordinator journal.
+    coordinator: JoinHandle<()>,
 }
 
 /// The device's server link.
@@ -197,6 +199,8 @@ impl Remote {
         cfg: RemoteConfig,
         client: Client,
     ) -> Result<(), RemoteError> {
+        let coordinator =
+            spawn_coordinator(Arc::clone(&self.store), client.clone(), cfg.token.clone());
         let mut session = Session {
             url: cfg.url,
             token: cfg.token,
@@ -204,6 +208,7 @@ impl Remote {
             user_name: cfg.user_name,
             client,
             workers: HashMap::new(),
+            coordinator,
         };
         for info in self.store.list_spaces().await? {
             if info.authority() == Authority::Server {
@@ -225,6 +230,7 @@ impl Remote {
             for (_, w) in s.workers {
                 w.abort();
             }
+            s.coordinator.abort();
             s.client.close();
             self.store.emit_remote();
         }
@@ -429,6 +435,49 @@ async fn dial(url: &str) -> Result<Client, RemoteError> {
         ..ClientConfig::default()
     };
     Ok(Client::dial(url, cfg).await?)
+}
+
+/// Submits coordinated Changes, oldest first, and records their outcomes
+/// in every Space they touched. Runs after a coordinated write and
+/// periodically; a missing-predecessor answer waits for the Space workers
+/// to push what the Change builds on.
+fn spawn_coordinator(store: Arc<Store>, client: Client, token: String) -> JoinHandle<()> {
+    tokio::spawn(async move {
+        loop {
+            if let Err(e) = submit_coordinated(&store, &client, &token).await {
+                tracing::warn!(error = %e, "coordinated submission failed");
+            }
+            tokio::select! {
+                () = store.wait_dirty() => {}
+                () = tokio::time::sleep(Duration::from_secs(30)) => {}
+            }
+        }
+    })
+}
+
+async fn submit_coordinated(
+    store: &Store,
+    client: &Client,
+    token: &str,
+) -> Result<(), RemoteError> {
+    let sync = SyncServiceClient::new(client.clone());
+    for env in store.coordinator_outbox().await? {
+        let res = sync
+            .submit(authed(
+                token,
+                SubmitRequest {
+                    change: Some(env.clone()),
+                },
+            ))
+            .await?
+            .msg;
+        match res.outcome {
+            Some(Outcome::Rejected(r)) if r.reason() == Reason::MissingPredecessors => break,
+            Some(outcome) => store.record_coordinated_outcome(&env, &outcome).await?,
+            None => return Err(RemoteError::BadReply("submit outcome")),
+        }
+    }
+    Ok(())
 }
 
 fn spawn_worker(

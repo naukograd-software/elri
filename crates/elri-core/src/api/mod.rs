@@ -27,10 +27,10 @@ use elri_proto::elri::v1::object::object_service_ws::{
     register_object_service_arc, ObjectServiceHandler,
 };
 use elri_proto::elri::v1::object::{
-    CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest, DeleteObjectResponse,
-    GetObjectRequest, GetObjectResponse, ListObjectsRequest, ListObjectsResponse, ObjectKind,
-    Participant, Placement, PurgeObjectRequest, PurgeObjectResponse, UpdateObjectRequest,
-    UpdateObjectResponse, Value,
+    write, CommitRequest, CommitResponse, CreateObjectRequest, CreateObjectResponse,
+    DeleteObjectRequest, DeleteObjectResponse, GetObjectRequest, GetObjectResponse,
+    ListObjectsRequest, ListObjectsResponse, ObjectKind, Participant, Placement,
+    PurgeObjectRequest, PurgeObjectResponse, UpdateObjectRequest, UpdateObjectResponse, Value,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::{
     register_remote_service_arc, RemoteServiceHandler,
@@ -55,11 +55,12 @@ use ws_proto::server::{Handler, OriginPolicy};
 use ws_proto::{Code, Request, Response, Server, ServerConfig, Status};
 
 use crate::device::{DeviceId, LaunchToken};
+use crate::model::SpaceId;
 use crate::model::{
     is_definition, is_scalar, kind_accepts, now_ms, ModelError, ObjectDoc, ObjectId,
 };
 use crate::remote::{Remote, RemoteError};
-use crate::store::{ObjectFilter, SpaceStore, Store, StoreError};
+use crate::store::{Edit, ObjectFilter, SpaceStore, Store, StoreError};
 use crate::BuildInfo;
 
 /// Everything the handlers need.
@@ -310,12 +311,9 @@ impl SpaceServiceHandler for Services {
     }
 }
 
-impl ObjectServiceHandler for Services {
-    async fn create_object(
-        &self,
-        req: Request<CreateObjectRequest>,
-    ) -> Result<Response<CreateObjectResponse>, Status> {
-        let m = &req.msg;
+impl Services {
+    /// Checks a create request and builds its document, without writing.
+    async fn plan_create(&self, m: &CreateObjectRequest) -> Result<(SpaceId, ObjectDoc), Status> {
         let space_id = parse_id(&m.space_id, "space_id")?;
         let kind = kind_arg(m.kind)?;
         if is_definition(kind) {
@@ -347,27 +345,14 @@ impl ObjectServiceHandler for Services {
             doc.set_field(k, v).map_err(StoreError::from)?;
         }
         doc.touch(now_ms()).map_err(StoreError::from)?;
-        Ok(Response::new(CreateObjectResponse {
-            object: Some(space.insert(&doc).await?),
-        }))
+        Ok((space_id, doc))
     }
 
-    async fn get_object(
+    /// Checks an update request and builds the edit, without writing.
+    async fn plan_update(
         &self,
-        req: Request<GetObjectRequest>,
-    ) -> Result<Response<GetObjectResponse>, Status> {
-        let space_id = parse_id(&req.msg.space_id, "space_id")?;
-        let id = parse_id(&req.msg.id, "id")?;
-        Ok(Response::new(GetObjectResponse {
-            object: Some(self.store.space(space_id).await?.get(id).await?),
-        }))
-    }
-
-    async fn update_object(
-        &self,
-        req: Request<UpdateObjectRequest>,
-    ) -> Result<Response<UpdateObjectResponse>, Status> {
-        let m = &req.msg;
+        m: &UpdateObjectRequest,
+    ) -> Result<(SpaceId, ObjectId, UpdateEdit), Status> {
         let space_id = parse_id(&m.space_id, "space_id")?;
         let id = parse_id(&m.id, "id")?;
         check_fields(&m.set_fields)?;
@@ -389,40 +374,108 @@ impl ObjectServiceHandler for Services {
                     .await?;
             }
         }
-        let object = space
-            .update(id, |doc| {
-                for (k, v) in &m.set_fields {
-                    doc.set_field(k, v)?;
+        let m = m.clone();
+        let edit: UpdateEdit = Box::new(move |doc: &ObjectDoc| {
+            for (k, v) in &m.set_fields {
+                doc.set_field(k, v)?;
+            }
+            for p in &m.set_participants {
+                doc.set_participant(p)?;
+            }
+            for slot in &m.remove_participants {
+                doc.remove_participant(slot)?;
+            }
+            for k in &m.remove_fields {
+                doc.remove_field(k)?;
+            }
+            for t in &m.add_types {
+                doc.add_type(t)?;
+            }
+            for t in &m.remove_types {
+                doc.remove_type(t)?;
+            }
+            for p in &m.set_placements {
+                let index = usize::try_from(p.index).unwrap_or(0);
+                if p.id.is_empty() {
+                    doc.place_block(&p.parent_id, index, ObjectId::parse(&p.block_id)?)?;
+                } else {
+                    doc.move_placement(&p.id, &p.parent_id, index)?;
                 }
-                for p in &m.set_participants {
-                    doc.set_participant(p)?;
+            }
+            for p in &m.remove_placements {
+                doc.remove_placement(p)?;
+            }
+            Ok(())
+        });
+        Ok((space_id, id, edit))
+    }
+}
+
+/// A checked update, ready to apply to a document.
+type UpdateEdit = Box<dyn FnOnce(&ObjectDoc) -> Result<(), ModelError> + Send>;
+
+impl ObjectServiceHandler for Services {
+    async fn create_object(
+        &self,
+        req: Request<CreateObjectRequest>,
+    ) -> Result<Response<CreateObjectResponse>, Status> {
+        let (space_id, doc) = self.plan_create(&req.msg).await?;
+        let space = self.store.space(space_id).await?;
+        Ok(Response::new(CreateObjectResponse {
+            object: Some(space.insert(&doc).await?),
+        }))
+    }
+
+    async fn commit(
+        &self,
+        req: Request<CommitRequest>,
+    ) -> Result<Response<CommitResponse>, Status> {
+        if req.msg.writes.is_empty() {
+            return Err(invalid("writes are required"));
+        }
+        let mut edits = Vec::with_capacity(req.msg.writes.len());
+        for w in &req.msg.writes {
+            match &w.write {
+                Some(write::Write::Create(m)) => {
+                    let (space, doc) = self.plan_create(m).await?;
+                    edits.push((space, Edit::Create(doc)));
                 }
-                for slot in &m.remove_participants {
-                    doc.remove_participant(slot)?;
+                Some(write::Write::Update(m)) => {
+                    let (space, id, edit) = self.plan_update(m).await?;
+                    edits.push((space, Edit::Update(id, edit)));
                 }
-                for k in &m.remove_fields {
-                    doc.remove_field(k)?;
+                Some(write::Write::Delete(m)) => {
+                    let space = parse_id(&m.space_id, "space_id")?;
+                    let id = parse_id(&m.id, "id")?;
+                    edits.push((
+                        space,
+                        Edit::Update(id, Box::new(|doc| doc.mark_deleted(now_ms()))),
+                    ));
                 }
-                for t in &m.add_types {
-                    doc.add_type(t)?;
-                }
-                for t in &m.remove_types {
-                    doc.remove_type(t)?;
-                }
-                for p in &m.set_placements {
-                    let index = usize::try_from(p.index).unwrap_or(0);
-                    if p.id.is_empty() {
-                        doc.place_block(&p.parent_id, index, ObjectId::parse(&p.block_id)?)?;
-                    } else {
-                        doc.move_placement(&p.id, &p.parent_id, index)?;
-                    }
-                }
-                for p in &m.remove_placements {
-                    doc.remove_placement(p)?;
-                }
-                Ok(())
-            })
-            .await?;
+                None => return Err(invalid("empty write")),
+            }
+        }
+        let (change_id, objects) = self.store.commit(edits).await?;
+        Ok(Response::new(CommitResponse { change_id, objects }))
+    }
+
+    async fn get_object(
+        &self,
+        req: Request<GetObjectRequest>,
+    ) -> Result<Response<GetObjectResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let id = parse_id(&req.msg.id, "id")?;
+        Ok(Response::new(GetObjectResponse {
+            object: Some(self.store.space(space_id).await?.get(id).await?),
+        }))
+    }
+
+    async fn update_object(
+        &self,
+        req: Request<UpdateObjectRequest>,
+    ) -> Result<Response<UpdateObjectResponse>, Status> {
+        let (space_id, id, edit) = self.plan_update(&req.msg).await?;
+        let object = self.store.space(space_id).await?.update(id, edit).await?;
         Ok(Response::new(UpdateObjectResponse {
             object: Some(object),
         }))
@@ -658,12 +711,7 @@ impl ChangeServiceHandler for Services {
     ) -> Result<Response<RetryChangeResponse>, Status> {
         let space_id = parse_id(&req.msg.space_id, "space_id")?;
         parse_id(&req.msg.id, "id")?;
-        let change = self
-            .store
-            .space(space_id)
-            .await?
-            .retry_change(&req.msg.id)
-            .await?;
+        let change = self.store.retry_change(space_id, &req.msg.id).await?;
         Ok(Response::new(RetryChangeResponse {
             change: Some(change),
         }))
@@ -675,12 +723,7 @@ impl ChangeServiceHandler for Services {
     ) -> Result<Response<DiscardChangeResponse>, Status> {
         let space_id = parse_id(&req.msg.space_id, "space_id")?;
         parse_id(&req.msg.id, "id")?;
-        let discarded = self
-            .store
-            .space(space_id)
-            .await?
-            .discard_change(&req.msg.id)
-            .await?;
+        let discarded = self.store.discard_change(space_id, &req.msg.id).await?;
         Ok(Response::new(DiscardChangeResponse { discarded }))
     }
 }

@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest, DeleteObjectResponse, GetObjectRequest, GetObjectResponse, ListObjectsRequest, ListObjectsResponse, PurgeObjectRequest, PurgeObjectResponse, UpdateObjectRequest, UpdateObjectResponse } from "./object_pb.ts";
-import { CreateObjectRequestSchema, CreateObjectResponseSchema, DeleteObjectRequestSchema, DeleteObjectResponseSchema, GetObjectRequestSchema, GetObjectResponseSchema, ListObjectsRequestSchema, ListObjectsResponseSchema, PurgeObjectRequestSchema, PurgeObjectResponseSchema, UpdateObjectRequestSchema, UpdateObjectResponseSchema } from "./object_pb.ts";
+import type { CommitRequest, CommitResponse, CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest, DeleteObjectResponse, GetObjectRequest, GetObjectResponse, ListObjectsRequest, ListObjectsResponse, PurgeObjectRequest, PurgeObjectResponse, UpdateObjectRequest, UpdateObjectResponse } from "./object_pb.ts";
+import { CommitRequestSchema, CommitResponseSchema, CreateObjectRequestSchema, CreateObjectResponseSchema, DeleteObjectRequestSchema, DeleteObjectResponseSchema, GetObjectRequestSchema, GetObjectResponseSchema, ListObjectsRequestSchema, ListObjectsResponseSchema, PurgeObjectRequestSchema, PurgeObjectResponseSchema, UpdateObjectRequestSchema, UpdateObjectResponseSchema } from "./object_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -57,6 +57,14 @@ const ObjectService_PurgeObject: MethodInfo<PurgeObjectRequest, PurgeObjectRespo
   kind: "unary",
   input: PurgeObjectRequestSchema,
   output: PurgeObjectResponseSchema,
+};
+
+const ObjectService_Commit: MethodInfo<CommitRequest, CommitResponse> = {
+  typeName: "elri.v1.object.ObjectService",
+  name: "Commit",
+  kind: "unary",
+  input: CommitRequestSchema,
+  output: CommitResponseSchema,
 };
 
 const ObjectService_ListObjects: MethodInfo<ListObjectsRequest, ListObjectsResponse> = {
@@ -122,6 +130,20 @@ export class ObjectServiceClient {
    */
   async purgeObject(req: PurgeObjectRequest, options?: CallOptions): Promise<PurgeObjectResponse> {
     const res = await this.transport.unary(ObjectService_PurgeObject, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   *
+   * Several writes as one Change: all of them land, or none. The writes may
+   * touch Objects of different Spaces; a server accepts or rejects the
+   * whole. Use it for anything whose halves must not be seen apart: moving
+   * a block between documents, splitting one, repointing a relation.
+   *
+   * @generated from rpc elri.v1.object.ObjectService.Commit
+   */
+  async commit(req: CommitRequest, options?: CallOptions): Promise<CommitResponse> {
+    const res = await this.transport.unary(ObjectService_Commit, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

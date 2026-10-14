@@ -6,7 +6,7 @@
 use elri_core::change::{rejected, Outcome, Reason};
 use elri_core::device::DeviceId;
 use elri_core::model::{int_value, ref_value, string_value, ObjectDoc, ObjectId, SpaceId};
-use elri_core::store::{ObjectFilter, Store, StoreError};
+use elri_core::store::{Edit, ObjectFilter, Store, StoreError};
 use elri_proto::elri::v1::change::ChangeStatus;
 use elri_proto::elri::v1::object::{value, ObjectKind, Value};
 use elri_proto::elri::v1::space::Authority;
@@ -650,4 +650,252 @@ async fn purge_erases_for_good_and_blocks_the_identity() {
         b_space.insert(&again).await,
         Err(StoreError::Purged(_))
     ));
+}
+
+#[tokio::test]
+async fn a_change_across_spaces_lands_whole_and_is_submitted_by_the_coordinator() {
+    let a = store("a7").await;
+    let server = store("server7").await;
+    let (sp1, sp2) = (SpaceId::new(), SpaceId::new());
+    for s in [&a, &server] {
+        s.register_space(sp1, "one", Authority::Server)
+            .await
+            .expect("register");
+        s.register_space(sp2, "two", Authority::Server)
+            .await
+            .expect("register");
+    }
+    let one = a.space(sp1).await.expect("one");
+    let two = a.space(sp2).await.expect("two");
+    let existing = ObjectDoc::create(ObjectId::new(), sp2, ObjectKind::Entity, 1).expect("doc");
+    existing.touch(1).expect("touch");
+    two.insert(&existing).await.expect("insert");
+    for env in two.outbox(0).await.expect("outbox") {
+        let outcome = server
+            .space(sp2)
+            .await
+            .expect("s2")
+            .admit(&env)
+            .await
+            .expect("admit");
+        two.record_outcome(&env.id, &outcome).await.expect("record");
+    }
+
+    // Create in one Space, edit in another: one Change.
+    let fresh = ObjectDoc::create(ObjectId::new(), sp1, ObjectKind::Entity, 2).expect("doc");
+    fresh
+        .set_field("title", &string_value("moved here"))
+        .expect("set");
+    fresh.touch(2).expect("touch");
+    let fresh_id = fresh.id();
+    let (change_id, written) = a
+        .commit(vec![
+            (sp1, Edit::Create(fresh)),
+            (
+                sp2,
+                Edit::Update(
+                    existing.id(),
+                    Box::new(|d| d.set_field("moved_to", &string_value("one"))),
+                ),
+            ),
+        ])
+        .await
+        .expect("commit");
+    assert_eq!(written.len(), 2);
+    assert_eq!(written[0].id, fresh_id.to_string());
+    assert_eq!(written[1].fields["moved_to"], string_value("one"));
+    one.get(fresh_id).await.expect("in one");
+    assert_eq!(
+        two.get(existing.id()).await.expect("in two").fields["moved_to"],
+        string_value("one")
+    );
+
+    // Each Space records it as coordinated: the Space workers leave it to
+    // the coordinator, whose outbox carries both parts.
+    for s in [&one, &two] {
+        let c = s.change(&change_id).await.expect("change");
+        assert_eq!(c.status(), ChangeStatus::Local);
+        assert_eq!(c.parts.len(), 1);
+        assert!(s.outbox(0).await.expect("outbox").is_empty());
+    }
+    let pending = a.coordinator_outbox().await.expect("coordinator outbox");
+    assert_eq!(pending.len(), 1);
+    assert_eq!(pending[0].id, change_id);
+    assert_eq!(pending[0].parts.len(), 2);
+    assert_eq!(pending[0].space_id, sp1.to_string());
+    assert_eq!(pending[0].parts[1].space_id, sp2.to_string());
+
+    // The authority admits it whole: a sequence in each Space; the replica
+    // records acceptance everywhere.
+    let seqs = server
+        .admit_coordinated(&pending[0])
+        .await
+        .expect("admit")
+        .expect("accepted");
+    assert_eq!(seqs, vec![(sp1, 1), (sp2, 2)]);
+    server
+        .space(sp1)
+        .await
+        .expect("s1")
+        .get(fresh_id)
+        .await
+        .expect("on server");
+    let replay = server
+        .admit_coordinated(&pending[0])
+        .await
+        .expect("admit")
+        .expect_err("replay returns the recorded outcome");
+    assert_eq!(replay, Outcome::AcceptedSeq(1));
+    a.record_coordinated_outcome(&pending[0], &Outcome::AcceptedSeq(1))
+        .await
+        .expect("record");
+    for s in [&one, &two] {
+        assert_eq!(
+            s.change(&change_id).await.expect("change").status(),
+            ChangeStatus::Accepted
+        );
+    }
+    assert!(a.coordinator_outbox().await.expect("outbox").is_empty());
+
+    // A single-Space commit of several writes is one Change too, but needs
+    // no journal.
+    let p = ObjectDoc::create(ObjectId::new(), sp1, ObjectKind::Entity, 3).expect("doc");
+    p.touch(3).expect("touch");
+    let q = ObjectDoc::create(ObjectId::new(), sp1, ObjectKind::Entity, 3).expect("doc");
+    q.touch(3).expect("touch");
+    let (pair_id, _) = a
+        .commit(vec![(sp1, Edit::Create(p)), (sp1, Edit::Create(q))])
+        .await
+        .expect("commit");
+    let c = one.change(&pair_id).await.expect("change");
+    assert_eq!(c.parts.len(), 2);
+    assert!(a.journaled(&pair_id).await.expect("journal").is_none());
+    assert_eq!(one.outbox(0).await.expect("outbox").len(), 1);
+}
+
+#[tokio::test]
+async fn a_coordinated_change_with_a_bad_part_leaves_every_space_untouched() {
+    let a = store("a8").await;
+    let server = store("server8").await;
+    let (sp1, sp2) = (SpaceId::new(), SpaceId::new());
+    for s in [&a, &server] {
+        s.register_space(sp1, "one", Authority::Server)
+            .await
+            .expect("register");
+        s.register_space(sp2, "two", Authority::Server)
+            .await
+            .expect("register");
+    }
+    // sp2 holds a deleted, purged object on the server; the device still
+    // has it and edits it together with a fresh object in sp1.
+    let two = a.space(sp2).await.expect("two");
+    let gone = ObjectDoc::create(ObjectId::new(), sp2, ObjectKind::Entity, 1).expect("doc");
+    gone.touch(1).expect("touch");
+    two.insert(&gone).await.expect("insert");
+    two.update(gone.id(), |d| d.mark_deleted(2))
+        .await
+        .expect("delete");
+    for env in two.outbox(0).await.expect("outbox") {
+        let outcome = server
+            .space(sp2)
+            .await
+            .expect("s2")
+            .admit(&env)
+            .await
+            .expect("admit");
+        two.record_outcome(&env.id, &outcome).await.expect("record");
+    }
+    server
+        .space(sp2)
+        .await
+        .expect("s2")
+        .purge_object(gone.id())
+        .await
+        .expect("purge");
+
+    let fresh = ObjectDoc::create(ObjectId::new(), sp1, ObjectKind::Entity, 3).expect("doc");
+    fresh.touch(3).expect("touch");
+    let fresh_id = fresh.id();
+    a.commit(vec![
+        (sp1, Edit::Create(fresh)),
+        (
+            sp2,
+            Edit::Update(gone.id(), Box::new(|d| d.set_field("n", &int_value(1)))),
+        ),
+    ])
+    .await
+    .expect("commit");
+    let env = a.coordinator_outbox().await.expect("outbox").remove(0);
+    let outcome = server
+        .admit_coordinated(&env)
+        .await
+        .expect("admit")
+        .expect_err("rejected whole");
+    match &outcome {
+        Outcome::Rejected(r) => assert_eq!(r.reason(), Reason::Purged),
+        Outcome::AcceptedSeq(_) => panic!("accepted a purged edit"),
+    }
+    assert!(server
+        .space(sp1)
+        .await
+        .expect("s1")
+        .get(fresh_id)
+        .await
+        .is_err());
+    assert_eq!(
+        server
+            .space(sp1)
+            .await
+            .expect("s1")
+            .last_seq()
+            .await
+            .expect("seq"),
+        0
+    );
+    assert!(server.journaled(&env.id).await.expect("journal").is_none());
+
+    // Recorded as rejected in both Spaces; the live state drops the work;
+    // retry and discard reach both through the coordinator.
+    a.record_coordinated_outcome(&env, &outcome)
+        .await
+        .expect("record");
+    assert!(a
+        .space(sp1)
+        .await
+        .expect("one")
+        .get(fresh_id)
+        .await
+        .is_err());
+    assert_eq!(
+        a.space(sp2)
+            .await
+            .expect("two")
+            .change(&env.id)
+            .await
+            .expect("c")
+            .status(),
+        ChangeStatus::Rejected
+    );
+    let retried = a.retry_change(sp1, &env.id).await.expect("retry");
+    assert_eq!(retried.status(), ChangeStatus::Local);
+    assert_eq!(a.coordinator_outbox().await.expect("outbox").len(), 1);
+    a.space(sp1)
+        .await
+        .expect("one")
+        .get(fresh_id)
+        .await
+        .expect("back");
+    a.record_coordinated_outcome(&env, &outcome)
+        .await
+        .expect("record");
+    let dropped = a.discard_change(sp2, &env.id).await.expect("discard");
+    assert_eq!(dropped, vec![env.id.clone()]);
+    assert!(a.journaled(&env.id).await.expect("journal").is_none());
+    assert!(a
+        .space(sp1)
+        .await
+        .expect("one")
+        .change(&env.id)
+        .await
+        .is_err());
 }

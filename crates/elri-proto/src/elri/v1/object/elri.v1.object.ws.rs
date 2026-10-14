@@ -31,6 +31,10 @@ pub mod object_service_ws {
         route: "/elri.v1.object.ObjectService/PurgeObject",
         kind: StreamKind::Unary,
     };
+    pub const COMMIT: MethodSpec = MethodSpec {
+        route: "/elri.v1.object.ObjectService/Commit",
+        kind: StreamKind::Unary,
+    };
     pub const LIST_OBJECTS: MethodSpec = MethodSpec {
         route: "/elri.v1.object.ObjectService/ListObjects",
         kind: StreamKind::Unary,
@@ -73,6 +77,17 @@ pub mod object_service_ws {
             req: Request<super::PurgeObjectRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::PurgeObjectResponse>, Status>,
+        > + Send;
+        ///
+        /// Several writes as one Change: all of them land, or none. The writes may
+        /// touch Objects of different Spaces; a server accepts or rejects the
+        /// whole. Use it for anything whose halves must not be seen apart: moving
+        /// a block between documents, splitting one, repointing a relation.
+        fn commit(
+            &self,
+            req: Request<super::CommitRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::CommitResponse>, Status>,
         > + Send;
         fn list_objects(
             &self,
@@ -152,6 +167,17 @@ pub mod object_service_ws {
             let h = ::std::sync::Arc::clone(&handler);
             server
                 .register_unary(
+                    COMMIT.route,
+                    move |req: Request<super::CommitRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.commit(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
                     LIST_OBJECTS.route,
                     move |req: Request<super::ListObjectsRequest>| {
                         let h = ::std::sync::Arc::clone(&h);
@@ -209,6 +235,17 @@ pub mod object_service_ws {
             req: impl Into<Request<super::PurgeObjectRequest>>,
         ) -> Result<Response<super::PurgeObjectResponse>, Status> {
             self.conn.invoke_unary(PURGE_OBJECT, req.into()).await
+        }
+        ///
+        /// Several writes as one Change: all of them land, or none. The writes may
+        /// touch Objects of different Spaces; a server accepts or rejects the
+        /// whole. Use it for anything whose halves must not be seen apart: moving
+        /// a block between documents, splitting one, repointing a relation.
+        pub async fn commit(
+            &self,
+            req: impl Into<Request<super::CommitRequest>>,
+        ) -> Result<Response<super::CommitResponse>, Status> {
+            self.conn.invoke_unary(COMMIT, req.into()).await
         }
         pub async fn list_objects(
             &self,

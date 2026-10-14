@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use elri_core::change::{rejected, Outcome, Reason};
 use elri_core::model::ObjectId;
-use elri_core::sync::{envelope_space, validate_envelope};
+use elri_core::sync::{envelope_space, envelope_spaces, validate_envelope};
 use elri_proto::elri::v1::account::account_service_ws::{
     register_account_service_arc, AccountServiceHandler,
 };
@@ -424,13 +424,38 @@ impl SyncServiceHandler for State {
         if let Err(e) = validate_envelope(&env) {
             return reply(rejected(Reason::Invalid, e.to_string()));
         }
-        let space_id = envelope_space(&env).map_err(|e| invalid(e.to_string()))?;
-        let Some(role) = self.registry.role(space_id.uuid(), user.id).await? else {
-            return reply(rejected(Reason::PermissionDenied, "not a member"));
-        };
-        if !role.can_write() {
-            return reply(rejected(Reason::PermissionDenied, "viewer cannot write"));
+        let spaces = envelope_spaces(&env).map_err(|e| invalid(e.to_string()))?;
+        for space_id in &spaces {
+            let Some(role) = self.registry.role(space_id.uuid(), user.id).await? else {
+                return reply(rejected(
+                    Reason::PermissionDenied,
+                    format!("not a member of space {space_id}"),
+                ));
+            };
+            if !role.can_write() {
+                return reply(rejected(
+                    Reason::PermissionDenied,
+                    format!("viewer cannot write to space {space_id}"),
+                ));
+            }
         }
+        if spaces.len() > 1 {
+            // Whole or nothing across Spaces: the coordinator admits it.
+            return match self.spaces.admit_coordinated(&env).await.map_err(storage)? {
+                Ok(seqs) => {
+                    let mut first = 0;
+                    for (space_id, seq) in &seqs {
+                        let _ = self.events.send((space_id.uuid(), *seq));
+                        if *space_id == envelope_space(&env).map_err(|e| invalid(e.to_string()))? {
+                            first = *seq;
+                        }
+                    }
+                    reply(Outcome::AcceptedSeq(first))
+                }
+                Err(outcome) => reply(outcome),
+            };
+        }
+        let space_id = spaces[0];
         let space = self.spaces.space(space_id).await.map_err(storage)?;
         let outcome = space.admit(&env).await.map_err(storage)?;
         if let Outcome::AcceptedSeq(seq) = outcome {

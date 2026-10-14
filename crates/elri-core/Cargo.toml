@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 elri-proto.workspace = true
+prost.workspace = true
 ws-proto.workspace = true
 loro.workspace = true
 toasty.workspace = true

@@ -19,6 +19,13 @@ service ObjectService {
     server Space asks the server, and the erasure arrives with the log.
     */
     rpc PurgeObject(PurgeObjectRequest) returns (PurgeObjectResponse);
+    /*
+    Several writes as one Change: all of them land, or none. The writes may
+    touch Objects of different Spaces; a server accepts or rejects the
+    whole. Use it for anything whose halves must not be seen apart: moving
+    a block between documents, splitting one, repointing a relation.
+    */
+    rpc Commit(CommitRequest) returns (CommitResponse);
     rpc ListObjects(ListObjectsRequest) returns (ListObjectsResponse);
 }
 
@@ -83,6 +90,24 @@ message PurgeObjectRequest {
 }
 
 message PurgeObjectResponse {}
+
+message Write {
+    oneof write {
+        CreateObjectRequest create = 1;
+        UpdateObjectRequest update = 2;
+        DeleteObjectRequest delete = 3;
+    }
+}
+
+message CommitRequest {
+    repeated Write writes = 1;
+}
+
+message CommitResponse {
+    string change_id = 1;
+    /* The written Objects, in the order of the writes. */
+    repeated Object objects = 2;
+}
 
 message ListObjectsRequest {
     string space_id = 1;

@@ -14,6 +14,9 @@ message Part {
     bytes to_version = 4;
     /* Loro update bytes. */
     bytes bytes = 5;
+    /* Space of this part; empty means the envelope's Space. A Change may
+       span Spaces: it is accepted or rejected as a whole. */
+    string space_id = 6;
 }
 
 /* A Change as it travels between a device and the server. */

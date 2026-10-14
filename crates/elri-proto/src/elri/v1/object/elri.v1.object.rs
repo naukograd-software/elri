@@ -245,6 +245,36 @@ pub struct PurgeObjectRequest {
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PurgeObjectResponse {
 }
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Write {
+    #[prost(oneof = "write::Write", tags = "1, 2, 3")]
+    pub write: ::core::option::Option<write::Write>,
+}
+/// Nested message and enum types in `Write`.
+pub mod write {
+    #[derive(Clone, PartialEq, ::prost::Oneof)]
+    pub enum Write {
+        #[prost(message, tag = "1")]
+        Create(super::CreateObjectRequest),
+        #[prost(message, tag = "2")]
+        Update(super::UpdateObjectRequest),
+        #[prost(message, tag = "3")]
+        Delete(super::DeleteObjectRequest),
+    }
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CommitRequest {
+    #[prost(message, repeated, tag = "1")]
+    pub writes: ::prost::alloc::vec::Vec<Write>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CommitResponse {
+    #[prost(string, tag = "1")]
+    pub change_id: ::prost::alloc::string::String,
+    /// The written Objects, in the order of the writes. 
+    #[prost(message, repeated, tag = "2")]
+    pub objects: ::prost::alloc::vec::Vec<Object>,
+}
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListObjectsRequest {
     #[prost(string, tag = "1")]

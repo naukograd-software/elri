@@ -76,6 +76,9 @@ pub struct ChangeRow {
     pub accepted_seq: Option<i64>,
     /// Why it was rejected, if it was.
     pub rejection: Option<String>,
+    /// Part of a Change spanning several Spaces: submitted by the
+    /// coordinator from its journal, not by this Space's worker.
+    pub coordinated: bool,
 }
 
 /// The operations a Change added to one document.
@@ -266,6 +269,26 @@ pub struct SyncStateRow {
     pub key: String,
     /// Value.
     pub value: i64,
+}
+
+/// Coordinator journal: a Change that spans Spaces, written durably before
+/// any Space is touched and kept until every part is installed and the
+/// authority has answered.
+#[derive(Debug, toasty::Model)]
+#[table = "journal"]
+pub struct JournalRow {
+    /// Change id.
+    #[key]
+    pub change_id: Uuid,
+    /// Encoded envelope with every part.
+    pub envelope: Vec<u8>,
+    /// `JournalState` code: committed or applied.
+    pub state: i64,
+    /// `ChangeStatus` code of the whole Change.
+    #[index]
+    pub status: i64,
+    /// Recording instant.
+    pub created_at: i64,
 }
 
 /// The server this device synchronizes with; at most one row.

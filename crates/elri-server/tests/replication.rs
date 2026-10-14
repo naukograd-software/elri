@@ -11,8 +11,8 @@ use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
 use elri_proto::elri::v1::change::{ChangeStatus, ListChangesRequest};
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
-    value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest,
-    ObjectKind, PurgeObjectRequest, UpdateObjectRequest, Value,
+    value, write, CommitRequest, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest,
+    ListObjectsRequest, ObjectKind, PurgeObjectRequest, UpdateObjectRequest, Value, Write,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::RemoteServiceClient;
 use elri_proto::elri::v1::remote::{
@@ -395,6 +395,93 @@ async fn changes_flow_between_devices_through_the_server() {
             }))
             .await
             .is_err_and(|e| e.code == ws_proto::Code::NotFound)
+    })
+    .await;
+
+    // One Change across two server Spaces: Alice commits, Bob receives
+    // both halves.
+    let second = a
+        .remote
+        .create_remote_space(a.authed(CreateRemoteSpaceRequest {
+            name: "second".into(),
+        }))
+        .await
+        .expect("second space")
+        .msg
+        .space
+        .expect("space");
+    a.remote
+        .add_member(a.authed(AddMemberRequest {
+            space_id: second.id.clone(),
+            user_name: "bob".into(),
+            role: Role::Editor.into(),
+        }))
+        .await
+        .expect("add bob");
+    b.remote
+        .join_space(b.authed(JoinSpaceRequest {
+            space_id: second.id.clone(),
+        }))
+        .await
+        .expect("join second");
+    let mut f1 = HashMap::new();
+    f1.insert("title".to_owned(), s("in team"));
+    let mut f2 = HashMap::new();
+    f2.insert("title".to_owned(), s("in second"));
+    let committed = a
+        .objects
+        .commit(a.authed(CommitRequest {
+            writes: vec![
+                Write {
+                    write: Some(write::Write::Create(CreateObjectRequest {
+                        space_id: space.id.clone(),
+                        kind: ObjectKind::Entity.into(),
+                        fields: f1,
+                        ..Default::default()
+                    })),
+                },
+                Write {
+                    write: Some(write::Write::Create(CreateObjectRequest {
+                        space_id: second.id.clone(),
+                        kind: ObjectKind::Entity.into(),
+                        fields: f2,
+                        ..Default::default()
+                    })),
+                },
+            ],
+        }))
+        .await
+        .expect("commit")
+        .msg;
+    assert_eq!(committed.objects.len(), 2);
+    for (sp, obj) in [
+        (&space, &committed.objects[0]),
+        (&second, &committed.objects[1]),
+    ] {
+        eventually("bob to receive both halves", || async {
+            b.objects
+                .get_object(b.authed(GetObjectRequest {
+                    space_id: sp.id.clone(),
+                    id: obj.id.clone(),
+                }))
+                .await
+                .is_ok()
+        })
+        .await;
+    }
+    eventually("alice's coordinated change to be accepted", || async {
+        a.changes
+            .list_changes(a.authed(ListChangesRequest {
+                space_id: second.id.clone(),
+                limit: 10,
+            }))
+            .await
+            .is_ok_and(|r| {
+                r.msg
+                    .changes
+                    .iter()
+                    .any(|c| c.id == committed.change_id && c.status() == ChangeStatus::Accepted)
+            })
     })
     .await;
 

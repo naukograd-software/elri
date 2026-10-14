@@ -16,6 +16,10 @@ pub struct Part {
     /// Loro update bytes. 
     #[prost(bytes = "bytes", tag = "5")]
     pub bytes: ::prost::bytes::Bytes,
+    /// Space of this part; empty means the envelope's Space. A Change may
+    /// span Spaces: it is accepted or rejected as a whole. 
+    #[prost(string, tag = "6")]
+    pub space_id: ::prost::alloc::string::String,
 }
 /// A Change as it travels between a device and the server. 
 #[derive(Clone, PartialEq, ::prost::Message)]
