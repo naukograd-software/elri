@@ -96,7 +96,7 @@ impl SyncServiceHandler for State {
         if req.msg.protocol_version != PROTOCOL_VERSION {
             return Err(Status::new(
                 Code::FailedPrecondition,
-                format!("protocol {} required", PROTOCOL_VERSION),
+                format!("protocol {PROTOCOL_VERSION} required"),
             ));
         }
         Ok(Response::new(HelloResponse {
@@ -203,9 +203,8 @@ impl SyncServiceHandler for State {
                 })),
             }))
         };
-        let role = match self.registry.role(space_id.uuid(), user.id).await? {
-            Some(r) => r,
-            None => return reject(rejection::Reason::PermissionDenied, "not a member".into()),
+        let Some(role) = self.registry.role(space_id.uuid(), user.id).await? else {
+            return reject(rejection::Reason::PermissionDenied, "not a member".into());
         };
         if !role.can_write() {
             return reject(
