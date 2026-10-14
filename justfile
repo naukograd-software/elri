@@ -29,9 +29,10 @@ web:
 build:
     cargo build --workspace
 
-# Local core + renderer in dev mode.
+# Local core + renderer in dev mode. GDK_BACKEND=x11 sidesteps WebKitGTK's
+# Wayland protocol errors; drop it if your session renders fine without.
 dev:
-    pnpm --filter @elri/app tauri dev
+    GDK_BACKEND=x11 pnpm --filter @elri/app tauri dev
 
 # Cross-build the core for Android (needs cargo-ndk and an NDK).
 android:
