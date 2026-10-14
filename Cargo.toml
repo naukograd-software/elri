@@ -58,6 +58,7 @@ clap = { version = "4", features = ["derive", "env"] }
 # shell
 tauri = "2.12.3"
 tauri-build = "2.7.2"
+tauri-plugin-single-instance = "2.5.3"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

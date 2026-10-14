@@ -104,3 +104,20 @@ async fn device_id_is_stable_across_restarts() {
         .expect("restart");
     assert_eq!(second.device_id(), id);
 }
+
+#[tokio::test]
+async fn second_core_on_the_same_data_dir_is_refused() {
+    let dir = tmp_dir("single");
+    let first = Core::start(Config::new(&dir, build()))
+        .await
+        .expect("start");
+    let err = Core::start(Config::new(&dir, build()))
+        .await
+        .err()
+        .expect("second start must fail");
+    assert!(err.to_string().contains("already running"), "{err}");
+    first.shutdown();
+    let _again = Core::start(Config::new(&dir, build()))
+        .await
+        .expect("starts again after shutdown");
+}

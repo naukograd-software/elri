@@ -33,7 +33,17 @@ pub fn run() {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // Desktop: a second launch focuses the running instance instead of
+    // fighting it for the data directory.
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        if let Some(w) = app.get_webview_window("main") {
+            let _ = w.show();
+            let _ = w.set_focus();
+        }
+    }));
+    builder
         .manage(CoreState(Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![core_endpoint])
         .setup(|app| {
@@ -45,7 +55,14 @@ pub fn run() {
                     commit: option_env!("ELRI_COMMIT").unwrap_or(""),
                 },
             );
-            let core = tauri::async_runtime::block_on(Core::start(config))?;
+            let core = match tauri::async_runtime::block_on(Core::start(config)) {
+                Ok(core) => core,
+                Err(e) => {
+                    tracing::error!(error = %e, "core failed to start");
+                    eprintln!("elri: {e}");
+                    std::process::exit(2);
+                }
+            };
             if let Ok(mut guard) = app.state::<CoreState>().0.lock() {
                 *guard = Some(core);
             }

@@ -136,6 +136,14 @@ pub enum CoreError {
         /// Recorded process id.
         pid: u32,
     },
+    /// Another core already serves this data directory.
+    #[error("another elri core (pid {pid}) is already running on {}", path.display())]
+    AlreadyRunning {
+        /// Data directory.
+        path: PathBuf,
+        /// Process holding it.
+        pid: u32,
+    },
     /// The loopback listener could not be bound.
     #[error("bind {addr}: {source}")]
     Bind {
@@ -166,6 +174,17 @@ impl Core {
     /// Loads the device identity, binds the loopback listener, registers the
     /// API, and publishes the endpoint file.
     pub async fn start(config: Config) -> Result<Self, CoreError> {
+        // A live endpoint file whose socket still answers means another core
+        // owns this directory; a file whose socket is gone is stale and gets
+        // overwritten below.
+        if let Ok(existing) = Endpoint::read(&config.data_dir) {
+            if endpoint_answers(&existing).await {
+                return Err(CoreError::AlreadyRunning {
+                    path: config.data_dir.clone(),
+                    pid: existing.pid,
+                });
+            }
+        }
         let device_id = DeviceId::load_or_create(&config.data_dir)?;
         let token = LaunchToken::generate();
         let store = Arc::new(Store::open(&config.data_dir, device_id).await?);
@@ -268,6 +287,22 @@ impl Drop for Core {
 /// The endpoint file contains the launch token, so it is owner-only and
 /// written atomically: a temporary file with restricted permissions, then a
 /// rename over the final name.
+async fn endpoint_answers(endpoint: &Endpoint) -> bool {
+    let Some(addr) = endpoint
+        .url
+        .strip_prefix("ws://")
+        .and_then(|rest| rest.split('/').next())
+    else {
+        return false;
+    };
+    tokio::time::timeout(
+        std::time::Duration::from_millis(500),
+        tokio::net::TcpStream::connect(addr),
+    )
+    .await
+    .is_ok_and(|r| r.is_ok())
+}
+
 fn write_endpoint(data_dir: &std::path::Path, endpoint: &Endpoint) -> Result<(), CoreError> {
     use std::io::Write as _;
 
