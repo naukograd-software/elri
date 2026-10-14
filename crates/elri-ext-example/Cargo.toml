@@ -1,0 +1,17 @@
+[package]
+name = "elri-ext-example"
+description = "Example native extension with the elri C ABI; used by the core's tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+serde_json.workspace = true

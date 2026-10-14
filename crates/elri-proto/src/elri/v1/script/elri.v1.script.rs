@@ -18,6 +18,9 @@ pub struct Manifest {
     /// Uses an AI provider (not available in this version; declared for grants). 
     #[prost(bool, tag = "4")]
     pub ai: bool,
+    /// Extensions the script calls by name; each must be installed and granted. 
+    #[prost(string, repeated, tag = "5")]
+    pub extensions: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Luau source kept in a Space. 
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]

@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/script/domain.proto.
  */
 export const file_elri_v1_script_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL3NjcmlwdC9kb21haW4ucHJvdG8SDmVscmkudjEuc2NyaXB0IkMKCE1hbmlmZXN0Eg0KBXJlYWRzGAEgAygJEg4KBndyaXRlcxgCIAMoCRIMCgRodHRwGAMgASgIEgoKAmFpGAQgASgIIu0BCgZTY3JpcHQSCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSDAoEbmFtZRgDIAEoCRIOCgZzb3VyY2UYBCABKAkSKgoIbWFuaWZlc3QYBSABKAsyGC5lbHJpLnYxLnNjcmlwdC5NYW5pZmVzdBIPCgd2ZXJzaW9uGAYgASgJEg4KBmJlbmlnbhgHIAEoCBIVCg1jcmVhdGVkX2F0X21zGAggASgDEhUKDXVwZGF0ZWRfYXRfbXMYCSABKAMSGgoNZGVsZXRlZF9hdF9tcxgKIAEoA0gAiAEBQhAKDl9kZWxldGVkX2F0X21zIp4BCgVHcmFudBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIRCglzY3JpcHRfaWQYAyABKAkSDwoHdmVyc2lvbhgEIAEoCRIOCgZiZW5pZ24YBSABKAgSFQoNZ3JhbnRlZF9hdF9tcxgGIAEoAxIaCg1yZXZva2VkX2F0X21zGAcgASgDSACIAQFCEAoOX3Jldm9rZWRfYXRfbXMiRQoHVHJpZ2dlchIpCgVraW5kcxgBIAMoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDwoHdHlwZV9pZBgCIAEoCSL4AQoEUnVsZRIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEhEKCXNjcmlwdF9pZBgEIAEoCRIoCgd0cmlnZ2VyGAUgASgLMhcuZWxyaS52MS5zY3JpcHQuVHJpZ2dlchIaChJleGVjdXRvcl9kZXZpY2VfaWQYBiABKAkSDwoHZW5hYmxlZBgHIAEoCBIVCg1jcmVhdGVkX2F0X21zGAggASgDEhUKDXVwZGF0ZWRfYXRfbXMYCSABKAMSGgoNZGVsZXRlZF9hdF9tcxgKIAEoA0gAiAEBQhAKDl9kZWxldGVkX2F0X21zInQKCVJ1blJlc3VsdBITCgtvdXRwdXRfanNvbhgBIAEoCRIMCgRsb2dzGAIgAygJEhMKC2R1cmF0aW9uX21zGAMgASgDEg0KBWVycm9yGAQgASgJEg4KBmxhYmVscxgFIAMoCRIQCghncmFudF9pZBgGIAEoCWIGcHJvdG8z", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL3NjcmlwdC9kb21haW4ucHJvdG8SDmVscmkudjEuc2NyaXB0IlcKCE1hbmlmZXN0Eg0KBXJlYWRzGAEgAygJEg4KBndyaXRlcxgCIAMoCRIMCgRodHRwGAMgASgIEgoKAmFpGAQgASgIEhIKCmV4dGVuc2lvbnMYBSADKAki7QEKBlNjcmlwdBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnNvdXJjZRgEIAEoCRIqCghtYW5pZmVzdBgFIAEoCzIYLmVscmkudjEuc2NyaXB0Lk1hbmlmZXN0Eg8KB3ZlcnNpb24YBiABKAkSDgoGYmVuaWduGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMingEKBUdyYW50EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIPCgd2ZXJzaW9uGAQgASgJEg4KBmJlbmlnbhgFIAEoCBIVCg1ncmFudGVkX2F0X21zGAYgASgDEhoKDXJldm9rZWRfYXRfbXMYByABKANIAIgBAUIQCg5fcmV2b2tlZF9hdF9tcyJFCgdUcmlnZ2VyEikKBWtpbmRzGAEgAygOMhouZWxyaS52MS5vYmplY3QuT2JqZWN0S2luZBIPCgd0eXBlX2lkGAIgASgJIvgBCgRSdWxlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEQoJc2NyaXB0X2lkGAQgASgJEigKB3RyaWdnZXIYBSABKAsyFy5lbHJpLnYxLnNjcmlwdC5UcmlnZ2VyEhoKEmV4ZWN1dG9yX2RldmljZV9pZBgGIAEoCRIPCgdlbmFibGVkGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMidAoJUnVuUmVzdWx0EhMKC291dHB1dF9qc29uGAEgASgJEgwKBGxvZ3MYAiADKAkSEwoLZHVyYXRpb25fbXMYAyABKAMSDQoFZXJyb3IYBCABKAkSDgoGbGFiZWxzGAUgAygJEhAKCGdyYW50X2lkGAYgASgJYgZwcm90bzM", [file_elri_v1_object_domain]);
 
 /**
  *
@@ -50,6 +50,13 @@ export type Manifest = Message<"elri.v1.script.Manifest"> & {
    * @generated from field: bool ai = 4;
    */
   ai: boolean;
+
+  /**
+   * Extensions the script calls by name; each must be installed and granted. 
+   *
+   * @generated from field: repeated string extensions = 5;
+   */
+  extensions: string[];
 };
 
 /**
@@ -88,6 +95,13 @@ export type ManifestJson = {
    * @generated from field: bool ai = 4;
    */
   ai?: boolean;
+
+  /**
+   * Extensions the script calls by name; each must be installed and granted. 
+   *
+   * @generated from field: repeated string extensions = 5;
+   */
+  extensions?: string[];
 };
 
 /**

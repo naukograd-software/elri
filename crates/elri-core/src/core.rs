@@ -223,7 +223,9 @@ impl Core {
         write_endpoint(&config.data_dir, &endpoint)?;
 
         let retention_task = spawn_retention(Arc::clone(&store));
-        let scripts = crate::script::Host::new(Arc::clone(&store), device_id.as_string());
+        let modules = crate::extension::Modules::new(&config.data_dir);
+        let scripts =
+            crate::script::Host::new(Arc::clone(&store), device_id.as_string(), modules.clone());
         let rules_task =
             crate::rules::spawn_runner(Arc::clone(&store), scripts.clone(), device_id.as_string());
         let server = api::build_server(
@@ -234,6 +236,7 @@ impl Core {
                 store: Arc::clone(&store),
                 remote: Arc::clone(&remote),
                 scripts,
+                modules,
             },
             config.allowed_origins.clone(),
         );

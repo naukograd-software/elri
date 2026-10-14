@@ -19,6 +19,8 @@ pub mod backup;
 pub mod blobs;
 pub mod change;
 pub mod device;
+pub mod extension;
+pub mod hostops;
 pub mod model;
 pub mod remote;
 pub mod rules;

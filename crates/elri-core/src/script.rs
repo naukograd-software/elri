@@ -80,11 +80,15 @@ pub fn manifest_json(m: &Manifest) -> String {
     let mut writes = m.writes.clone();
     writes.sort();
     writes.dedup();
+    let mut extensions = m.extensions.clone();
+    extensions.sort();
+    extensions.dedup();
     serde_json::json!({
         "reads": reads,
         "writes": writes,
         "http": m.http,
         "ai": m.ai,
+        "extensions": extensions,
     })
     .to_string()
 }
@@ -121,6 +125,7 @@ pub fn manifest_from_json(s: &str) -> Result<Manifest, ScriptError> {
             .get("ai")
             .and_then(serde_json::Value::as_bool)
             .unwrap_or(false),
+        extensions: list("extensions")?,
     })
 }
 
@@ -128,7 +133,11 @@ pub fn manifest_from_json(s: &str) -> Result<Manifest, ScriptError> {
 /// such a script is granted without asking under the device policy.
 pub fn is_benign(space: SpaceId, m: &Manifest) -> bool {
     let own = space.to_string();
-    m.reads.iter().all(|s| *s == own) && m.writes.iter().all(|s| *s == own) && !m.http && !m.ai
+    m.reads.iter().all(|s| *s == own)
+        && m.writes.iter().all(|s| *s == own)
+        && !m.http
+        && !m.ai
+        && m.extensions.is_empty()
 }
 
 /// The protocol view of a script Object.
@@ -221,6 +230,7 @@ impl Access {
 pub struct Host {
     store: Arc<Store>,
     device_id: String,
+    modules: crate::extension::Modules,
 }
 
 /// One run's identity for attribution.
@@ -246,8 +256,12 @@ impl RunIdentity {
 
 impl Host {
     /// A host over this device's store.
-    pub fn new(store: Arc<Store>, device_id: String) -> Self {
-        Self { store, device_id }
+    pub fn new(store: Arc<Store>, device_id: String, modules: crate::extension::Modules) -> Self {
+        Self {
+            store,
+            device_id,
+            modules,
+        }
     }
 
     /// Runs a script with JSON `args` as `elri.args`.
@@ -720,6 +734,81 @@ impl Host {
             })
             .map_err(|e| lua_err(&e))?;
         elri.set("delete", delete).map_err(|e| lua_err(&e))?;
+
+        // elri.ext(name, func, args): an installed, granted extension the
+        // script's manifest names.
+        let a = Arc::clone(access);
+        let store = Arc::clone(&self.store);
+        let modules = self.modules.clone();
+        let ext = lua
+            .create_async_function(
+                move |lua, (name, func, args): (String, String, Option<LuaValue>)| {
+                    let a = Arc::clone(&a);
+                    let store = Arc::clone(&store);
+                    let modules = modules.clone();
+                    async move {
+                        {
+                            let mut g = a.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+                            g.charge().map_err(to_lua)?;
+                            if !g.manifest.extensions.contains(&name) {
+                                return Err(to_lua(ScriptError::Denied(format!(
+                                    "extension {name}"
+                                ))));
+                            }
+                        }
+                        let rec =
+                            store
+                                .extension(&name)
+                                .await
+                                .map_err(to_lua)?
+                                .ok_or_else(|| {
+                                    to_lua(ScriptError::Denied(format!(
+                                        "extension {name} is not installed"
+                                    )))
+                                })?;
+                        let grant = store
+                            .grant_for(crate::extension::grant_identity(&name), &rec.version)
+                            .await
+                            .map_err(to_lua)?
+                            .ok_or_else(|| {
+                                to_lua(ScriptError::Denied(format!(
+                                    "extension {name} has no grant on this device"
+                                )))
+                            })?;
+                        let args: serde_json::Value = match args {
+                            Some(v) => lua.from_value(v)?,
+                            None => serde_json::Value::Null,
+                        };
+                        let result = crate::extension::call(
+                            Arc::clone(&store),
+                            &modules,
+                            &rec,
+                            &func,
+                            own,
+                            args,
+                            grant.id,
+                        )
+                        .await;
+                        {
+                            let mut g = a.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+                            g.logs.extend(result.logs.iter().cloned());
+                            g.labels.extend(result.labels.iter().cloned());
+                        }
+                        if !result.error.is_empty() {
+                            return Err(mlua::Error::runtime(result.error));
+                        }
+                        let out: serde_json::Value = if result.output_json.is_empty() {
+                            serde_json::Value::Null
+                        } else {
+                            serde_json::from_str(&result.output_json)
+                                .unwrap_or(serde_json::Value::Null)
+                        };
+                        lua.to_value(&out)
+                    }
+                },
+            )
+            .map_err(|e| lua_err(&e))?;
+        elri.set("ext", ext).map_err(|e| lua_err(&e))?;
         Ok(())
     }
 }

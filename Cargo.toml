@@ -6,6 +6,7 @@ members = [
     "crates/elri-server",
     "crates/elri-cli",
     "crates/elri-daemon",
+    "crates/elri-ext-example",
     "apps/elri/src-tauri",
 ]
 
@@ -41,7 +42,8 @@ turso = "0.8.3"
 toasty = { git = "https://github.com/tokio-rs/toasty", rev = "25b4e22ced8f8b18e00d5f48fdfbb592b820b2bd", features = ["turso"] }
 toasty-driver-turso = { git = "https://github.com/tokio-rs/toasty", rev = "25b4e22ced8f8b18e00d5f48fdfbb592b820b2bd", features = ["fts"] }
 mlua = { version = "0.12.2", features = ["luau", "vendored", "async", "send", "serde"] }
-wasmtime = "49.0.2"
+wasmtime = { version = "49.0.3", default-features = false, features = ["cranelift", "runtime", "std", "parallel-compilation"] }
+libloading = "0.8.9"
 
 # common
 uuid = { version = "1", features = ["v7", "serde"] }
@@ -62,7 +64,9 @@ tauri-build = "2.7.2"
 tauri-plugin-single-instance = "2.5.3"
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+# `deny`, not `forbid`: the one allowed exception is loading native
+# extensions, which the user accepts as running outside the sandbox.
+unsafe_code = "deny"
 missing_docs = "warn"
 
 [workspace.lints.clippy]

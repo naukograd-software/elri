@@ -349,6 +349,25 @@ pub struct GrantRow {
     pub revoked_at: Option<i64>,
 }
 
+/// An extension installed on this device.
+#[derive(Debug, toasty::Model)]
+#[table = "extensions"]
+pub struct ExtensionRow {
+    /// Name, unique on the device.
+    #[key]
+    pub name: String,
+    /// `ExtensionKind` code.
+    pub kind: i64,
+    /// Hex SHA-256 of the module bytes.
+    pub version: String,
+    /// Functions exposed, as a JSON list.
+    pub functions: String,
+    /// Manifest as JSON.
+    pub manifest: String,
+    /// Install instant.
+    pub installed_at: i64,
+}
+
 /// Device-wide settings: small named values.
 #[derive(Debug, toasty::Model)]
 #[table = "settings"]

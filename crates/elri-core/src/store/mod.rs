@@ -37,9 +37,9 @@ use crate::model::{
     field_def_kind, now_ms, publication_of, ModelError, ObjectDoc, ObjectId, SpaceId,
 };
 use models::{
-    BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, GrantRow,
-    GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow, PinRow, PlacementRow,
-    RemoteRow, SettingRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
+    BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, ExtensionRow,
+    FieldValueRow, GrantRow, GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow,
+    PinRow, PlacementRow, RemoteRow, SettingRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
 };
 
 mod coordinator;
@@ -241,7 +241,14 @@ impl Store {
         let root = root.into();
         let (db, _) = open_db(
             &root.join("device.db"),
-            toasty::models!(SpaceRow, RemoteRow, JournalRow, GrantRow, SettingRow),
+            toasty::models!(
+                SpaceRow,
+                RemoteRow,
+                JournalRow,
+                GrantRow,
+                SettingRow,
+                ExtensionRow
+            ),
         )
         .await?;
         let blobs = Blobs::new(&root);
@@ -353,6 +360,66 @@ impl Store {
             count += space.purge_expired(now).await?.len();
         }
         Ok(count)
+    }
+
+    // --- extensions -------------------------------------------------------
+
+    /// Records an installed extension, replacing one of the same name.
+    pub async fn put_extension(&self, row: ExtensionRecord) -> Result<(), StoreError> {
+        let mut db = self.device.lock().await;
+        ExtensionRow::filter_by_name(row.name.clone())
+            .delete()
+            .exec(&mut *db)
+            .await?;
+        toasty::create!(ExtensionRow {
+            name: row.name,
+            kind: row.kind,
+            version: row.version,
+            functions: row.functions,
+            manifest: row.manifest,
+            installed_at: row.installed_at,
+        })
+        .exec(&mut *db)
+        .await?;
+        Ok(())
+    }
+
+    /// An installed extension by name.
+    pub async fn extension(&self, name: &str) -> Result<Option<ExtensionRecord>, StoreError> {
+        let mut db = self.device.lock().await;
+        Ok(ExtensionRow::filter_by_name(name.to_owned())
+            .first()
+            .exec(&mut *db)
+            .await?
+            .map(ExtensionRecord::from))
+    }
+
+    /// Every installed extension, by name.
+    pub async fn extensions(&self) -> Result<Vec<ExtensionRecord>, StoreError> {
+        let mut db = self.device.lock().await;
+        let mut out: Vec<ExtensionRecord> = ExtensionRow::all()
+            .exec(&mut *db)
+            .await?
+            .into_iter()
+            .map(ExtensionRecord::from)
+            .collect();
+        out.sort_by(|a, b| a.name.cmp(&b.name));
+        Ok(out)
+    }
+
+    /// Forgets an installed extension.
+    pub async fn remove_extension(&self, name: &str) -> Result<bool, StoreError> {
+        let mut db = self.device.lock().await;
+        let existed = ExtensionRow::filter_by_name(name.to_owned())
+            .first()
+            .exec(&mut *db)
+            .await?
+            .is_some();
+        ExtensionRow::filter_by_name(name.to_owned())
+            .delete()
+            .exec(&mut *db)
+            .await?;
+        Ok(existed)
     }
 
     // --- grants and settings ----------------------------------------------
@@ -635,6 +702,36 @@ impl Store {
             .exec(&mut *db)
             .await?;
         Ok(())
+    }
+}
+
+/// An installed extension as the store keeps it.
+#[derive(Debug, Clone)]
+pub struct ExtensionRecord {
+    /// Name.
+    pub name: String,
+    /// `ExtensionKind` code.
+    pub kind: i64,
+    /// Hex SHA-256 of the module bytes.
+    pub version: String,
+    /// Functions exposed, as a JSON list.
+    pub functions: String,
+    /// Manifest as JSON.
+    pub manifest: String,
+    /// Install instant.
+    pub installed_at: i64,
+}
+
+impl From<ExtensionRow> for ExtensionRecord {
+    fn from(r: ExtensionRow) -> Self {
+        Self {
+            name: r.name,
+            kind: r.kind,
+            version: r.version,
+            functions: r.functions,
+            manifest: r.manifest,
+            installed_at: r.installed_at,
+        }
     }
 }
 

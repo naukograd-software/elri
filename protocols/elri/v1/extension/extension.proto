@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package elri.v1.extension;
+
+import "elri/v1/script/domain.proto";
+
+/*
+Extensions installed on this device: compiled code that registers
+functions scripts and rules can call. A WASM extension runs in a strong
+sandbox on every platform; a native extension is a dynamic library with a
+C ABI, desktop only, at the user's own risk. Both use the same grant model
+as scripts: a version is the hash of the module bytes, and consent is
+recorded per version on this device.
+*/
+service ExtensionService {
+    /* First message is the header, then the module bytes in chunks. */
+    rpc InstallExtension(stream InstallExtensionRequest) returns (InstallExtensionResponse);
+    rpc ListExtensions(ListExtensionsRequest) returns (ListExtensionsResponse);
+    rpc RemoveExtension(RemoveExtensionRequest) returns (RemoveExtensionResponse);
+    /* Consents to the installed version; needed for anything non-benign
+       and for every native extension. */
+    rpc GrantExtension(GrantExtensionRequest) returns (GrantExtensionResponse);
+    /* Calls one function with JSON arguments in the context of a Space. */
+    rpc CallExtension(CallExtensionRequest) returns (CallExtensionResponse);
+}
+
+enum ExtensionKind {
+    EXTENSION_KIND_UNSPECIFIED = 0;
+    /* WebAssembly module run by wasmtime. */
+    EXTENSION_KIND_WASM = 1;
+    /* Dynamic library with the elri C ABI; desktop only. */
+    EXTENSION_KIND_NATIVE = 2;
+}
+
+message Extension {
+    string name = 1;
+    ExtensionKind kind = 2;
+    /* Hex SHA-256 of the module bytes. */
+    string version = 3;
+    /* Functions the module exports for callers. */
+    repeated string functions = 4;
+    elri.v1.script.Manifest manifest = 5;
+    /* A WASM extension whose manifest stays within data: granted without
+       asking under the device policy. Native extensions never are. */
+    bool benign = 6;
+    /* This version has a live grant on this device. */
+    bool granted = 7;
+    int64 installed_at_ms = 8;
+}
+
+message InstallHeader {
+    string name = 1;
+    ExtensionKind kind = 2;
+    elri.v1.script.Manifest manifest = 3;
+    /* Functions to expose; every one must be exported by the module. */
+    repeated string functions = 4;
+}
+
+message InstallExtensionRequest {
+    oneof request {
+        InstallHeader header = 1;
+        bytes chunk = 2;
+    }
+}
+
+message InstallExtensionResponse {
+    Extension extension = 1;
+}
+
+message ListExtensionsRequest {}
+
+message ListExtensionsResponse {
+    repeated Extension extensions = 1;
+}
+
+message RemoveExtensionRequest {
+    string name = 1;
+}
+
+message RemoveExtensionResponse {}
+
+message GrantExtensionRequest {
+    string name = 1;
+    /* Required for a native extension: the user accepts that it runs
+       outside the sandbox. */
+    bool accept_native_risk = 2;
+}
+
+message GrantExtensionResponse {
+    elri.v1.script.Grant grant = 1;
+}
+
+message CallExtensionRequest {
+    string name = 1;
+    string function = 2;
+    /* The Space the call reads and writes by default. */
+    string space_id = 3;
+    string args_json = 4;
+}
+
+message CallExtensionResponse {
+    elri.v1.script.RunResult result = 1;
+}

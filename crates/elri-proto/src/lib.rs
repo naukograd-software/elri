@@ -43,6 +43,12 @@ pub mod elri {
             include!("elri/v1/events/elri.v1.events.rs");
             // @@protoc_insertion_point(elri.v1.events)
         }
+        #[cfg(feature = "elri-v1-extension")]
+        // @@protoc_insertion_point(attribute:elri.v1.extension)
+        pub mod extension {
+            include!("elri/v1/extension/elri.v1.extension.rs");
+            // @@protoc_insertion_point(elri.v1.extension)
+        }
         #[cfg(feature = "elri-v1-object")]
         // @@protoc_insertion_point(attribute:elri.v1.object)
         pub mod object {

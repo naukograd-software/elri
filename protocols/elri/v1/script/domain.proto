@@ -18,6 +18,8 @@ message Manifest {
     bool http = 3;
     /* Uses an AI provider (not available in this version; declared for grants). */
     bool ai = 4;
+    /* Extensions the script calls by name; each must be installed and granted. */
+    repeated string extensions = 5;
 }
 
 /* Luau source kept in a Space. */

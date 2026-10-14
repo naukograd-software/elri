@@ -4,6 +4,7 @@
 
 mod attachments;
 mod definitions;
+mod extensions;
 mod scripts;
 mod transfer;
 mod ui;
@@ -80,6 +81,8 @@ pub struct Services {
     pub remote: Arc<Remote>,
     /// Script runtime.
     pub scripts: crate::script::Host,
+    /// Installed extension modules.
+    pub modules: crate::extension::Modules,
 }
 
 /// Builds the loopback server: origin policy, bearer-token middleware, all
@@ -106,7 +109,8 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     attachments::register(&server, Arc::clone(&services));
     scripts::register(&server, Arc::clone(&services));
     ui::register(&server, Arc::clone(&services));
-    transfer::register(&server, services);
+    transfer::register(&server, Arc::clone(&services));
+    extensions::register(&server, services);
     server
 }
 

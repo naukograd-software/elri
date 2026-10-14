@@ -21,6 +21,12 @@ use elri_proto::elri::v1::core::core_service_ws::CoreServiceClient;
 use elri_proto::elri::v1::core::GetInfoRequest;
 use elri_proto::elri::v1::events::event_service_ws::EventServiceClient;
 use elri_proto::elri::v1::events::{event, WatchRequest};
+use elri_proto::elri::v1::extension::extension_service_ws::ExtensionServiceClient;
+use elri_proto::elri::v1::extension::{
+    install_extension_request, CallExtensionRequest, Extension, ExtensionKind,
+    GrantExtensionRequest, InstallExtensionRequest, InstallHeader, ListExtensionsRequest,
+    RemoveExtensionRequest,
+};
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest, Object,
@@ -115,6 +121,11 @@ enum Cmd {
         #[command(subcommand)]
         cmd: RuleCmd,
     },
+    /// Extensions installed on this device: WASM modules and native libraries.
+    Extension {
+        #[command(subcommand)]
+        cmd: ExtensionCmd,
+    },
     /// Objects between Spaces: export, import, move.
     Transfer {
         #[command(subcommand)]
@@ -192,6 +203,9 @@ enum ScriptCmd {
         /// Spaces written besides its own.
         #[arg(long = "write")]
         writes: Vec<String>,
+        /// Extensions the script calls.
+        #[arg(long = "ext")]
+        extensions: Vec<String>,
     },
     /// List scripts of a Space.
     List {
@@ -260,6 +274,48 @@ enum RuleCmd {
         id: String,
         #[arg(long)]
         off: bool,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum ExtensionCmd {
+    /// Install a module file as an extension.
+    Install {
+        name: String,
+        /// `.wasm` module, or a native library with `--native`.
+        file: PathBuf,
+        /// Functions the module exports for callers.
+        #[arg(long = "fn", required = true)]
+        functions: Vec<String>,
+        /// A native dynamic library (desktop only, at your own risk).
+        #[arg(long)]
+        native: bool,
+        /// Spaces read besides the one of each call.
+        #[arg(long = "read")]
+        reads: Vec<String>,
+        /// Spaces written besides the one of each call.
+        #[arg(long = "write")]
+        writes: Vec<String>,
+    },
+    /// List installed extensions.
+    List,
+    /// Remove an extension and its modules.
+    Remove { name: String },
+    /// Consent to the installed version.
+    Grant {
+        name: String,
+        /// Required for a native extension.
+        #[arg(long)]
+        accept_native_risk: bool,
+    },
+    /// Call a function with JSON arguments in the context of a Space.
+    Call {
+        #[arg(long)]
+        space: String,
+        name: String,
+        function: String,
+        #[arg(default_value = "null")]
+        args: String,
     },
 }
 
@@ -792,6 +848,7 @@ async fn run_script(
             file,
             reads,
             writes,
+            extensions,
         } => {
             let source = std::fs::read_to_string(&file)?;
             let res = client
@@ -806,6 +863,7 @@ async fn run_script(
                             writes,
                             http: false,
                             ai: false,
+                            extensions,
                         }),
                     },
                 ))
@@ -1005,6 +1063,163 @@ async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<ser
                 bail!("core returned no rule");
             };
             Ok(rule_json(&r))
+        }
+    }
+}
+
+fn extension_json(e: &Extension) -> serde_json::Value {
+    json!({
+        "name": e.name,
+        "kind": ExtensionKind::try_from(e.kind).map(|k| k.as_str_name().to_lowercase()).unwrap_or_default(),
+        "version": e.version,
+        "functions": e.functions,
+        "benign": e.benign,
+        "granted": e.granted,
+        "manifest": e.manifest.as_ref().map(|m| json!({
+            "reads": m.reads, "writes": m.writes, "http": m.http, "ai": m.ai, "extensions": m.extensions,
+        })),
+        "installed_at_ms": e.installed_at_ms,
+    })
+}
+
+async fn install_extension(
+    client: &ExtensionServiceClient,
+    endpoint: &Endpoint,
+    header: InstallHeader,
+    file: &Path,
+) -> Result<serde_json::Value> {
+    let bytes = std::fs::read(file)?;
+    let stream = client
+        .install_extension(
+            ws_proto::CallOptions::new()
+                .with_header("authorization", format!("Bearer {}", endpoint.token)),
+        )
+        .await?;
+    stream
+        .send(&InstallExtensionRequest {
+            request: Some(install_extension_request::Request::Header(header)),
+        })
+        .await?;
+    for chunk in bytes.chunks(64 * 1024) {
+        stream
+            .send(&InstallExtensionRequest {
+                request: Some(install_extension_request::Request::Chunk(
+                    chunk.to_vec().into(),
+                )),
+            })
+            .await?;
+    }
+    let res = stream.close_and_recv().await?;
+    let Some(e) = res.msg.extension else {
+        bail!("core returned no extension");
+    };
+    Ok(extension_json(&e))
+}
+
+async fn run_extension(
+    endpoint: &Endpoint,
+    conn: Client,
+    cmd: ExtensionCmd,
+) -> Result<serde_json::Value> {
+    let client = ExtensionServiceClient::new(conn);
+    match cmd {
+        ExtensionCmd::Install {
+            name,
+            file,
+            functions,
+            native,
+            reads,
+            writes,
+        } => {
+            install_extension(
+                &client,
+                endpoint,
+                InstallHeader {
+                    name,
+                    kind: if native {
+                        ExtensionKind::Native
+                    } else {
+                        ExtensionKind::Wasm
+                    }
+                    .into(),
+                    manifest: Some(Manifest {
+                        reads,
+                        writes,
+                        ..Default::default()
+                    }),
+                    functions,
+                },
+                &file,
+            )
+            .await
+        }
+        ExtensionCmd::List => {
+            let res = client
+                .list_extensions(authed(endpoint, ListExtensionsRequest {}))
+                .await?;
+            Ok(json!(res
+                .msg
+                .extensions
+                .iter()
+                .map(extension_json)
+                .collect::<Vec<_>>()))
+        }
+        ExtensionCmd::Remove { name } => {
+            client
+                .remove_extension(authed(
+                    endpoint,
+                    RemoveExtensionRequest { name: name.clone() },
+                ))
+                .await?;
+            Ok(json!({ "removed": name }))
+        }
+        ExtensionCmd::Grant {
+            name,
+            accept_native_risk,
+        } => {
+            let res = client
+                .grant_extension(authed(
+                    endpoint,
+                    GrantExtensionRequest {
+                        name,
+                        accept_native_risk,
+                    },
+                ))
+                .await?;
+            let Some(g) = res.msg.grant else {
+                bail!("core returned no grant");
+            };
+            Ok(json!({ "id": g.id, "version": g.version, "benign": g.benign }))
+        }
+        ExtensionCmd::Call {
+            space,
+            name,
+            function,
+            args,
+        } => {
+            let res = client
+                .call_extension(authed(
+                    endpoint,
+                    CallExtensionRequest {
+                        name,
+                        function,
+                        space_id: space,
+                        args_json: args,
+                    },
+                ))
+                .await?;
+            let Some(r) = res.msg.result else {
+                bail!("core returned no result");
+            };
+            let output: serde_json::Value = if r.output_json.is_empty() {
+                serde_json::Value::Null
+            } else {
+                serde_json::from_str(&r.output_json).unwrap_or(json!(r.output_json))
+            };
+            Ok(json!({
+                "output": output, "logs": r.logs, "duration_ms": r.duration_ms,
+                "error": r.error, "labels": r.labels, "grant_id": r.grant_id,
+            }))
         }
     }
 }
@@ -1490,6 +1705,7 @@ async fn main() -> Result<()> {
         Cmd::Rule { cmd } => run_rule(&endpoint, conn, cmd).await?,
         Cmd::Ui { cmd } => run_ui(&endpoint, conn, cmd).await?,
         Cmd::Transfer { cmd } => run_transfer(&endpoint, conn, cmd).await?,
+        Cmd::Extension { cmd } => run_extension(&endpoint, conn, cmd).await?,
         Cmd::Backup {
             cmd: BackupCmd::Create { dest },
         } => {
