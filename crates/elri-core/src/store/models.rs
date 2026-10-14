@@ -296,16 +296,17 @@ pub struct GraveyardRow {
     pub seq: i64,
 }
 
-/// Which device each editing peer belongs to. A peer id is claimed by the
-/// first device whose accepted Change carries it; another device using it
-/// is forging history.
+/// Which principal each editing peer belongs to: on a server the
+/// authenticated user, on a local authority the device label. A peer id
+/// is claimed by the first accepted Change that carries it; anyone else
+/// using it is forging history.
 #[derive(Debug, toasty::Model)]
 #[table = "peers"]
 pub struct PeerRow {
     /// Loro peer id, as a signed 64-bit integer.
     #[key]
     pub peer: i64,
-    /// The device that owns it.
+    /// The principal that owns it.
     pub device_id: String,
     /// When it was first seen.
     pub first_seen: i64,

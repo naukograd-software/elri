@@ -335,6 +335,17 @@ impl Store {
         env: &Envelope,
         check: &(dyn Fn(&Object) -> Result<(), String> + Sync),
     ) -> Result<Result<Vec<(SpaceId, i64)>, Outcome>, StoreError> {
+        self.admit_coordinated_as(env, &env.device_id, check).await
+    }
+
+    /// [`Self::admit_coordinated`] claiming editing peers for `owner`, the
+    /// authenticated principal, rather than the envelope's device label.
+    pub async fn admit_coordinated_as(
+        &self,
+        env: &Envelope,
+        owner: &str,
+        check: &(dyn Fn(&Object) -> Result<(), String> + Sync),
+    ) -> Result<Result<Vec<(SpaceId, i64)>, Outcome>, StoreError> {
         let spaces = envelope_spaces(env)?;
         let change_id = uuid_arg(&env.id)?;
         let mut stores = Vec::with_capacity(spaces.len());
@@ -364,7 +375,7 @@ impl Store {
             if sub.parts.is_empty() {
                 return Ok(Err(rejected(Reason::Invalid, "a space without parts")));
             }
-            match stage_admit(guard, &sub).await? {
+            match stage_admit(guard, &sub, owner).await? {
                 Ok(docs) => {
                     for d in &docs {
                         if let Err(msg) = check(&d.rec) {
@@ -392,6 +403,9 @@ impl Store {
             let sub = envelope_for(env, *space);
             install_with_status(guard, &sub, docs, true, ChangeStatus::Accepted, Some(*seq))
                 .await?;
+            let mut tx = guard.transaction().await?;
+            super::claim_peers(&mut tx, owner, &sub).await?;
+            tx.commit().await?;
         }
         self.journal_mark(change_id, JournalState::Applied).await?;
         drop(guards);
@@ -557,6 +571,7 @@ async fn restage_from_bytes(db: &mut Db, env: &Envelope) -> Result<Vec<StagedDoc
 async fn stage_admit(
     db: &mut Db,
     env: &Envelope,
+    owner: &str,
 ) -> Result<Result<Vec<StagedDoc>, Outcome>, StoreError> {
     for part in &env.parts {
         let Ok(object_id) = ObjectId::parse(&part.object_id) else {
@@ -568,7 +583,7 @@ async fn stage_admit(
                 format!("object {object_id} was purged"),
             )));
         }
-        if let Some(outcome) = super::foreign_peers(db, &env.device_id, &part.bytes).await? {
+        if let Some(outcome) = super::foreign_peers(db, owner, &part.bytes).await? {
             return Ok(Err(outcome));
         }
     }
@@ -620,9 +635,6 @@ async fn install_with_status(
     let change_id = uuid_arg(&env.id)?;
     let mut tx = db.transaction().await?;
     write_change_flagged(&mut tx, env, status, accepted_seq, "", coordinated).await?;
-    if accepted_seq.is_some() {
-        super::claim_peers(&mut tx, env).await?;
-    }
     for d in docs {
         write_deps(&mut tx, change_id, &d.deps).await?;
         if d.is_new {

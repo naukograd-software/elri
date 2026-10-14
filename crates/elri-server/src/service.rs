@@ -474,6 +474,9 @@ impl SyncServiceHandler for State {
                 managers.push(space_id.uuid());
             }
         }
+        // Editing peers are owned by the authenticated user, whatever the
+        // envelope says about its device.
+        let owner = user.id.to_string();
         let check = move |o: &elri_proto::elri::v1::object::Object| -> Result<(), String> {
             if let Some(c) = elri_core::model::constraint_of(o) {
                 let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
@@ -493,7 +496,7 @@ impl SyncServiceHandler for State {
             // Whole or nothing across Spaces: the coordinator admits it.
             return match self
                 .spaces
-                .admit_coordinated(&env, &check)
+                .admit_coordinated_as(&env, &owner, &check)
                 .await
                 .map_err(storage)?
             {
@@ -512,7 +515,10 @@ impl SyncServiceHandler for State {
         }
         let space_id = spaces[0];
         let space = self.spaces.space(space_id).await.map_err(storage)?;
-        let outcome = space.admit_with(&env, &check).await.map_err(storage)?;
+        let outcome = space
+            .admit_as(&env, &owner, &check)
+            .await
+            .map_err(storage)?;
         if let Outcome::AcceptedSeq(seq) = outcome {
             let _ = self.events.send((space_id.uuid(), seq));
         }

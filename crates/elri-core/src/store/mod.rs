@@ -1935,11 +1935,24 @@ impl SpaceStore {
         self.admit_with(env, &|_| Ok(())).await
     }
 
-    /// [`Self::admit`] with an extra check of every staged Object; a
-    /// message from `check` rejects the whole Change as invalid.
+    /// [`Self::admit_as`] with the envelope's own device label as the
+    /// peer owner: for a local authority that trusts its callers.
     pub async fn admit_with(
         &self,
         env: &Envelope,
+        check: &(dyn Fn(&Object) -> Result<(), String> + Sync),
+    ) -> Result<Outcome, StoreError> {
+        self.admit_as(env, &env.device_id, check).await
+    }
+
+    /// [`Self::admit`] with an extra check of every staged Object; a
+    /// message from `check` rejects the whole Change as invalid. `owner`
+    /// is the authenticated principal the editing peers are claimed for;
+    /// the envelope's device label is attribution, not authority.
+    pub async fn admit_as(
+        &self,
+        env: &Envelope,
+        owner: &str,
         check: &(dyn Fn(&Object) -> Result<(), String> + Sync),
     ) -> Result<Outcome, StoreError> {
         let Ok(change_id) = uuid_arg(&env.id) else {
@@ -1962,7 +1975,7 @@ impl SpaceStore {
         }
 
         // Stage every part on a candidate document before touching storage.
-        let staged = match stage_parts(&mut db, self.id, env, check).await? {
+        let staged = match stage_parts(&mut db, self.id, env, owner, check).await? {
             Ok(staged) => staged,
             Err(outcome) => return Ok(outcome),
         };
@@ -1986,7 +1999,7 @@ impl SpaceStore {
         for ((doc, rec, pending), part) in staged.iter().zip(&env.parts) {
             install_part(&mut tx, doc, rec, part, change_id, *pending).await?;
         }
-        claim_peers(&mut tx, env).await?;
+        claim_peers(&mut tx, owner, env).await?;
         tx.commit().await?;
         Ok(accepted(seq))
     }
@@ -2735,6 +2748,7 @@ async fn stage_parts(
     db: &mut Db,
     space_id: SpaceId,
     env: &Envelope,
+    owner: &str,
     check: &(dyn Fn(&Object) -> Result<(), String> + Sync),
 ) -> Result<Result<Vec<(ObjectDoc, Object, usize)>, Outcome>, StoreError> {
     let missing = || {
@@ -2755,7 +2769,7 @@ async fn stage_parts(
                 format!("object {object_id} was purged"),
             )));
         }
-        if let Some(outcome) = foreign_peers(db, &env.device_id, &part.bytes).await? {
+        if let Some(outcome) = foreign_peers(db, owner, &part.bytes).await? {
             return Ok(Err(outcome));
         }
         let (doc, pending) = match load_doc(db, object_id).await {
@@ -2801,10 +2815,10 @@ async fn stage_parts(
     Ok(Ok(staged))
 }
 
-/// Rejects an update whose editing peers another device already owns.
+/// Rejects an update whose editing peers another principal already owns.
 pub(super) async fn foreign_peers(
     db: &mut Db,
-    device_id: &str,
+    owner: &str,
     bytes: &[u8],
 ) -> Result<Option<Outcome>, StoreError> {
     let peers = match ObjectDoc::blob_peers(bytes) {
@@ -2814,7 +2828,7 @@ pub(super) async fn foreign_peers(
     for peer in peers {
         let key = i64::from_ne_bytes(peer.to_ne_bytes());
         if let Some(row) = PeerRow::filter_by_peer(key).first().exec(&mut *db).await? {
-            if row.device_id != device_id {
+            if row.device_id != owner {
                 return Ok(Some(rejected(
                     Reason::Invalid,
                     "operations claim an editing peer of another device",
@@ -2825,9 +2839,10 @@ pub(super) async fn foreign_peers(
     Ok(None)
 }
 
-/// Records the submitting device as owner of every peer its parts carry.
+/// Records `owner` as owner of every peer the envelope's parts carry.
 pub(super) async fn claim_peers(
     tx: &mut toasty::Transaction<'_>,
+    owner: &str,
     env: &Envelope,
 ) -> Result<(), StoreError> {
     let now = now_ms();
@@ -2842,7 +2857,7 @@ pub(super) async fn claim_peers(
             {
                 toasty::create!(PeerRow {
                     peer: key,
-                    device_id: env.device_id.clone(),
+                    device_id: owner.to_owned(),
                     first_seen: now,
                 })
                 .exec(&mut *tx)
