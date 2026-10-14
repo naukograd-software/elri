@@ -63,6 +63,22 @@ message Trigger {
     int64 every_seconds = 3;
     /* Fire on events at all; a rule may be schedule-only. */
     bool on_events = 4;
+    /* What to do about scheduled runs the device slept through. */
+    MissedRuns missed = 5;
+}
+
+/* How a schedule treats runs that did not happen while the executing
+   device was away. Unspecified = LATEST. */
+enum MissedRuns {
+    MISSED_RUNS_UNSPECIFIED = 0;
+    /* Forget them; the cadence continues from the next slot. */
+    MISSED_RUNS_SKIP = 1;
+    /* Run once now for all of them. */
+    MISSED_RUNS_LATEST = 2;
+    /* Run once per missed slot, at most ten. */
+    MISSED_RUNS_CATCH_UP = 3;
+    /* Run nothing; record the miss and tell the user, who runs it by hand. */
+    MISSED_RUNS_ASK = 4;
 }
 
 /* One execution of a rule, as the executing device recorded it. */
@@ -70,7 +86,8 @@ message RuleRun {
     string rule_id = 1;
     int64 started_at_ms = 2;
     int64 duration_ms = 3;
-    /* `event` or `schedule`. */
+    /* `event`, `schedule`, `catch-up`, `manual`, or `missed` for a run
+       that did not happen because the schedule asks the user. */
     string cause = 4;
     /* Empty when the run succeeded. */
     string error = 5;

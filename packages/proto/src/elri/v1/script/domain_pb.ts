@@ -2,8 +2,8 @@
 // @generated from file elri/v1/script/domain.proto (package elri.v1.script, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { ObjectKind, ObjectKindJson } from "../object/domain_pb.ts";
 import { file_elri_v1_object_domain } from "../object/domain_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/script/domain.proto.
  */
 export const file_elri_v1_script_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL3NjcmlwdC9kb21haW4ucHJvdG8SDmVscmkudjEuc2NyaXB0IlcKCE1hbmlmZXN0Eg0KBXJlYWRzGAEgAygJEg4KBndyaXRlcxgCIAMoCRIMCgRodHRwGAMgASgIEgoKAmFpGAQgASgIEhIKCmV4dGVuc2lvbnMYBSADKAki7QEKBlNjcmlwdBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnNvdXJjZRgEIAEoCRIqCghtYW5pZmVzdBgFIAEoCzIYLmVscmkudjEuc2NyaXB0Lk1hbmlmZXN0Eg8KB3ZlcnNpb24YBiABKAkSDgoGYmVuaWduGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMingEKBUdyYW50EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIPCgd2ZXJzaW9uGAQgASgJEg4KBmJlbmlnbhgFIAEoCBIVCg1ncmFudGVkX2F0X21zGAYgASgDEhoKDXJldm9rZWRfYXRfbXMYByABKANIAIgBAUIQCg5fcmV2b2tlZF9hdF9tcyJvCgdUcmlnZ2VyEikKBWtpbmRzGAEgAygOMhouZWxyaS52MS5vYmplY3QuT2JqZWN0S2luZBIPCgd0eXBlX2lkGAIgASgJEhUKDWV2ZXJ5X3NlY29uZHMYAyABKAMSEQoJb25fZXZlbnRzGAQgASgIImQKB1J1bGVSdW4SDwoHcnVsZV9pZBgBIAEoCRIVCg1zdGFydGVkX2F0X21zGAIgASgDEhMKC2R1cmF0aW9uX21zGAMgASgDEg0KBWNhdXNlGAQgASgJEg0KBWVycm9yGAUgASgJIvgBCgRSdWxlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEQoJc2NyaXB0X2lkGAQgASgJEigKB3RyaWdnZXIYBSABKAsyFy5lbHJpLnYxLnNjcmlwdC5UcmlnZ2VyEhoKEmV4ZWN1dG9yX2RldmljZV9pZBgGIAEoCRIPCgdlbmFibGVkGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMidAoJUnVuUmVzdWx0EhMKC291dHB1dF9qc29uGAEgASgJEgwKBGxvZ3MYAiADKAkSEwoLZHVyYXRpb25fbXMYAyABKAMSDQoFZXJyb3IYBCABKAkSDgoGbGFiZWxzGAUgAygJEhAKCGdyYW50X2lkGAYgASgJYgZwcm90bzM", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL3NjcmlwdC9kb21haW4ucHJvdG8SDmVscmkudjEuc2NyaXB0IlcKCE1hbmlmZXN0Eg0KBXJlYWRzGAEgAygJEg4KBndyaXRlcxgCIAMoCRIMCgRodHRwGAMgASgIEgoKAmFpGAQgASgIEhIKCmV4dGVuc2lvbnMYBSADKAki7QEKBlNjcmlwdBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnNvdXJjZRgEIAEoCRIqCghtYW5pZmVzdBgFIAEoCzIYLmVscmkudjEuc2NyaXB0Lk1hbmlmZXN0Eg8KB3ZlcnNpb24YBiABKAkSDgoGYmVuaWduGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMingEKBUdyYW50EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIPCgd2ZXJzaW9uGAQgASgJEg4KBmJlbmlnbhgFIAEoCBIVCg1ncmFudGVkX2F0X21zGAYgASgDEhoKDXJldm9rZWRfYXRfbXMYByABKANIAIgBAUIQCg5fcmV2b2tlZF9hdF9tcyKbAQoHVHJpZ2dlchIpCgVraW5kcxgBIAMoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDwoHdHlwZV9pZBgCIAEoCRIVCg1ldmVyeV9zZWNvbmRzGAMgASgDEhEKCW9uX2V2ZW50cxgEIAEoCBIqCgZtaXNzZWQYBSABKA4yGi5lbHJpLnYxLnNjcmlwdC5NaXNzZWRSdW5zImQKB1J1bGVSdW4SDwoHcnVsZV9pZBgBIAEoCRIVCg1zdGFydGVkX2F0X21zGAIgASgDEhMKC2R1cmF0aW9uX21zGAMgASgDEg0KBWNhdXNlGAQgASgJEg0KBWVycm9yGAUgASgJIvgBCgRSdWxlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEQoJc2NyaXB0X2lkGAQgASgJEigKB3RyaWdnZXIYBSABKAsyFy5lbHJpLnYxLnNjcmlwdC5UcmlnZ2VyEhoKEmV4ZWN1dG9yX2RldmljZV9pZBgGIAEoCRIPCgdlbmFibGVkGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMidAoJUnVuUmVzdWx0EhMKC291dHB1dF9qc29uGAEgASgJEgwKBGxvZ3MYAiADKAkSEwoLZHVyYXRpb25fbXMYAyABKAMSDQoFZXJyb3IYBCABKAkSDgoGbGFiZWxzGAUgAygJEhAKCGdyYW50X2lkGAYgASgJKoYBCgpNaXNzZWRSdW5zEhsKF01JU1NFRF9SVU5TX1VOU1BFQ0lGSUVEEAASFAoQTUlTU0VEX1JVTlNfU0tJUBABEhYKEk1JU1NFRF9SVU5TX0xBVEVTVBACEhgKFE1JU1NFRF9SVU5TX0NBVENIX1VQEAMSEwoPTUlTU0VEX1JVTlNfQVNLEARiBnByb3RvMw", [file_elri_v1_object_domain]);
 
 /**
  *
@@ -369,6 +369,13 @@ export type Trigger = Message<"elri.v1.script.Trigger"> & {
    * @generated from field: bool on_events = 4;
    */
   onEvents: boolean;
+
+  /**
+   * What to do about scheduled runs the device slept through. 
+   *
+   * @generated from field: elri.v1.script.MissedRuns missed = 5;
+   */
+  missed: MissedRuns;
 };
 
 /**
@@ -409,6 +416,13 @@ export type TriggerJson = {
    * @generated from field: bool on_events = 4;
    */
   onEvents?: boolean;
+
+  /**
+   * What to do about scheduled runs the device slept through. 
+   *
+   * @generated from field: elri.v1.script.MissedRuns missed = 5;
+   */
+  missed?: MissedRunsJson;
 };
 
 /**
@@ -440,7 +454,8 @@ export type RuleRun = Message<"elri.v1.script.RuleRun"> & {
   durationMs: bigint;
 
   /**
-   * `event` or `schedule`. 
+   * `event`, `schedule`, `catch-up`, `manual`, or `missed` for a run
+   * that did not happen because the schedule asks the user. 
    *
    * @generated from field: string cause = 4;
    */
@@ -476,7 +491,8 @@ export type RuleRunJson = {
   durationMs?: string;
 
   /**
-   * `event` or `schedule`. 
+   * `event`, `schedule`, `catch-up`, `manual`, or `missed` for a run
+   * that did not happen because the schedule asks the user. 
    *
    * @generated from field: string cause = 4;
    */
@@ -718,4 +734,59 @@ export type RunResultJson = {
  */
 export const RunResultSchema: GenMessage<RunResult, {jsonType: RunResultJson}> = /*@__PURE__*/
   messageDesc(file_elri_v1_script_domain, 6);
+
+/**
+ * How a schedule treats runs that did not happen while the executing
+ * device was away. Unspecified = LATEST. 
+ *
+ * @generated from enum elri.v1.script.MissedRuns
+ */
+export enum MissedRuns {
+  /**
+   * @generated from enum value: MISSED_RUNS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Forget them; the cadence continues from the next slot. 
+   *
+   * @generated from enum value: MISSED_RUNS_SKIP = 1;
+   */
+  SKIP = 1,
+
+  /**
+   * Run once now for all of them. 
+   *
+   * @generated from enum value: MISSED_RUNS_LATEST = 2;
+   */
+  LATEST = 2,
+
+  /**
+   * Run once per missed slot, at most ten. 
+   *
+   * @generated from enum value: MISSED_RUNS_CATCH_UP = 3;
+   */
+  CATCH_UP = 3,
+
+  /**
+   * Run nothing; record the miss and tell the user, who runs it by hand. 
+   *
+   * @generated from enum value: MISSED_RUNS_ASK = 4;
+   */
+  ASK = 4,
+}
+
+/**
+ * How a schedule treats runs that did not happen while the executing
+ * device was away. Unspecified = LATEST. 
+ *
+ * @generated from enum elri.v1.script.MissedRuns
+ */
+export type MissedRunsJson = "MISSED_RUNS_UNSPECIFIED" | "MISSED_RUNS_SKIP" | "MISSED_RUNS_LATEST" | "MISSED_RUNS_CATCH_UP" | "MISSED_RUNS_ASK";
+
+/**
+ * Describes the enum elri.v1.script.MissedRuns.
+ */
+export const MissedRunsSchema: GenEnum<MissedRuns, MissedRunsJson> = /*@__PURE__*/
+  enumDesc(file_elri_v1_script_domain, 0);
 

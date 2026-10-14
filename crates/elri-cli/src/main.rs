@@ -49,8 +49,8 @@ use elri_proto::elri::v1::script::script_service_ws::ScriptServiceClient;
 use elri_proto::elri::v1::script::{
     CheckScriptRequest, CreateRuleRequest, CreateScriptRequest, GetPolicyRequest,
     GrantScriptRequest, ListGrantsRequest, ListRuleRunsRequest, ListRulesRequest,
-    ListScriptsRequest, Manifest, RevokeGrantRequest, Rule, RunScriptRequest, Script,
-    SetPolicyRequest, Trigger, UpdateRuleRequest,
+    ListScriptsRequest, Manifest, MissedRuns, RevokeGrantRequest, Rule, RunRuleRequest,
+    RunScriptRequest, Script, SetPolicyRequest, Trigger, UpdateRuleRequest,
 };
 use elri_proto::elri::v1::search::search_service_ws::SearchServiceClient;
 use elri_proto::elri::v1::search::SearchRequest;
@@ -315,6 +315,16 @@ enum RuleCmd {
         /// With --every: also fire on events (default: schedule only).
         #[arg(long)]
         on_events: bool,
+        /// With --every: what to do about runs this device slept through:
+        /// skip, latest, catch-up, ask.
+        #[arg(long, default_value = "latest", value_parser = parse_missed)]
+        missed: MissedRuns,
+    },
+    /// Run a rule now on this device, whatever its trigger.
+    Run {
+        #[arg(long)]
+        space: String,
+        id: String,
     },
     /// Recent runs of a rule on this device.
     Runs {
@@ -883,6 +893,23 @@ fn script_json(s: &Script) -> serde_json::Value {
     })
 }
 
+fn run_json(r: &elri_proto::elri::v1::script::RuleRun) -> serde_json::Value {
+    json!({
+        "started_at_ms": r.started_at_ms, "duration_ms": r.duration_ms,
+        "cause": r.cause, "error": r.error,
+    })
+}
+
+fn parse_missed(s: &str) -> Result<MissedRuns, String> {
+    match s {
+        "skip" => Ok(MissedRuns::Skip),
+        "latest" => Ok(MissedRuns::Latest),
+        "catch-up" | "catchup" => Ok(MissedRuns::CatchUp),
+        "ask" => Ok(MissedRuns::Ask),
+        other => Err(format!("unknown missed-runs policy {other}")),
+    }
+}
+
 fn rule_json(r: &Rule) -> serde_json::Value {
     json!({
         "id": r.id,
@@ -892,6 +919,9 @@ fn rule_json(r: &Rule) -> serde_json::Value {
         "trigger": r.trigger.as_ref().map(|t| json!({
             "kinds": t.kinds.iter().map(|k| ObjectKind::try_from(*k).map(|k| k.as_str_name().to_lowercase()).unwrap_or_default()).collect::<Vec<_>>(),
             "type_id": t.type_id,
+            "every_seconds": t.every_seconds,
+            "on_events": t.on_events,
+            "missed": t.missed().as_str_name().trim_start_matches("MISSED_RUNS_").to_lowercase(),
         })),
         "executor_device_id": r.executor_device_id,
         "enabled": r.enabled,
@@ -1161,6 +1191,18 @@ async fn run_grant(endpoint: &Endpoint, conn: Client, cmd: GrantCmd) -> Result<s
     }
 }
 
+async fn rule_create(
+    endpoint: &Endpoint,
+    client: &RuleServiceClient,
+    req: CreateRuleRequest,
+) -> Result<serde_json::Value> {
+    let res = client.create_rule(authed(endpoint, req)).await?;
+    let Some(r) = res.msg.rule else {
+        bail!("core returned no rule");
+    };
+    Ok(rule_json(&r))
+}
+
 async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<serde_json::Value> {
     let client = RuleServiceClient::new(conn);
     match cmd {
@@ -1175,15 +1217,7 @@ async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<ser
                     },
                 ))
                 .await?;
-            Ok(json!(res
-                .msg
-                .runs
-                .iter()
-                .map(|r| json!({
-                    "started_at_ms": r.started_at_ms, "duration_ms": r.duration_ms,
-                    "cause": r.cause, "error": r.error,
-                }))
-                .collect::<Vec<_>>()))
+            Ok(json!(res.msg.runs.iter().map(run_json).collect::<Vec<_>>()))
         }
         RuleCmd::Create {
             space,
@@ -1193,28 +1227,38 @@ async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<ser
             type_id,
             every,
             on_events,
+            missed,
         } => {
+            let req = CreateRuleRequest {
+                space_id: space,
+                name,
+                script_id: script,
+                trigger: Some(Trigger {
+                    kinds: kinds.into_iter().map(i32::from).collect(),
+                    type_id: type_id.unwrap_or_default(),
+                    every_seconds: every,
+                    on_events,
+                    missed: missed.into(),
+                }),
+                executor_device_id: String::new(),
+            };
+            rule_create(endpoint, &client, req).await
+        }
+        RuleCmd::Run { space, id } => {
             let res = client
-                .create_rule(authed(
+                .run_rule(authed(
                     endpoint,
-                    CreateRuleRequest {
+                    RunRuleRequest {
                         space_id: space,
-                        name,
-                        script_id: script,
-                        trigger: Some(Trigger {
-                            kinds: kinds.into_iter().map(i32::from).collect(),
-                            type_id: type_id.unwrap_or_default(),
-                            every_seconds: every,
-                            on_events,
-                        }),
-                        executor_device_id: String::new(),
+                        id,
                     },
                 ))
                 .await?;
-            let Some(r) = res.msg.rule else {
-                bail!("core returned no rule");
-            };
-            Ok(rule_json(&r))
+            Ok(res
+                .msg
+                .run
+                .as_ref()
+                .map_or(serde_json::Value::Null, run_json))
         }
         RuleCmd::List { space } => {
             let res = client

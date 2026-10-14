@@ -18,9 +18,9 @@ use elri_proto::elri::v1::script::{
     GetScriptRequest, GetScriptResponse, GrantScriptRequest, GrantScriptResponse,
     ListGrantsRequest, ListGrantsResponse, ListRuleRunsRequest, ListRuleRunsResponse,
     ListRulesRequest, ListRulesResponse, ListScriptsRequest, ListScriptsResponse,
-    RevokeGrantRequest, RevokeGrantResponse, RunScriptRequest, RunScriptResponse, SetPolicyRequest,
-    SetPolicyResponse, UpdateRuleRequest, UpdateRuleResponse, UpdateScriptRequest,
-    UpdateScriptResponse,
+    RevokeGrantRequest, RevokeGrantResponse, RunRuleRequest, RunRuleResponse, RunScriptRequest,
+    RunScriptResponse, SetPolicyRequest, SetPolicyResponse, UpdateRuleRequest, UpdateRuleResponse,
+    UpdateScriptRequest, UpdateScriptResponse,
 };
 use ws_proto::{Code, Request, Response, Server, Status};
 
@@ -366,6 +366,16 @@ impl RuleServiceHandler for Services {
             .rule_runs(id, usize::try_from(req.msg.limit).unwrap_or(0))
             .await?;
         Ok(Response::new(ListRuleRunsResponse { runs }))
+    }
+
+    async fn run_rule(
+        &self,
+        req: Request<RunRuleRequest>,
+    ) -> Result<Response<RunRuleResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let id = parse_id(&req.msg.id, "id")?;
+        let run = rules::run_now(&self.store, &self.scripts, space_id, id).await?;
+        Ok(Response::new(RunRuleResponse { run: Some(run) }))
     }
 
     async fn list_rules(

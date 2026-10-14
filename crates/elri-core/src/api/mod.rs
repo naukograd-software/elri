@@ -50,7 +50,7 @@ use elri_proto::elri::v1::remote::{
 use elri_proto::elri::v1::search::search_service_ws::{
     register_search_service_arc, SearchServiceHandler,
 };
-use elri_proto::elri::v1::search::{Hit, SearchRequest, SearchResponse};
+use elri_proto::elri::v1::search::{Hit, SearchRequest, SearchResponse, Watermark};
 use elri_proto::elri::v1::space::space_service_ws::{
     register_space_service_arc, SpaceServiceHandler,
 };
@@ -678,10 +678,8 @@ impl SearchServiceHandler for Services {
             .ok()
             .filter(|k| *k != ObjectKind::Unspecified);
         let limit = usize::try_from(m.limit).unwrap_or(0).min(500);
-        let hits = self
-            .store
-            .space(space_id)
-            .await?
+        let space = self.store.space(space_id).await?;
+        let hits = space
             .search(&m.query, kind, limit)
             .await
             .map_err(|e| match e {
@@ -689,6 +687,11 @@ impl SearchServiceHandler for Services {
                 StoreError::Db(inner) => invalid(format!("query: {inner}")),
                 other => Status::from(other),
             })?;
+        // The text index is written in the data's transaction, so it
+        // covers exactly what the Space holds; what the Space holds may
+        // still be a partial initial copy.
+        let data_seq = space.cursor().await?;
+        let downloading = space.downloading().await?;
         Ok(Response::new(SearchResponse {
             hits: hits
                 .into_iter()
@@ -698,6 +701,12 @@ impl SearchServiceHandler for Services {
                     fields,
                 })
                 .collect(),
+            watermark: Some(Watermark {
+                data_seq,
+                index_seq: data_seq,
+                partial: downloading.is_some(),
+                target_seq: downloading.map_or(0, |(_, target)| target),
+            }),
         }))
     }
 }

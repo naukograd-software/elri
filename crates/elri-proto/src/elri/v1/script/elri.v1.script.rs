@@ -86,6 +86,9 @@ pub struct Trigger {
     /// Fire on events at all; a rule may be schedule-only. 
     #[prost(bool, tag = "4")]
     pub on_events: bool,
+    /// What to do about scheduled runs the device slept through. 
+    #[prost(enumeration = "MissedRuns", tag = "5")]
+    pub missed: i32,
 }
 /// One execution of a rule, as the executing device recorded it. 
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -96,7 +99,8 @@ pub struct RuleRun {
     pub started_at_ms: i64,
     #[prost(int64, tag = "3")]
     pub duration_ms: i64,
-    /// `event` or `schedule`. 
+    /// `event`, `schedule`, `catch-up`, `manual`, or `missed` for a run
+    /// that did not happen because the schedule asks the user. 
     #[prost(string, tag = "4")]
     pub cause: ::prost::alloc::string::String,
     /// Empty when the run succeeded. 
@@ -147,6 +151,59 @@ pub struct RunResult {
     /// The grant the run used. 
     #[prost(string, tag = "6")]
     pub grant_id: ::prost::alloc::string::String,
+}
+/// How a schedule treats runs that did not happen while the executing
+/// device was away. Unspecified = LATEST. 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum MissedRuns {
+    Unspecified = 0,
+    /// Forget them; the cadence continues from the next slot. 
+    Skip = 1,
+    /// Run once now for all of them. 
+    Latest = 2,
+    /// Run once per missed slot, at most ten. 
+    CatchUp = 3,
+    /// Run nothing; record the miss and tell the user, who runs it by hand. 
+    Ask = 4,
+}
+impl MissedRuns {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "MISSED_RUNS_UNSPECIFIED",
+            Self::Skip => "MISSED_RUNS_SKIP",
+            Self::Latest => "MISSED_RUNS_LATEST",
+            Self::CatchUp => "MISSED_RUNS_CATCH_UP",
+            Self::Ask => "MISSED_RUNS_ASK",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "MISSED_RUNS_UNSPECIFIED" => Some(Self::Unspecified),
+            "MISSED_RUNS_SKIP" => Some(Self::Skip),
+            "MISSED_RUNS_LATEST" => Some(Self::Latest),
+            "MISSED_RUNS_CATCH_UP" => Some(Self::CatchUp),
+            "MISSED_RUNS_ASK" => Some(Self::Ask),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RunRuleRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RunRuleResponse {
+    #[prost(message, optional, tag = "1")]
+    pub run: ::core::option::Option<RuleRun>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListRuleRunsRequest {

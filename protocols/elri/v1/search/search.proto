@@ -30,4 +30,21 @@ message Hit {
 
 message SearchResponse {
     repeated Hit hits = 1;
+    Watermark watermark = 2;
+}
+
+/* How complete the answer is. The text index is written with the data,
+   so it is never behind the data this device holds; the data itself may
+   be behind the server. */
+message Watermark {
+    /* Highest server sequence installed locally; 0 for a local-only
+       Space or before the first delivery. */
+    int64 data_seq = 1;
+    /* Sequence the text index covers; equal to `data_seq`. */
+    int64 index_seq = 2;
+    /* The initial download has not finished: results come from a partial
+       copy. */
+    bool partial = 3;
+    /* Sequence the initial download must reach, when partial. */
+    int64 target_seq = 4;
 }

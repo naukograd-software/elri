@@ -12,7 +12,71 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/script/script.proto.
  */
 export const file_elri_v1_script_script: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL3NjcmlwdC9zY3JpcHQucHJvdG8SDmVscmkudjEuc2NyaXB0IkIKE0xpc3RSdWxlUnVuc1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSDQoFbGltaXQYAyABKAUiPQoUTGlzdFJ1bGVSdW5zUmVzcG9uc2USJQoEcnVucxgBIAMoCzIXLmVscmkudjEuc2NyaXB0LlJ1bGVSdW4icQoTQ3JlYXRlU2NyaXB0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg4KBnNvdXJjZRgDIAEoCRIqCghtYW5pZmVzdBgEIAEoCzIYLmVscmkudjEuc2NyaXB0Lk1hbmlmZXN0Ij4KFENyZWF0ZVNjcmlwdFJlc3BvbnNlEiYKBnNjcmlwdBgBIAEoCzIWLmVscmkudjEuc2NyaXB0LlNjcmlwdCKbAQoTVXBkYXRlU2NyaXB0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIRCgRuYW1lGAMgASgJSACIAQESEwoGc291cmNlGAQgASgJSAGIAQESKgoIbWFuaWZlc3QYBSABKAsyGC5lbHJpLnYxLnNjcmlwdC5NYW5pZmVzdEIHCgVfbmFtZUIJCgdfc291cmNlIj4KFFVwZGF0ZVNjcmlwdFJlc3BvbnNlEiYKBnNjcmlwdBgBIAEoCzIWLmVscmkudjEuc2NyaXB0LlNjcmlwdCIwChBHZXRTY3JpcHRSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJIjsKEUdldFNjcmlwdFJlc3BvbnNlEiYKBnNjcmlwdBgBIAEoCzIWLmVscmkudjEuc2NyaXB0LlNjcmlwdCI/ChJMaXN0U2NyaXB0c1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAIgASgIIj4KE0xpc3RTY3JpcHRzUmVzcG9uc2USJwoHc2NyaXB0cxgBIAMoCzIWLmVscmkudjEuc2NyaXB0LlNjcmlwdCIkChJDaGVja1NjcmlwdFJlcXVlc3QSDgoGc291cmNlGAEgASgJIioKE0NoZWNrU2NyaXB0UmVzcG9uc2USEwoLZGlhZ25vc3RpY3MYASADKAkiQwoQUnVuU2NyaXB0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIRCglhcmdzX2pzb24YAyABKAkiPgoRUnVuU2NyaXB0UmVzcG9uc2USKQoGcmVzdWx0GAEgASgLMhkuZWxyaS52MS5zY3JpcHQuUnVuUmVzdWx0Ij4KEUxpc3RHcmFudHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhcKD2luY2x1ZGVfcmV2b2tlZBgCIAEoCCI7ChJMaXN0R3JhbnRzUmVzcG9uc2USJQoGZ3JhbnRzGAEgAygLMhUuZWxyaS52MS5zY3JpcHQuR3JhbnQiOQoSR3JhbnRTY3JpcHRSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCXNjcmlwdF9pZBgCIAEoCSI7ChNHcmFudFNjcmlwdFJlc3BvbnNlEiQKBWdyYW50GAEgASgLMhUuZWxyaS52MS5zY3JpcHQuR3JhbnQiIAoSUmV2b2tlR3JhbnRSZXF1ZXN0EgoKAmlkGAEgASgJIhUKE1Jldm9rZUdyYW50UmVzcG9uc2UiEgoQR2V0UG9saWN5UmVxdWVzdCIuChFHZXRQb2xpY3lSZXNwb25zZRIZChFhdXRvX2dyYW50X2JlbmlnbhgBIAEoCCItChBTZXRQb2xpY3lSZXF1ZXN0EhkKEWF1dG9fZ3JhbnRfYmVuaWduGAEgASgIIi4KEVNldFBvbGljeVJlc3BvbnNlEhkKEWF1dG9fZ3JhbnRfYmVuaWduGAEgASgIIowBChFDcmVhdGVSdWxlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIoCgd0cmlnZ2VyGAQgASgLMhcuZWxyaS52MS5zY3JpcHQuVHJpZ2dlchIaChJleGVjdXRvcl9kZXZpY2VfaWQYBSABKAkiOAoSQ3JlYXRlUnVsZVJlc3BvbnNlEiIKBHJ1bGUYASABKAsyFC5lbHJpLnYxLnNjcmlwdC5SdWxlItEBChFVcGRhdGVSdWxlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIRCgRuYW1lGAMgASgJSACIAQESFAoHZW5hYmxlZBgEIAEoCEgBiAEBEigKB3RyaWdnZXIYBSABKAsyFy5lbHJpLnYxLnNjcmlwdC5UcmlnZ2VyEh8KEmV4ZWN1dG9yX2RldmljZV9pZBgGIAEoCUgCiAEBQgcKBV9uYW1lQgoKCF9lbmFibGVkQhUKE19leGVjdXRvcl9kZXZpY2VfaWQiOAoSVXBkYXRlUnVsZVJlc3BvbnNlEiIKBHJ1bGUYASABKAsyFC5lbHJpLnYxLnNjcmlwdC5SdWxlIj0KEExpc3RSdWxlc1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAIgASgIIjgKEUxpc3RSdWxlc1Jlc3BvbnNlEiMKBXJ1bGVzGAEgAygLMhQuZWxyaS52MS5zY3JpcHQuUnVsZTKZBAoNU2NyaXB0U2VydmljZRJZCgxDcmVhdGVTY3JpcHQSIy5lbHJpLnYxLnNjcmlwdC5DcmVhdGVTY3JpcHRSZXF1ZXN0GiQuZWxyaS52MS5zY3JpcHQuQ3JlYXRlU2NyaXB0UmVzcG9uc2USWQoMVXBkYXRlU2NyaXB0EiMuZWxyaS52MS5zY3JpcHQuVXBkYXRlU2NyaXB0UmVxdWVzdBokLmVscmkudjEuc2NyaXB0LlVwZGF0ZVNjcmlwdFJlc3BvbnNlElAKCUdldFNjcmlwdBIgLmVscmkudjEuc2NyaXB0LkdldFNjcmlwdFJlcXVlc3QaIS5lbHJpLnYxLnNjcmlwdC5HZXRTY3JpcHRSZXNwb25zZRJWCgtMaXN0U2NyaXB0cxIiLmVscmkudjEuc2NyaXB0Lkxpc3RTY3JpcHRzUmVxdWVzdBojLmVscmkudjEuc2NyaXB0Lkxpc3RTY3JpcHRzUmVzcG9uc2USVgoLQ2hlY2tTY3JpcHQSIi5lbHJpLnYxLnNjcmlwdC5DaGVja1NjcmlwdFJlcXVlc3QaIy5lbHJpLnYxLnNjcmlwdC5DaGVja1NjcmlwdFJlc3BvbnNlElAKCVJ1blNjcmlwdBIgLmVscmkudjEuc2NyaXB0LlJ1blNjcmlwdFJlcXVlc3QaIS5lbHJpLnYxLnNjcmlwdC5SdW5TY3JpcHRSZXNwb25zZTK3AwoMR3JhbnRTZXJ2aWNlElMKCkxpc3RHcmFudHMSIS5lbHJpLnYxLnNjcmlwdC5MaXN0R3JhbnRzUmVxdWVzdBoiLmVscmkudjEuc2NyaXB0Lkxpc3RHcmFudHNSZXNwb25zZRJWCgtHcmFudFNjcmlwdBIiLmVscmkudjEuc2NyaXB0LkdyYW50U2NyaXB0UmVxdWVzdBojLmVscmkudjEuc2NyaXB0LkdyYW50U2NyaXB0UmVzcG9uc2USVgoLUmV2b2tlR3JhbnQSIi5lbHJpLnYxLnNjcmlwdC5SZXZva2VHcmFudFJlcXVlc3QaIy5lbHJpLnYxLnNjcmlwdC5SZXZva2VHcmFudFJlc3BvbnNlElAKCUdldFBvbGljeRIgLmVscmkudjEuc2NyaXB0LkdldFBvbGljeVJlcXVlc3QaIS5lbHJpLnYxLnNjcmlwdC5HZXRQb2xpY3lSZXNwb25zZRJQCglTZXRQb2xpY3kSIC5lbHJpLnYxLnNjcmlwdC5TZXRQb2xpY3lSZXF1ZXN0GiEuZWxyaS52MS5zY3JpcHQuU2V0UG9saWN5UmVzcG9uc2Uy5AIKC1J1bGVTZXJ2aWNlElMKCkNyZWF0ZVJ1bGUSIS5lbHJpLnYxLnNjcmlwdC5DcmVhdGVSdWxlUmVxdWVzdBoiLmVscmkudjEuc2NyaXB0LkNyZWF0ZVJ1bGVSZXNwb25zZRJTCgpVcGRhdGVSdWxlEiEuZWxyaS52MS5zY3JpcHQuVXBkYXRlUnVsZVJlcXVlc3QaIi5lbHJpLnYxLnNjcmlwdC5VcGRhdGVSdWxlUmVzcG9uc2USUAoJTGlzdFJ1bGVzEiAuZWxyaS52MS5zY3JpcHQuTGlzdFJ1bGVzUmVxdWVzdBohLmVscmkudjEuc2NyaXB0Lkxpc3RSdWxlc1Jlc3BvbnNlElkKDExpc3RSdWxlUnVucxIjLmVscmkudjEuc2NyaXB0Lkxpc3RSdWxlUnVuc1JlcXVlc3QaJC5lbHJpLnYxLnNjcmlwdC5MaXN0UnVsZVJ1bnNSZXNwb25zZWIGcHJvdG8z", [file_elri_v1_script_domain]);
+  fileDesc("ChtlbHJpL3YxL3NjcmlwdC9zY3JpcHQucHJvdG8SDmVscmkudjEuc2NyaXB0Ii4KDlJ1blJ1bGVSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJIjcKD1J1blJ1bGVSZXNwb25zZRIkCgNydW4YASABKAsyFy5lbHJpLnYxLnNjcmlwdC5SdWxlUnVuIkIKE0xpc3RSdWxlUnVuc1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSDQoFbGltaXQYAyABKAUiPQoUTGlzdFJ1bGVSdW5zUmVzcG9uc2USJQoEcnVucxgBIAMoCzIXLmVscmkudjEuc2NyaXB0LlJ1bGVSdW4icQoTQ3JlYXRlU2NyaXB0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg4KBnNvdXJjZRgDIAEoCRIqCghtYW5pZmVzdBgEIAEoCzIYLmVscmkudjEuc2NyaXB0Lk1hbmlmZXN0Ij4KFENyZWF0ZVNjcmlwdFJlc3BvbnNlEiYKBnNjcmlwdBgBIAEoCzIWLmVscmkudjEuc2NyaXB0LlNjcmlwdCKbAQoTVXBkYXRlU2NyaXB0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIRCgRuYW1lGAMgASgJSACIAQESEwoGc291cmNlGAQgASgJSAGIAQESKgoIbWFuaWZlc3QYBSABKAsyGC5lbHJpLnYxLnNjcmlwdC5NYW5pZmVzdEIHCgVfbmFtZUIJCgdfc291cmNlIj4KFFVwZGF0ZVNjcmlwdFJlc3BvbnNlEiYKBnNjcmlwdBgBIAEoCzIWLmVscmkudjEuc2NyaXB0LlNjcmlwdCIwChBHZXRTY3JpcHRSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJIjsKEUdldFNjcmlwdFJlc3BvbnNlEiYKBnNjcmlwdBgBIAEoCzIWLmVscmkudjEuc2NyaXB0LlNjcmlwdCI/ChJMaXN0U2NyaXB0c1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAIgASgIIj4KE0xpc3RTY3JpcHRzUmVzcG9uc2USJwoHc2NyaXB0cxgBIAMoCzIWLmVscmkudjEuc2NyaXB0LlNjcmlwdCIkChJDaGVja1NjcmlwdFJlcXVlc3QSDgoGc291cmNlGAEgASgJIioKE0NoZWNrU2NyaXB0UmVzcG9uc2USEwoLZGlhZ25vc3RpY3MYASADKAkiQwoQUnVuU2NyaXB0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIRCglhcmdzX2pzb24YAyABKAkiPgoRUnVuU2NyaXB0UmVzcG9uc2USKQoGcmVzdWx0GAEgASgLMhkuZWxyaS52MS5zY3JpcHQuUnVuUmVzdWx0Ij4KEUxpc3RHcmFudHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhcKD2luY2x1ZGVfcmV2b2tlZBgCIAEoCCI7ChJMaXN0R3JhbnRzUmVzcG9uc2USJQoGZ3JhbnRzGAEgAygLMhUuZWxyaS52MS5zY3JpcHQuR3JhbnQiOQoSR3JhbnRTY3JpcHRSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCXNjcmlwdF9pZBgCIAEoCSI7ChNHcmFudFNjcmlwdFJlc3BvbnNlEiQKBWdyYW50GAEgASgLMhUuZWxyaS52MS5zY3JpcHQuR3JhbnQiIAoSUmV2b2tlR3JhbnRSZXF1ZXN0EgoKAmlkGAEgASgJIhUKE1Jldm9rZUdyYW50UmVzcG9uc2UiEgoQR2V0UG9saWN5UmVxdWVzdCIuChFHZXRQb2xpY3lSZXNwb25zZRIZChFhdXRvX2dyYW50X2JlbmlnbhgBIAEoCCItChBTZXRQb2xpY3lSZXF1ZXN0EhkKEWF1dG9fZ3JhbnRfYmVuaWduGAEgASgIIi4KEVNldFBvbGljeVJlc3BvbnNlEhkKEWF1dG9fZ3JhbnRfYmVuaWduGAEgASgIIowBChFDcmVhdGVSdWxlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIoCgd0cmlnZ2VyGAQgASgLMhcuZWxyaS52MS5zY3JpcHQuVHJpZ2dlchIaChJleGVjdXRvcl9kZXZpY2VfaWQYBSABKAkiOAoSQ3JlYXRlUnVsZVJlc3BvbnNlEiIKBHJ1bGUYASABKAsyFC5lbHJpLnYxLnNjcmlwdC5SdWxlItEBChFVcGRhdGVSdWxlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCRIRCgRuYW1lGAMgASgJSACIAQESFAoHZW5hYmxlZBgEIAEoCEgBiAEBEigKB3RyaWdnZXIYBSABKAsyFy5lbHJpLnYxLnNjcmlwdC5UcmlnZ2VyEh8KEmV4ZWN1dG9yX2RldmljZV9pZBgGIAEoCUgCiAEBQgcKBV9uYW1lQgoKCF9lbmFibGVkQhUKE19leGVjdXRvcl9kZXZpY2VfaWQiOAoSVXBkYXRlUnVsZVJlc3BvbnNlEiIKBHJ1bGUYASABKAsyFC5lbHJpLnYxLnNjcmlwdC5SdWxlIj0KEExpc3RSdWxlc1JlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAIgASgIIjgKEUxpc3RSdWxlc1Jlc3BvbnNlEiMKBXJ1bGVzGAEgAygLMhQuZWxyaS52MS5zY3JpcHQuUnVsZTKZBAoNU2NyaXB0U2VydmljZRJZCgxDcmVhdGVTY3JpcHQSIy5lbHJpLnYxLnNjcmlwdC5DcmVhdGVTY3JpcHRSZXF1ZXN0GiQuZWxyaS52MS5zY3JpcHQuQ3JlYXRlU2NyaXB0UmVzcG9uc2USWQoMVXBkYXRlU2NyaXB0EiMuZWxyaS52MS5zY3JpcHQuVXBkYXRlU2NyaXB0UmVxdWVzdBokLmVscmkudjEuc2NyaXB0LlVwZGF0ZVNjcmlwdFJlc3BvbnNlElAKCUdldFNjcmlwdBIgLmVscmkudjEuc2NyaXB0LkdldFNjcmlwdFJlcXVlc3QaIS5lbHJpLnYxLnNjcmlwdC5HZXRTY3JpcHRSZXNwb25zZRJWCgtMaXN0U2NyaXB0cxIiLmVscmkudjEuc2NyaXB0Lkxpc3RTY3JpcHRzUmVxdWVzdBojLmVscmkudjEuc2NyaXB0Lkxpc3RTY3JpcHRzUmVzcG9uc2USVgoLQ2hlY2tTY3JpcHQSIi5lbHJpLnYxLnNjcmlwdC5DaGVja1NjcmlwdFJlcXVlc3QaIy5lbHJpLnYxLnNjcmlwdC5DaGVja1NjcmlwdFJlc3BvbnNlElAKCVJ1blNjcmlwdBIgLmVscmkudjEuc2NyaXB0LlJ1blNjcmlwdFJlcXVlc3QaIS5lbHJpLnYxLnNjcmlwdC5SdW5TY3JpcHRSZXNwb25zZTK3AwoMR3JhbnRTZXJ2aWNlElMKCkxpc3RHcmFudHMSIS5lbHJpLnYxLnNjcmlwdC5MaXN0R3JhbnRzUmVxdWVzdBoiLmVscmkudjEuc2NyaXB0Lkxpc3RHcmFudHNSZXNwb25zZRJWCgtHcmFudFNjcmlwdBIiLmVscmkudjEuc2NyaXB0LkdyYW50U2NyaXB0UmVxdWVzdBojLmVscmkudjEuc2NyaXB0LkdyYW50U2NyaXB0UmVzcG9uc2USVgoLUmV2b2tlR3JhbnQSIi5lbHJpLnYxLnNjcmlwdC5SZXZva2VHcmFudFJlcXVlc3QaIy5lbHJpLnYxLnNjcmlwdC5SZXZva2VHcmFudFJlc3BvbnNlElAKCUdldFBvbGljeRIgLmVscmkudjEuc2NyaXB0LkdldFBvbGljeVJlcXVlc3QaIS5lbHJpLnYxLnNjcmlwdC5HZXRQb2xpY3lSZXNwb25zZRJQCglTZXRQb2xpY3kSIC5lbHJpLnYxLnNjcmlwdC5TZXRQb2xpY3lSZXF1ZXN0GiEuZWxyaS52MS5zY3JpcHQuU2V0UG9saWN5UmVzcG9uc2UysAMKC1J1bGVTZXJ2aWNlElMKCkNyZWF0ZVJ1bGUSIS5lbHJpLnYxLnNjcmlwdC5DcmVhdGVSdWxlUmVxdWVzdBoiLmVscmkudjEuc2NyaXB0LkNyZWF0ZVJ1bGVSZXNwb25zZRJTCgpVcGRhdGVSdWxlEiEuZWxyaS52MS5zY3JpcHQuVXBkYXRlUnVsZVJlcXVlc3QaIi5lbHJpLnYxLnNjcmlwdC5VcGRhdGVSdWxlUmVzcG9uc2USUAoJTGlzdFJ1bGVzEiAuZWxyaS52MS5zY3JpcHQuTGlzdFJ1bGVzUmVxdWVzdBohLmVscmkudjEuc2NyaXB0Lkxpc3RSdWxlc1Jlc3BvbnNlElkKDExpc3RSdWxlUnVucxIjLmVscmkudjEuc2NyaXB0Lkxpc3RSdWxlUnVuc1JlcXVlc3QaJC5lbHJpLnYxLnNjcmlwdC5MaXN0UnVsZVJ1bnNSZXNwb25zZRJKCgdSdW5SdWxlEh4uZWxyaS52MS5zY3JpcHQuUnVuUnVsZVJlcXVlc3QaHy5lbHJpLnYxLnNjcmlwdC5SdW5SdWxlUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_script_domain]);
+
+/**
+ * @generated from message elri.v1.script.RunRuleRequest
+ */
+export type RunRuleRequest = Message<"elri.v1.script.RunRuleRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id: string;
+};
+
+/**
+ * @generated from message elri.v1.script.RunRuleRequest
+ */
+export type RunRuleRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id?: string;
+};
+
+/**
+ * Describes the message elri.v1.script.RunRuleRequest.
+ * Use `create(RunRuleRequestSchema)` to create a new message.
+ */
+export const RunRuleRequestSchema: GenMessage<RunRuleRequest, {jsonType: RunRuleRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_script_script, 0);
+
+/**
+ * @generated from message elri.v1.script.RunRuleResponse
+ */
+export type RunRuleResponse = Message<"elri.v1.script.RunRuleResponse"> & {
+  /**
+   * @generated from field: elri.v1.script.RuleRun run = 1;
+   */
+  run?: RuleRun | undefined;
+};
+
+/**
+ * @generated from message elri.v1.script.RunRuleResponse
+ */
+export type RunRuleResponseJson = {
+  /**
+   * @generated from field: elri.v1.script.RuleRun run = 1;
+   */
+  run?: RuleRunJson;
+};
+
+/**
+ * Describes the message elri.v1.script.RunRuleResponse.
+ * Use `create(RunRuleResponseSchema)` to create a new message.
+ */
+export const RunRuleResponseSchema: GenMessage<RunRuleResponse, {jsonType: RunRuleResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_script_script, 1);
 
 /**
  * @generated from message elri.v1.script.ListRuleRunsRequest
@@ -63,7 +127,7 @@ export type ListRuleRunsRequestJson = {
  * Use `create(ListRuleRunsRequestSchema)` to create a new message.
  */
 export const ListRuleRunsRequestSchema: GenMessage<ListRuleRunsRequest, {jsonType: ListRuleRunsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 0);
+  messageDesc(file_elri_v1_script_script, 2);
 
 /**
  * @generated from message elri.v1.script.ListRuleRunsResponse
@@ -90,7 +154,7 @@ export type ListRuleRunsResponseJson = {
  * Use `create(ListRuleRunsResponseSchema)` to create a new message.
  */
 export const ListRuleRunsResponseSchema: GenMessage<ListRuleRunsResponse, {jsonType: ListRuleRunsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 1);
+  messageDesc(file_elri_v1_script_script, 3);
 
 /**
  * @generated from message elri.v1.script.CreateScriptRequest
@@ -147,7 +211,7 @@ export type CreateScriptRequestJson = {
  * Use `create(CreateScriptRequestSchema)` to create a new message.
  */
 export const CreateScriptRequestSchema: GenMessage<CreateScriptRequest, {jsonType: CreateScriptRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 2);
+  messageDesc(file_elri_v1_script_script, 4);
 
 /**
  * @generated from message elri.v1.script.CreateScriptResponse
@@ -174,7 +238,7 @@ export type CreateScriptResponseJson = {
  * Use `create(CreateScriptResponseSchema)` to create a new message.
  */
 export const CreateScriptResponseSchema: GenMessage<CreateScriptResponse, {jsonType: CreateScriptResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 3);
+  messageDesc(file_elri_v1_script_script, 5);
 
 /**
  * @generated from message elri.v1.script.UpdateScriptRequest
@@ -241,7 +305,7 @@ export type UpdateScriptRequestJson = {
  * Use `create(UpdateScriptRequestSchema)` to create a new message.
  */
 export const UpdateScriptRequestSchema: GenMessage<UpdateScriptRequest, {jsonType: UpdateScriptRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 4);
+  messageDesc(file_elri_v1_script_script, 6);
 
 /**
  * @generated from message elri.v1.script.UpdateScriptResponse
@@ -268,7 +332,7 @@ export type UpdateScriptResponseJson = {
  * Use `create(UpdateScriptResponseSchema)` to create a new message.
  */
 export const UpdateScriptResponseSchema: GenMessage<UpdateScriptResponse, {jsonType: UpdateScriptResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 5);
+  messageDesc(file_elri_v1_script_script, 7);
 
 /**
  * @generated from message elri.v1.script.GetScriptRequest
@@ -305,7 +369,7 @@ export type GetScriptRequestJson = {
  * Use `create(GetScriptRequestSchema)` to create a new message.
  */
 export const GetScriptRequestSchema: GenMessage<GetScriptRequest, {jsonType: GetScriptRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 6);
+  messageDesc(file_elri_v1_script_script, 8);
 
 /**
  * @generated from message elri.v1.script.GetScriptResponse
@@ -332,7 +396,7 @@ export type GetScriptResponseJson = {
  * Use `create(GetScriptResponseSchema)` to create a new message.
  */
 export const GetScriptResponseSchema: GenMessage<GetScriptResponse, {jsonType: GetScriptResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 7);
+  messageDesc(file_elri_v1_script_script, 9);
 
 /**
  * @generated from message elri.v1.script.ListScriptsRequest
@@ -369,7 +433,7 @@ export type ListScriptsRequestJson = {
  * Use `create(ListScriptsRequestSchema)` to create a new message.
  */
 export const ListScriptsRequestSchema: GenMessage<ListScriptsRequest, {jsonType: ListScriptsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 8);
+  messageDesc(file_elri_v1_script_script, 10);
 
 /**
  * @generated from message elri.v1.script.ListScriptsResponse
@@ -396,7 +460,7 @@ export type ListScriptsResponseJson = {
  * Use `create(ListScriptsResponseSchema)` to create a new message.
  */
 export const ListScriptsResponseSchema: GenMessage<ListScriptsResponse, {jsonType: ListScriptsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 9);
+  messageDesc(file_elri_v1_script_script, 11);
 
 /**
  * @generated from message elri.v1.script.CheckScriptRequest
@@ -423,7 +487,7 @@ export type CheckScriptRequestJson = {
  * Use `create(CheckScriptRequestSchema)` to create a new message.
  */
 export const CheckScriptRequestSchema: GenMessage<CheckScriptRequest, {jsonType: CheckScriptRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 10);
+  messageDesc(file_elri_v1_script_script, 12);
 
 /**
  * @generated from message elri.v1.script.CheckScriptResponse
@@ -454,7 +518,7 @@ export type CheckScriptResponseJson = {
  * Use `create(CheckScriptResponseSchema)` to create a new message.
  */
 export const CheckScriptResponseSchema: GenMessage<CheckScriptResponse, {jsonType: CheckScriptResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 11);
+  messageDesc(file_elri_v1_script_script, 13);
 
 /**
  * @generated from message elri.v1.script.RunScriptRequest
@@ -505,7 +569,7 @@ export type RunScriptRequestJson = {
  * Use `create(RunScriptRequestSchema)` to create a new message.
  */
 export const RunScriptRequestSchema: GenMessage<RunScriptRequest, {jsonType: RunScriptRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 12);
+  messageDesc(file_elri_v1_script_script, 14);
 
 /**
  * @generated from message elri.v1.script.RunScriptResponse
@@ -532,7 +596,7 @@ export type RunScriptResponseJson = {
  * Use `create(RunScriptResponseSchema)` to create a new message.
  */
 export const RunScriptResponseSchema: GenMessage<RunScriptResponse, {jsonType: RunScriptResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 13);
+  messageDesc(file_elri_v1_script_script, 15);
 
 /**
  * @generated from message elri.v1.script.ListGrantsRequest
@@ -573,7 +637,7 @@ export type ListGrantsRequestJson = {
  * Use `create(ListGrantsRequestSchema)` to create a new message.
  */
 export const ListGrantsRequestSchema: GenMessage<ListGrantsRequest, {jsonType: ListGrantsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 14);
+  messageDesc(file_elri_v1_script_script, 16);
 
 /**
  * @generated from message elri.v1.script.ListGrantsResponse
@@ -600,7 +664,7 @@ export type ListGrantsResponseJson = {
  * Use `create(ListGrantsResponseSchema)` to create a new message.
  */
 export const ListGrantsResponseSchema: GenMessage<ListGrantsResponse, {jsonType: ListGrantsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 15);
+  messageDesc(file_elri_v1_script_script, 17);
 
 /**
  * @generated from message elri.v1.script.GrantScriptRequest
@@ -637,7 +701,7 @@ export type GrantScriptRequestJson = {
  * Use `create(GrantScriptRequestSchema)` to create a new message.
  */
 export const GrantScriptRequestSchema: GenMessage<GrantScriptRequest, {jsonType: GrantScriptRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 16);
+  messageDesc(file_elri_v1_script_script, 18);
 
 /**
  * @generated from message elri.v1.script.GrantScriptResponse
@@ -664,7 +728,7 @@ export type GrantScriptResponseJson = {
  * Use `create(GrantScriptResponseSchema)` to create a new message.
  */
 export const GrantScriptResponseSchema: GenMessage<GrantScriptResponse, {jsonType: GrantScriptResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 17);
+  messageDesc(file_elri_v1_script_script, 19);
 
 /**
  * @generated from message elri.v1.script.RevokeGrantRequest
@@ -691,7 +755,7 @@ export type RevokeGrantRequestJson = {
  * Use `create(RevokeGrantRequestSchema)` to create a new message.
  */
 export const RevokeGrantRequestSchema: GenMessage<RevokeGrantRequest, {jsonType: RevokeGrantRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 18);
+  messageDesc(file_elri_v1_script_script, 20);
 
 /**
  * @generated from message elri.v1.script.RevokeGrantResponse
@@ -710,7 +774,7 @@ export type RevokeGrantResponseJson = {
  * Use `create(RevokeGrantResponseSchema)` to create a new message.
  */
 export const RevokeGrantResponseSchema: GenMessage<RevokeGrantResponse, {jsonType: RevokeGrantResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 19);
+  messageDesc(file_elri_v1_script_script, 21);
 
 /**
  * @generated from message elri.v1.script.GetPolicyRequest
@@ -729,7 +793,7 @@ export type GetPolicyRequestJson = {
  * Use `create(GetPolicyRequestSchema)` to create a new message.
  */
 export const GetPolicyRequestSchema: GenMessage<GetPolicyRequest, {jsonType: GetPolicyRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 20);
+  messageDesc(file_elri_v1_script_script, 22);
 
 /**
  * @generated from message elri.v1.script.GetPolicyResponse
@@ -756,7 +820,7 @@ export type GetPolicyResponseJson = {
  * Use `create(GetPolicyResponseSchema)` to create a new message.
  */
 export const GetPolicyResponseSchema: GenMessage<GetPolicyResponse, {jsonType: GetPolicyResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 21);
+  messageDesc(file_elri_v1_script_script, 23);
 
 /**
  * @generated from message elri.v1.script.SetPolicyRequest
@@ -783,7 +847,7 @@ export type SetPolicyRequestJson = {
  * Use `create(SetPolicyRequestSchema)` to create a new message.
  */
 export const SetPolicyRequestSchema: GenMessage<SetPolicyRequest, {jsonType: SetPolicyRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 22);
+  messageDesc(file_elri_v1_script_script, 24);
 
 /**
  * @generated from message elri.v1.script.SetPolicyResponse
@@ -810,7 +874,7 @@ export type SetPolicyResponseJson = {
  * Use `create(SetPolicyResponseSchema)` to create a new message.
  */
 export const SetPolicyResponseSchema: GenMessage<SetPolicyResponse, {jsonType: SetPolicyResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 23);
+  messageDesc(file_elri_v1_script_script, 25);
 
 /**
  * @generated from message elri.v1.script.CreateRuleRequest
@@ -881,7 +945,7 @@ export type CreateRuleRequestJson = {
  * Use `create(CreateRuleRequestSchema)` to create a new message.
  */
 export const CreateRuleRequestSchema: GenMessage<CreateRuleRequest, {jsonType: CreateRuleRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 24);
+  messageDesc(file_elri_v1_script_script, 26);
 
 /**
  * @generated from message elri.v1.script.CreateRuleResponse
@@ -908,7 +972,7 @@ export type CreateRuleResponseJson = {
  * Use `create(CreateRuleResponseSchema)` to create a new message.
  */
 export const CreateRuleResponseSchema: GenMessage<CreateRuleResponse, {jsonType: CreateRuleResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 25);
+  messageDesc(file_elri_v1_script_script, 27);
 
 /**
  * @generated from message elri.v1.script.UpdateRuleRequest
@@ -985,7 +1049,7 @@ export type UpdateRuleRequestJson = {
  * Use `create(UpdateRuleRequestSchema)` to create a new message.
  */
 export const UpdateRuleRequestSchema: GenMessage<UpdateRuleRequest, {jsonType: UpdateRuleRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 26);
+  messageDesc(file_elri_v1_script_script, 28);
 
 /**
  * @generated from message elri.v1.script.UpdateRuleResponse
@@ -1012,7 +1076,7 @@ export type UpdateRuleResponseJson = {
  * Use `create(UpdateRuleResponseSchema)` to create a new message.
  */
 export const UpdateRuleResponseSchema: GenMessage<UpdateRuleResponse, {jsonType: UpdateRuleResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 27);
+  messageDesc(file_elri_v1_script_script, 29);
 
 /**
  * @generated from message elri.v1.script.ListRulesRequest
@@ -1049,7 +1113,7 @@ export type ListRulesRequestJson = {
  * Use `create(ListRulesRequestSchema)` to create a new message.
  */
 export const ListRulesRequestSchema: GenMessage<ListRulesRequest, {jsonType: ListRulesRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 28);
+  messageDesc(file_elri_v1_script_script, 30);
 
 /**
  * @generated from message elri.v1.script.ListRulesResponse
@@ -1076,7 +1140,7 @@ export type ListRulesResponseJson = {
  * Use `create(ListRulesResponseSchema)` to create a new message.
  */
 export const ListRulesResponseSchema: GenMessage<ListRulesResponse, {jsonType: ListRulesResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_script, 29);
+  messageDesc(file_elri_v1_script_script, 31);
 
 /**
  * Scripts: Luau source in a Space, run on this device within its grant. 
@@ -1231,6 +1295,16 @@ export const RuleService: GenService<{
     methodKind: "unary";
     input: typeof ListRuleRunsRequestSchema;
     output: typeof ListRuleRunsResponseSchema;
+  },
+  /**
+   * Runs a rule's script now on this device, whatever its trigger. 
+   *
+   * @generated from rpc elri.v1.script.RuleService.RunRule
+   */
+  runRule: {
+    methodKind: "unary";
+    input: typeof RunRuleRequestSchema;
+    output: typeof RunRuleResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_script_script, 2);

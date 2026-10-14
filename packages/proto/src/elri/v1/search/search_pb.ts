@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/search/search.proto.
  */
 export const file_elri_v1_search_search: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL3NlYXJjaC9zZWFyY2gucHJvdG8SDmVscmkudjEuc2VhcmNoImkKDVNlYXJjaFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDQoFcXVlcnkYAiABKAkSKAoEa2luZBgDIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDQoFbGltaXQYBCABKAUiTAoDSGl0EiYKBm9iamVjdBgBIAEoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdBINCgVzY29yZRgCIAEoARIOCgZmaWVsZHMYAyADKAkiMwoOU2VhcmNoUmVzcG9uc2USIQoEaGl0cxgBIAMoCzITLmVscmkudjEuc2VhcmNoLkhpdDJYCg1TZWFyY2hTZXJ2aWNlEkcKBlNlYXJjaBIdLmVscmkudjEuc2VhcmNoLlNlYXJjaFJlcXVlc3QaHi5lbHJpLnYxLnNlYXJjaC5TZWFyY2hSZXNwb25zZWIGcHJvdG8z", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL3NlYXJjaC9zZWFyY2gucHJvdG8SDmVscmkudjEuc2VhcmNoImkKDVNlYXJjaFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDQoFcXVlcnkYAiABKAkSKAoEa2luZBgDIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDQoFbGltaXQYBCABKAUiTAoDSGl0EiYKBm9iamVjdBgBIAEoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdBINCgVzY29yZRgCIAEoARIOCgZmaWVsZHMYAyADKAkiYQoOU2VhcmNoUmVzcG9uc2USIQoEaGl0cxgBIAMoCzITLmVscmkudjEuc2VhcmNoLkhpdBIsCgl3YXRlcm1hcmsYAiABKAsyGS5lbHJpLnYxLnNlYXJjaC5XYXRlcm1hcmsiVQoJV2F0ZXJtYXJrEhAKCGRhdGFfc2VxGAEgASgDEhEKCWluZGV4X3NlcRgCIAEoAxIPCgdwYXJ0aWFsGAMgASgIEhIKCnRhcmdldF9zZXEYBCABKAMyWAoNU2VhcmNoU2VydmljZRJHCgZTZWFyY2gSHS5lbHJpLnYxLnNlYXJjaC5TZWFyY2hSZXF1ZXN0Gh4uZWxyaS52MS5zZWFyY2guU2VhcmNoUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_object_domain]);
 
 /**
  * @generated from message elri.v1.search.SearchRequest
@@ -146,6 +146,11 @@ export type SearchResponse = Message<"elri.v1.search.SearchResponse"> & {
    * @generated from field: repeated elri.v1.search.Hit hits = 1;
    */
   hits: Hit[];
+
+  /**
+   * @generated from field: elri.v1.search.Watermark watermark = 2;
+   */
+  watermark?: Watermark | undefined;
 };
 
 /**
@@ -156,6 +161,11 @@ export type SearchResponseJson = {
    * @generated from field: repeated elri.v1.search.Hit hits = 1;
    */
   hits?: HitJson[];
+
+  /**
+   * @generated from field: elri.v1.search.Watermark watermark = 2;
+   */
+  watermark?: WatermarkJson;
 };
 
 /**
@@ -164,6 +174,91 @@ export type SearchResponseJson = {
  */
 export const SearchResponseSchema: GenMessage<SearchResponse, {jsonType: SearchResponseJson}> = /*@__PURE__*/
   messageDesc(file_elri_v1_search_search, 2);
+
+/**
+ * How complete the answer is. The text index is written with the data,
+ * so it is never behind the data this device holds; the data itself may
+ * be behind the server. 
+ *
+ * @generated from message elri.v1.search.Watermark
+ */
+export type Watermark = Message<"elri.v1.search.Watermark"> & {
+  /**
+   * Highest server sequence installed locally; 0 for a local-only
+   * Space or before the first delivery. 
+   *
+   * @generated from field: int64 data_seq = 1;
+   */
+  dataSeq: bigint;
+
+  /**
+   * Sequence the text index covers; equal to `data_seq`. 
+   *
+   * @generated from field: int64 index_seq = 2;
+   */
+  indexSeq: bigint;
+
+  /**
+   * The initial download has not finished: results come from a partial
+   * copy. 
+   *
+   * @generated from field: bool partial = 3;
+   */
+  partial: boolean;
+
+  /**
+   * Sequence the initial download must reach, when partial. 
+   *
+   * @generated from field: int64 target_seq = 4;
+   */
+  targetSeq: bigint;
+};
+
+/**
+ * How complete the answer is. The text index is written with the data,
+ * so it is never behind the data this device holds; the data itself may
+ * be behind the server. 
+ *
+ * @generated from message elri.v1.search.Watermark
+ */
+export type WatermarkJson = {
+  /**
+   * Highest server sequence installed locally; 0 for a local-only
+   * Space or before the first delivery. 
+   *
+   * @generated from field: int64 data_seq = 1;
+   */
+  dataSeq?: string;
+
+  /**
+   * Sequence the text index covers; equal to `data_seq`. 
+   *
+   * @generated from field: int64 index_seq = 2;
+   */
+  indexSeq?: string;
+
+  /**
+   * The initial download has not finished: results come from a partial
+   * copy. 
+   *
+   * @generated from field: bool partial = 3;
+   */
+  partial?: boolean;
+
+  /**
+   * Sequence the initial download must reach, when partial. 
+   *
+   * @generated from field: int64 target_seq = 4;
+   */
+  targetSeq?: string;
+};
+
+/**
+ * Describes the message elri.v1.search.Watermark.
+ * Use `create(WatermarkSchema)` to create a new message.
+ */
+export const WatermarkSchema: GenMessage<Watermark, {jsonType: WatermarkJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_search_search, 3);
 
 /**
  * Full-text search over the text of a Space's Objects. 

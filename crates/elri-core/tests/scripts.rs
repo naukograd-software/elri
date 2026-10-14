@@ -18,7 +18,8 @@ use elri_proto::elri::v1::script::rule_service_ws::RuleServiceClient;
 use elri_proto::elri::v1::script::script_service_ws::ScriptServiceClient;
 use elri_proto::elri::v1::script::{
     CreateRuleRequest, CreateScriptRequest, GrantScriptRequest, ListGrantsRequest,
-    ListRuleRunsRequest, Manifest, RevokeGrantRequest, RunScriptRequest, SetPolicyRequest, Trigger,
+    ListRuleRunsRequest, Manifest, RevokeGrantRequest, RunRuleRequest, RunScriptRequest,
+    SetPolicyRequest, Trigger,
 };
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::CreateSpaceRequest;
@@ -342,6 +343,7 @@ async fn rules_fire_on_user_changes_but_not_on_their_own() {
                     type_id: "task".into(),
                     every_seconds: 0,
                     on_events: true,
+                    missed: 0,
                 }),
                 executor_device_id: String::new(),
             },
@@ -561,6 +563,40 @@ async fn scheduled_rules_run_and_record_their_runs() {
         .msg
         .runs;
     assert_eq!(runs.len(), 1);
+
+    // A manual run happens regardless of the trigger and is recorded.
+    let manual = c
+        .rules
+        .run_rule(authed(
+            &c.endpoint,
+            RunRuleRequest {
+                space_id: home.clone(),
+                id: rule.id.clone(),
+            },
+        ))
+        .await
+        .expect("run")
+        .msg
+        .run
+        .expect("run");
+    assert_eq!(manual.cause, "manual");
+    assert_eq!(manual.error, "");
+    let runs = c
+        .rules
+        .list_rule_runs(authed(
+            &c.endpoint,
+            ListRuleRunsRequest {
+                space_id: home.clone(),
+                id: rule.id.clone(),
+                limit: 0,
+            },
+        ))
+        .await
+        .expect("runs")
+        .msg
+        .runs;
+    assert_eq!(runs.len(), 2);
+    assert_eq!(runs[0].cause, "manual");
 
     // An Object's history names the Changes that touched it, newest first.
     let history = c

@@ -29,6 +29,28 @@ pub struct Hit {
 pub struct SearchResponse {
     #[prost(message, repeated, tag = "1")]
     pub hits: ::prost::alloc::vec::Vec<Hit>,
+    #[prost(message, optional, tag = "2")]
+    pub watermark: ::core::option::Option<Watermark>,
+}
+/// How complete the answer is. The text index is written with the data,
+/// so it is never behind the data this device holds; the data itself may
+/// be behind the server. 
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Watermark {
+    /// Highest server sequence installed locally; 0 for a local-only
+    /// Space or before the first delivery. 
+    #[prost(int64, tag = "1")]
+    pub data_seq: i64,
+    /// Sequence the text index covers; equal to `data_seq`. 
+    #[prost(int64, tag = "2")]
+    pub index_seq: i64,
+    /// The initial download has not finished: results come from a partial
+    /// copy. 
+    #[prost(bool, tag = "3")]
+    pub partial: bool,
+    /// Sequence the initial download must reach, when partial. 
+    #[prost(int64, tag = "4")]
+    pub target_seq: i64,
 }
 include!("elri.v1.search.ws.rs");
 // @@protoc_insertion_point(module)

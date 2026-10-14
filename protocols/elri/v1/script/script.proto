@@ -34,6 +34,17 @@ service RuleService {
     rpc ListRules(ListRulesRequest) returns (ListRulesResponse);
     /* Recent runs of a rule on this device, newest first. */
     rpc ListRuleRuns(ListRuleRunsRequest) returns (ListRuleRunsResponse);
+    /* Runs a rule's script now on this device, whatever its trigger. */
+    rpc RunRule(RunRuleRequest) returns (RunRuleResponse);
+}
+
+message RunRuleRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message RunRuleResponse {
+    RuleRun run = 1;
 }
 
 message ListRuleRunsRequest {

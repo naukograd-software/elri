@@ -5,9 +5,9 @@
 
 use std::sync::Arc;
 
-use elri_proto::elri::v1::events::event;
+use elri_proto::elri::v1::events::{event, NoticeEvent};
 use elri_proto::elri::v1::object::{Object, ObjectKind};
-use elri_proto::elri::v1::script::{Rule, Trigger};
+use elri_proto::elri::v1::script::{MissedRuns, Rule, RuleRun, Trigger};
 use tokio::task::JoinHandle;
 
 use crate::model::{
@@ -30,6 +30,10 @@ pub const TRIGGER_TYPE: &str = "$trigger_type";
 pub const EVERY_SECONDS: &str = "$every_seconds";
 /// Reserved field: whether events fire the rule.
 pub const ON_EVENTS: &str = "$on_events";
+/// Reserved field: `MissedRuns` code.
+pub const MISSED: &str = "$missed";
+/// Most slots a catch-up runs for.
+const CATCH_UP_LIMIT: i64 = 10;
 /// How often the scheduler looks for due rules.
 const SCHEDULER_TICK: std::time::Duration = std::time::Duration::from_secs(15);
 /// Device setting: benign scripts are granted without asking.
@@ -63,6 +67,9 @@ pub fn rule_of(o: &Object) -> Rule {
                 o.fields.get(ON_EVENTS).and_then(|v| v.value.as_ref()),
                 Some(elri_proto::elri::v1::object::value::Value::Bool(true))
             ),
+            missed: crate::model::int_field(o, MISSED)
+                .and_then(|m| i32::try_from(m).ok())
+                .unwrap_or(0),
         }),
         executor_device_id: string_field(o, EXECUTOR).unwrap_or_default().to_owned(),
         enabled: matches!(
@@ -91,6 +98,7 @@ pub fn write_trigger(doc: &ObjectDoc, t: &Trigger) -> Result<(), crate::model::M
     // `on_events` left unset means schedule only.
     let on_events = t.on_events || t.every_seconds <= 0;
     doc.set_field(ON_EVENTS, &crate::model::bool_value(on_events))?;
+    doc.set_field(MISSED, &int_value(i64::from(t.missed)))?;
     Ok(())
 }
 
@@ -205,8 +213,9 @@ async fn fire(
     Ok(())
 }
 
-/// Runs every scheduled rule of this device whose interval has elapsed.
-/// A rule the device slept through runs once, not once per missed tick.
+/// Runs every scheduled rule of this device whose interval has elapsed,
+/// treating slots the device slept through as the rule's missed-runs
+/// policy says.
 async fn run_due(
     store: &Arc<Store>,
     host: &Host,
@@ -224,23 +233,87 @@ async fn run_due(
             })
             .await?;
         for r in rules.iter().map(rule_of) {
-            let every = r.trigger.as_ref().map_or(0, |t| t.every_seconds);
+            let trigger = r.trigger.clone().unwrap_or_default();
+            let every = trigger.every_seconds;
             if !r.enabled || r.executor_device_id != device_id || every <= 0 {
                 continue;
             }
             let Ok(rule_id) = ObjectId::parse(&r.id) else {
                 continue;
             };
+            let period = every * 1000;
             let last = store.rule_last_scheduled(rule_id).await?;
-            if now - last < every * 1000 {
+            if last > 0 && now - last < period {
                 continue;
             }
+            // Slots since the last run; the first is due, the rest were
+            // missed while the device was away.
+            let slots = if last > 0 { (now - last) / period } else { 1 };
+            let missed = slots - 1;
             store.set_rule_last_scheduled(rule_id, now).await?;
-            let args = serde_json::json!({ "schedule": { "at": now }, "rule": r.id });
-            run_rule(store, host, &space, space_id, &r, args, "schedule").await?;
+            let at = |slot: i64| serde_json::json!({ "schedule": { "at": last + slot * period }, "rule": r.id });
+            match trigger.missed() {
+                MissedRuns::Skip if missed > 0 => {
+                    tracing::info!(rule = %r.id, missed, "skipped missed scheduled runs");
+                }
+                MissedRuns::CatchUp if missed > 0 => {
+                    let first = (slots - CATCH_UP_LIMIT).max(1);
+                    for slot in first..=slots {
+                        run_rule(store, host, &space, space_id, &r, at(slot), "catch-up").await?;
+                    }
+                }
+                MissedRuns::Ask if missed > 0 => {
+                    let text = format!(
+                        "rule {} missed {missed} scheduled run(s) while this device was away; run it by hand or change its missed-runs policy",
+                        r.name
+                    );
+                    store.emit(event::Event::Notice(NoticeEvent {
+                        space_id: space_id.to_string(),
+                        source: format!("rule:{}", r.id),
+                        text: text.clone(),
+                    }));
+                    store
+                        .record_rule_run(&RuleRun {
+                            rule_id: r.id.clone(),
+                            started_at_ms: now,
+                            duration_ms: 0,
+                            cause: "missed".to_owned(),
+                            error: text,
+                        })
+                        .await?;
+                }
+                _ => {
+                    let args = serde_json::json!({ "schedule": { "at": now }, "rule": r.id });
+                    run_rule(store, host, &space, space_id, &r, args, "schedule").await?;
+                }
+            }
         }
     }
     Ok(())
+}
+
+/// Runs a rule now on this device, whatever its trigger, and records the
+/// run with cause `manual`.
+pub async fn run_now(
+    store: &Arc<Store>,
+    host: &Host,
+    space_id: SpaceId,
+    rule_id: ObjectId,
+) -> Result<RuleRun, crate::script::ScriptError> {
+    let space = store.space(space_id).await?;
+    let rule = space.get(rule_id).await?;
+    if rule.kind() != ObjectKind::Rule {
+        return Err(crate::store::StoreError::ObjectNotFound(rule_id).into());
+    }
+    let r = rule_of(&rule);
+    // Shaped like a scheduled run, so a script written for the schedule
+    // works when run by hand; `manual` tells the two apart.
+    let args = serde_json::json!({
+        "schedule": { "at": crate::model::now_ms() },
+        "manual": true,
+        "rule": r.id,
+    });
+    run_rule(store, host, &space, space_id, &r, args, "manual").await
 }
 
 /// Runs a rule's script under its grant and records the run.
@@ -252,50 +325,49 @@ async fn run_rule(
     r: &Rule,
     args: serde_json::Value,
     cause: &str,
-) -> Result<(), crate::script::ScriptError> {
+) -> Result<RuleRun, crate::script::ScriptError> {
     let started = crate::model::now_ms();
-    let Ok(script_id) = ObjectId::parse(&r.script_id) else {
-        return Ok(());
-    };
-    let outcome = match space.get(script_id).await {
-        Ok(script_obj) => {
-            let script = script::script_of(&script_obj)?;
-            match grant_or_auto(store, space_id, &script).await? {
-                Some(grant) => {
-                    let result = host
-                        .run(
-                            space_id,
-                            &script,
-                            args,
-                            RunIdentity {
-                                script_id: script.id.clone(),
-                                rule_id: Some(r.id.clone()),
-                                grant_id: grant.id,
-                            },
-                        )
-                        .await;
-                    result.error
+    let outcome = match ObjectId::parse(&r.script_id) {
+        Err(_) => "rule names no script".to_owned(),
+        Ok(script_id) => match space.get(script_id).await {
+            Ok(script_obj) => {
+                let script = script::script_of(&script_obj)?;
+                match grant_or_auto(store, space_id, &script).await? {
+                    Some(grant) => {
+                        let result = host
+                            .run(
+                                space_id,
+                                &script,
+                                args,
+                                RunIdentity {
+                                    script_id: script.id.clone(),
+                                    rule_id: Some(r.id.clone()),
+                                    grant_id: grant.id,
+                                },
+                            )
+                            .await;
+                        result.error
+                    }
+                    None => "no grant for this version of the script on this device".to_owned(),
                 }
-                None => "no grant for this version of the script on this device".to_owned(),
             }
-        }
-        Err(_) => "rule names a missing script".to_owned(),
+            Err(_) => "rule names a missing script".to_owned(),
+        },
     };
     if outcome.is_empty() {
         tracing::debug!(rule = %r.id, cause, "rule ran");
     } else {
         tracing::warn!(rule = %r.id, cause, error = %outcome, "rule run failed");
     }
-    store
-        .record_rule_run(&elri_proto::elri::v1::script::RuleRun {
-            rule_id: r.id.clone(),
-            started_at_ms: started,
-            duration_ms: crate::model::now_ms() - started,
-            cause: cause.to_owned(),
-            error: outcome,
-        })
-        .await?;
-    Ok(())
+    let run = RuleRun {
+        rule_id: r.id.clone(),
+        started_at_ms: started,
+        duration_ms: crate::model::now_ms() - started,
+        cause: cause.to_owned(),
+        error: outcome,
+    };
+    store.record_rule_run(&run).await?;
+    Ok(run)
 }
 
 /// The live grant for a script's version, created on the spot for a benign
