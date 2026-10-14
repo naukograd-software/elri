@@ -37,6 +37,11 @@ use crate::store::{ExtensionRecord, Store, StoreError};
 
 /// Fuel a call may burn: roughly instructions.
 const FUEL: u64 = 50_000_000;
+/// Wall-clock a call may take, host calls included; fuel alone does not
+/// count time spent in the host.
+const TIME_LIMIT: std::time::Duration = std::time::Duration::from_secs(5);
+/// How often the engine's epoch advances.
+const EPOCH_TICK: std::time::Duration = std::time::Duration::from_millis(100);
 /// Linear memory a module may grow to.
 const MEMORY_LIMIT: usize = 64 * 1024 * 1024;
 /// Largest module accepted.
@@ -223,10 +228,29 @@ pub fn check_wasm(bytes: &[u8], functions: &[String]) -> Result<(), ExtensionErr
     Ok(())
 }
 
+/// One engine for the process, with a thread advancing its epoch so that
+/// every store's deadline is enforced in wall-clock time.
 fn engine() -> Result<wasmtime::Engine, ExtensionError> {
-    let mut config = wasmtime::Config::new();
-    config.consume_fuel(true);
-    wasmtime::Engine::new(&config).map_err(|e| ExtensionError::Module(e.to_string()))
+    static ENGINE: std::sync::OnceLock<Result<wasmtime::Engine, String>> =
+        std::sync::OnceLock::new();
+    ENGINE
+        .get_or_init(|| {
+            let mut config = wasmtime::Config::new();
+            config.consume_fuel(true);
+            config.epoch_interruption(true);
+            let engine = wasmtime::Engine::new(&config).map_err(|e| e.to_string())?;
+            let ticker = engine.clone();
+            std::thread::Builder::new()
+                .name("elri-wasm-epoch".into())
+                .spawn(move || loop {
+                    std::thread::sleep(EPOCH_TICK);
+                    ticker.increment_epoch();
+                })
+                .map_err(|e| e.to_string())?;
+            Ok(engine)
+        })
+        .clone()
+        .map_err(ExtensionError::Module)
 }
 
 /// Per-call state behind the wasmtime store.
@@ -380,6 +404,8 @@ fn call_wasm(
     store
         .set_fuel(FUEL)
         .map_err(|e| ExtensionError::Run(e.to_string()))?;
+    let ticks = u64::try_from(TIME_LIMIT.as_millis() / EPOCH_TICK.as_millis()).unwrap_or(50);
+    store.set_epoch_deadline(ticks);
 
     let mut linker = wasmtime::Linker::new(&engine);
     linker
@@ -469,8 +495,10 @@ fn call_wasm(
 
 fn trap_text(e: &wasmtime::Error) -> String {
     if let Some(trap) = e.downcast_ref::<wasmtime::Trap>() {
-        if *trap == wasmtime::Trap::OutOfFuel {
-            return "limit exceeded: fuel".to_owned();
+        match *trap {
+            wasmtime::Trap::OutOfFuel => return "limit exceeded: fuel".to_owned(),
+            wasmtime::Trap::Interrupt => return "limit exceeded: time".to_owned(),
+            _ => {}
         }
     }
     e.to_string()
