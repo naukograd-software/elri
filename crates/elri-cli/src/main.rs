@@ -71,8 +71,13 @@ enum MemberRole {
 
 #[derive(Subcommand, Debug)]
 enum RemoteCmd {
-    /// Store the server URL and token after verifying them.
-    Connect { url: String, token: String },
+    /// Store the server URL and token after verifying them. The token is
+    /// read from `ELRI_TOKEN` or, failing that, from standard input, so it
+    /// never lands in shell history or the process list.
+    Connect {
+        /// WebSocket URL of the server.
+        url: String,
+    },
     /// Forget the server; replicated Spaces stay on the device.
     Disconnect,
     /// Connection and per-Space replication status.
@@ -471,6 +476,25 @@ async fn run_change(
     }
 }
 
+fn read_token() -> Result<String> {
+    if let Ok(t) = std::env::var("ELRI_TOKEN") {
+        if !t.trim().is_empty() {
+            return Ok(t.trim().to_owned());
+        }
+    }
+    use std::io::{BufRead as _, IsTerminal as _};
+    if std::io::stdin().is_terminal() {
+        eprintln!("paste the server token, then press Enter:");
+    }
+    let mut line = String::new();
+    std::io::stdin().lock().read_line(&mut line)?;
+    let token = line.trim().to_owned();
+    if token.is_empty() {
+        bail!("no token given: set ELRI_TOKEN or pass it on standard input");
+    }
+    Ok(token)
+}
+
 fn space_json(s: &elri_proto::elri::v1::space::Space) -> serde_json::Value {
     json!({
         "id": s.id,
@@ -487,7 +511,8 @@ async fn run_remote(
 ) -> Result<serde_json::Value> {
     let client = RemoteServiceClient::new(conn);
     match cmd {
-        RemoteCmd::Connect { url, token } => {
+        RemoteCmd::Connect { url } => {
+            let token = read_token()?;
             let res = client
                 .connect(authed(endpoint, ConnectRequest { url, token }))
                 .await?;
