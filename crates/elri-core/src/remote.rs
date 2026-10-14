@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use elri_proto::elri::v1::object::ObjectKind;
 use elri_proto::elri::v1::space::{Authority, Space as PbSpace};
-use elri_proto::elri::v1::sync::sync_service_ws::SyncServiceClient;
+use elri_proto::elri::v1::sync::sync_service_ws::{SubscribeClientStream, SyncServiceClient};
 use elri_proto::elri::v1::sync::{
     upload_blob_request, AddMemberRequest, BlobHeader, CreateSpaceRequest, DownloadBlobRequest,
     HelloRequest, ListSpacesRequest, PinDefinitionRequest, PullRequest, PurgeObjectRequest,
@@ -544,8 +544,24 @@ fn spawn_worker(
     token: String,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
+        let sync = SyncServiceClient::new(client.clone());
         let mut backoff = Duration::from_millis(200);
+        // One subscription outlives the rounds, opened before the first
+        // one: an announcement that lands during a round is buffered in
+        // the stream, never missed.
+        let mut announce: Option<SubscribeClientStream> = None;
         loop {
+            if announce.is_none() {
+                announce = sync
+                    .subscribe(authed(
+                        &token,
+                        SubscribeRequest {
+                            space_ids: vec![space_id.to_string()],
+                        },
+                    ))
+                    .await
+                    .ok();
+            }
             match replicate_once(space_id, &space, &client, &token).await {
                 Ok(()) => backoff = Duration::from_millis(200),
                 Err(e) => {
@@ -557,26 +573,23 @@ fn spawn_worker(
             }
             // Wait for a reason to run again: a local write, a server
             // announcement, or a periodic check.
-            let announce = async {
-                let sync = SyncServiceClient::new(client.clone());
-                match sync
-                    .subscribe(authed(
-                        &token,
-                        SubscribeRequest {
-                            space_ids: vec![space_id.to_string()],
-                        },
-                    ))
-                    .await
-                {
-                    Ok(stream) => {
-                        let _ = stream.recv().await;
+            let announced = async {
+                match &announce {
+                    Some(stream) => stream.recv().await.is_ok_and(|m| m.is_some()),
+                    None => {
+                        tokio::time::sleep(Duration::from_secs(5)).await;
+                        false
                     }
-                    Err(_) => tokio::time::sleep(Duration::from_secs(5)).await,
                 }
             };
             tokio::select! {
                 () = space.wait_dirty() => {}
-                () = announce => {}
+                alive = announced => {
+                    if !alive {
+                        // The stream ended or failed: open a fresh one next round.
+                        announce = None;
+                    }
+                }
                 () = tokio::time::sleep(Duration::from_secs(30)) => {}
             }
         }
