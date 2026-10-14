@@ -2,7 +2,7 @@
 //! documents, recorded durably so they can be submitted, accepted, or
 //! rejected as a whole.
 
-use crate::model::ObjectId;
+use crate::model::{ObjectId, ObjectKind};
 
 /// Identity of a Change; the same shape as an Object id.
 pub type ChangeId = ObjectId;
@@ -56,6 +56,8 @@ impl ChangeStatus {
 pub struct ChangePart {
     /// Document.
     pub object_id: ObjectId,
+    /// Kind of the document, so a receiver can project it before reading.
+    pub kind: ObjectKind,
     /// Encoded version vector the operations build on.
     pub from_version: Vec<u8>,
     /// Encoded version vector after the operations.
@@ -75,6 +77,40 @@ pub struct Change {
     pub created_at_ms: i64,
     /// Lifecycle state.
     pub status: ChangeStatus,
+    /// Position in the Space log once accepted.
+    pub accepted_seq: Option<i64>,
+    /// Why it was rejected, if it was.
+    pub rejection: Option<String>,
     /// Touched documents, one entry each.
     pub parts: Vec<ChangePart>,
+}
+
+/// Why the authority refused a Change.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RejectReason {
+    /// The caller may not write to the Space.
+    PermissionDenied,
+    /// Operations reference history the authority does not have.
+    MissingPredecessors,
+    /// The payload could not be decoded or breaks a limit.
+    Invalid(String),
+}
+
+impl std::fmt::Display for RejectReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::PermissionDenied => f.write_str("permission denied"),
+            Self::MissingPredecessors => f.write_str("missing predecessors"),
+            Self::Invalid(m) => write!(f, "invalid: {m}"),
+        }
+    }
+}
+
+/// What the authority decided about a submitted Change.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Admission {
+    /// Accepted at this position in the Space log.
+    Accepted(i64),
+    /// Refused.
+    Rejected(RejectReason),
 }

@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package elri.v1.sync;
+
+import "elri/v1/space/domain.proto";
+import "elri/v1/sync/domain.proto";
+
+/*
+Server side of synchronization. Every call carries the user's token in the
+`authorization` header; the server decides per Space from memberships.
+*/
+service SyncService {
+    /* Identify the caller and negotiate the protocol. */
+    rpc Hello(HelloRequest) returns (HelloResponse);
+    /* Spaces the caller is a member of. */
+    rpc ListSpaces(ListSpacesRequest) returns (ListSpacesResponse);
+    /* Creates a server Space owned by the caller. */
+    rpc CreateSpace(CreateSpaceRequest) returns (CreateSpaceResponse);
+    /* Submits one Change; accepted or rejected as a whole. Resubmitting the
+       same id returns the recorded outcome. */
+    rpc Submit(SubmitRequest) returns (SubmitResponse);
+    /* Accepted Changes after a sequence number, oldest first. */
+    rpc Pull(PullRequest) returns (PullResponse);
+    /* Announces new sequence numbers for the given Spaces. */
+    rpc Subscribe(SubscribeRequest) returns (stream SubscribeEvent);
+}
+
+message HelloRequest {
+    string device_id = 1;
+    uint32 protocol_version = 2;
+}
+
+message HelloResponse {
+    string user_id = 1;
+    string user_name = 2;
+    uint32 protocol_version = 3;
+}
+
+message ListSpacesRequest {}
+
+message ListSpacesResponse {
+    repeated elri.v1.space.Space spaces = 1;
+}
+
+message CreateSpaceRequest {
+    string name = 1;
+}
+
+message CreateSpaceResponse {
+    elri.v1.space.Space space = 1;
+}
+
+message SubmitRequest {
+    Envelope change = 1;
+}
+
+message Rejection {
+    enum Reason {
+        REASON_UNSPECIFIED = 0;
+        /* Caller may not write to the Space. */
+        REASON_PERMISSION_DENIED = 1;
+        /* Operations reference history the server does not have. */
+        REASON_MISSING_PREDECESSORS = 2;
+        /* The payload could not be decoded or breaks a limit. */
+        REASON_INVALID = 3;
+        /* A protected path or a forged peer was touched. */
+        REASON_PROTECTED = 4;
+    }
+    Reason reason = 1;
+    string message = 2;
+}
+
+message SubmitResponse {
+    oneof outcome {
+        int64 accepted_seq = 1;
+        Rejection rejected = 2;
+    }
+}
+
+message PullRequest {
+    string space_id = 1;
+    int64 after_seq = 2;
+    /* 0 = server default. */
+    int32 limit = 3;
+}
+
+message PullResponse {
+    repeated Entry entries = 1;
+    bool has_more = 2;
+}
+
+message SubscribeRequest {
+    repeated string space_ids = 1;
+}
+
+message SubscribeEvent {
+    string space_id = 1;
+    int64 seq = 2;
+}

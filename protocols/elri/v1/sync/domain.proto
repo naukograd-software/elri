@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package elri.v1.sync;
+
+import "elri/v1/object/domain.proto";
+
+/* The operations a Change added to one document. */
+message Part {
+    string object_id = 1;
+    elri.v1.object.ObjectKind kind = 2;
+    /* Encoded version vector the operations build on. */
+    bytes from_version = 3;
+    /* Encoded version vector after the operations. */
+    bytes to_version = 4;
+    /* Loro update bytes. */
+    bytes bytes = 5;
+}
+
+/* A Change as it travels between a device and the server. */
+message Envelope {
+    /* UUIDv7, canonical string form. */
+    string id = 1;
+    string space_id = 2;
+    string device_id = 3;
+    int64 created_at_ms = 4;
+    repeated Part parts = 5;
+}
+
+/* An accepted Change with its position in the Space log. */
+message Entry {
+    int64 seq = 1;
+    Envelope change = 2;
+    int64 accepted_at_ms = 3;
+}

@@ -27,6 +27,16 @@ impl ObjectId {
         Self(Uuid::now_v7())
     }
 
+    /// Wraps an existing UUID.
+    pub fn from_uuid(id: Uuid) -> Self {
+        Self(id)
+    }
+
+    /// The underlying UUID.
+    pub fn uuid(&self) -> Uuid {
+        self.0
+    }
+
     /// Parses the canonical string form.
     pub fn parse(s: &str) -> Result<Self, ModelError> {
         Uuid::parse_str(s)
@@ -252,6 +262,25 @@ impl ObjectDoc {
             }
         }
         Ok(doc)
+    }
+
+    /// Builds a document that exists only as updates so far (a remote
+    /// creation). Fails if the updates do not form a complete history.
+    pub fn from_updates(id: ObjectId, updates: &[Vec<u8>]) -> Result<Self, ModelError> {
+        let doc = LoroDoc::new();
+        doc.set_record_timestamp(true);
+        let status = doc.import_batch(updates)?;
+        if status.pending.is_some() {
+            return Err(ModelError::Malformed("updates with missing predecessors"));
+        }
+        Ok(Self { id, doc })
+    }
+
+    /// Imports remote operations. Returns whether everything applied; `false`
+    /// means some operations wait for predecessors this document lacks.
+    pub fn import(&self, bytes: &[u8]) -> Result<bool, ModelError> {
+        let status = self.doc.import(bytes)?;
+        Ok(status.pending.is_none())
     }
 
     /// Version vector of the operation log.

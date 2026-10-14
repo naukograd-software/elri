@@ -25,5 +25,11 @@ pub mod elri {
             include!("elri/v1/space/elri.v1.space.rs");
             // @@protoc_insertion_point(elri.v1.space)
         }
+        #[cfg(feature = "elri-v1-sync")]
+        // @@protoc_insertion_point(attribute:elri.v1.sync)
+        pub mod sync {
+            include!("elri/v1/sync/elri.v1.sync.rs");
+            // @@protoc_insertion_point(elri.v1.sync)
+        }
     }
 }
