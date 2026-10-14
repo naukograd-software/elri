@@ -307,6 +307,22 @@ async fn changes_flow_between_devices_through_the_server() {
     assert!(status.configured && status.connected);
     assert_eq!(status.spaces.len(), 1);
     assert_eq!(status.spaces[0].rejected, 1);
+    let on_v = v
+        .objects
+        .get_object(v.authed(GetObjectRequest {
+            space_id: space.id.clone(),
+            id: created.id.clone(),
+        }))
+        .await
+        .expect("get")
+        .msg
+        .object
+        .expect("object");
+    assert_eq!(
+        on_v.fields["title"],
+        s("edited by bob"),
+        "the rejected edit left the viewer's live state"
+    );
     let on_a = a
         .objects
         .get_object(a.authed(GetObjectRequest {

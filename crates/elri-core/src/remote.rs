@@ -441,6 +441,13 @@ async fn replicate_once(
                 // Pull first and try again next round.
                 break;
             }
+            Some(outcome @ Outcome::Rejected(_)) => {
+                // Dependents of a rejected Change are paused by the store;
+                // start the next round from a fresh outbox so none of them
+                // go out.
+                space.record_outcome(&env.id, &outcome).await?;
+                break;
+            }
             Some(outcome) => space.record_outcome(&env.id, &outcome).await?,
             None => return Err(RemoteError::BadReply("submit outcome")),
         }

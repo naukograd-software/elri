@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/change/domain.proto.
  */
 export const file_elri_v1_change_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL2NoYW5nZS9kb21haW4ucHJvdG8SDmVscmkudjEuY2hhbmdlIjIKCkNoYW5nZVBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEhEKCWJ5dGVzX2xlbhgCIAEoDSLoAQoGQ2hhbmdlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIVCg1jcmVhdGVkX2F0X21zGAQgASgDEiwKBnN0YXR1cxgFIAEoDjIcLmVscmkudjEuY2hhbmdlLkNoYW5nZVN0YXR1cxIpCgVwYXJ0cxgGIAMoCzIaLmVscmkudjEuY2hhbmdlLkNoYW5nZVBhcnQSGQoMYWNjZXB0ZWRfc2VxGAcgASgDSACIAQESEQoJcmVqZWN0aW9uGAggASgJQg8KDV9hY2NlcHRlZF9zZXEqzQEKDENoYW5nZVN0YXR1cxIdChlDSEFOR0VfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFwoTQ0hBTkdFX1NUQVRVU19MT0NBTBABEhgKFENIQU5HRV9TVEFUVVNfUVVFVUVEEAISGQoVQ0hBTkdFX1NUQVRVU19XQUlUSU5HEAMSGgoWQ0hBTkdFX1NUQVRVU19BQ0NFUFRFRBAEEhoKFkNIQU5HRV9TVEFUVVNfUkVKRUNURUQQBRIYChRDSEFOR0VfU1RBVFVTX1BBVVNFRBAGYgZwcm90bzM");
+  fileDesc("ChtlbHJpL3YxL2NoYW5nZS9kb21haW4ucHJvdG8SDmVscmkudjEuY2hhbmdlIjIKCkNoYW5nZVBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEhEKCWJ5dGVzX2xlbhgCIAEoDSL8AQoGQ2hhbmdlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIVCg1jcmVhdGVkX2F0X21zGAQgASgDEiwKBnN0YXR1cxgFIAEoDjIcLmVscmkudjEuY2hhbmdlLkNoYW5nZVN0YXR1cxIpCgVwYXJ0cxgGIAMoCzIaLmVscmkudjEuY2hhbmdlLkNoYW5nZVBhcnQSGQoMYWNjZXB0ZWRfc2VxGAcgASgDSACIAQESEQoJcmVqZWN0aW9uGAggASgJEhIKCmRlcGVuZHNfb24YCSADKAlCDwoNX2FjY2VwdGVkX3NlcSrNAQoMQ2hhbmdlU3RhdHVzEh0KGUNIQU5HRV9TVEFUVVNfVU5TUEVDSUZJRUQQABIXChNDSEFOR0VfU1RBVFVTX0xPQ0FMEAESGAoUQ0hBTkdFX1NUQVRVU19RVUVVRUQQAhIZChVDSEFOR0VfU1RBVFVTX1dBSVRJTkcQAxIaChZDSEFOR0VfU1RBVFVTX0FDQ0VQVEVEEAQSGgoWQ0hBTkdFX1NUQVRVU19SRUpFQ1RFRBAFEhgKFENIQU5HRV9TVEFUVVNfUEFVU0VEEAZiBnByb3RvMw");
 
 /**
  * One document touched by a Change. 
@@ -103,11 +103,20 @@ export type Change = Message<"elri.v1.change.Change"> & {
   acceptedSeq?: bigint | undefined;
 
   /**
-   * Why it was rejected, if it was. 
+   * Why it was rejected, if it was; for a paused Change, which rejection
+   * it waits on. 
    *
    * @generated from field: string rejection = 8;
    */
   rejection: string;
+
+  /**
+   * Changes this one builds on: earlier unaccepted writes to the same
+   * documents, and the creators of the Objects it refers to. 
+   *
+   * @generated from field: repeated string depends_on = 9;
+   */
+  dependsOn: string[];
 };
 
 /**
@@ -156,11 +165,20 @@ export type ChangeJson = {
   acceptedSeq?: string;
 
   /**
-   * Why it was rejected, if it was. 
+   * Why it was rejected, if it was; for a paused Change, which rejection
+   * it waits on. 
    *
    * @generated from field: string rejection = 8;
    */
   rejection?: string;
+
+  /**
+   * Changes this one builds on: earlier unaccepted writes to the same
+   * documents, and the creators of the Objects it refers to. 
+   *
+   * @generated from field: repeated string depends_on = 9;
+   */
+  dependsOn?: string[];
 };
 
 /**

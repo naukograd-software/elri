@@ -189,6 +189,13 @@ pub fn int_value(i: i64) -> Value {
     }
 }
 
+/// Shorthand for a reference value.
+pub fn ref_value(id: ObjectId) -> Value {
+    Value {
+        value: Some(value::Value::Ref(id.to_string())),
+    }
+}
+
 /// Text of a string field, if present.
 pub fn string_field<'a>(o: &'a Object, id: &str) -> Option<&'a str> {
     match o.fields.get(id).and_then(|v| v.value.as_ref()) {
@@ -782,12 +789,6 @@ mod tests {
     fn time_value(ms: i64) -> Value {
         Value {
             value: Some(value::Value::TimeMs(ms)),
-        }
-    }
-
-    fn ref_value(id: ObjectId) -> Value {
-        Value {
-            value: Some(value::Value::Ref(id.to_string())),
         }
     }
 

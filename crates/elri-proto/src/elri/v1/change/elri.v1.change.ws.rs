@@ -15,6 +15,14 @@ pub mod change_service_ws {
         route: "/elri.v1.change.ChangeService/ListChanges",
         kind: StreamKind::Unary,
     };
+    pub const RETRY_CHANGE: MethodSpec = MethodSpec {
+        route: "/elri.v1.change.ChangeService/RetryChange",
+        kind: StreamKind::Unary,
+    };
+    pub const DISCARD_CHANGE: MethodSpec = MethodSpec {
+        route: "/elri.v1.change.ChangeService/DiscardChange",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `ChangeService` service. Implement with `async fn`.
     pub trait ChangeServiceHandler: Send + Sync + 'static {
         ///  Newest first.
@@ -23,6 +31,23 @@ pub mod change_service_ws {
             req: Request<super::ListChangesRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::ListChangesResponse>, Status>,
+        > + Send;
+        ///
+        /// Resubmits a rejected Change unchanged, with the same id and payload, and
+        /// puts its operations and those of its paused dependents back into the
+        /// live documents.
+        fn retry_change(
+            &self,
+            req: Request<super::RetryChangeRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::RetryChangeResponse>, Status>,
+        > + Send;
+        ///  Drops a rejected or paused Change and its paused dependents for good.
+        fn discard_change(
+            &self,
+            req: Request<super::DiscardChangeRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::DiscardChangeResponse>, Status>,
         > + Send;
     }
     /// Registers `handler` on `server` for every `ChangeService` method.
@@ -48,6 +73,28 @@ pub mod change_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    RETRY_CHANGE.route,
+                    move |req: Request<super::RetryChangeRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.retry_change(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    DISCARD_CHANGE.route,
+                    move |req: Request<super::DiscardChangeRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.discard_change(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `ChangeService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -68,6 +115,23 @@ pub mod change_service_ws {
             req: impl Into<Request<super::ListChangesRequest>>,
         ) -> Result<Response<super::ListChangesResponse>, Status> {
             self.conn.invoke_unary(LIST_CHANGES, req.into()).await
+        }
+        ///
+        /// Resubmits a rejected Change unchanged, with the same id and payload, and
+        /// puts its operations and those of its paused dependents back into the
+        /// live documents.
+        pub async fn retry_change(
+            &self,
+            req: impl Into<Request<super::RetryChangeRequest>>,
+        ) -> Result<Response<super::RetryChangeResponse>, Status> {
+            self.conn.invoke_unary(RETRY_CHANGE, req.into()).await
+        }
+        ///  Drops a rejected or paused Change and its paused dependents for good.
+        pub async fn discard_change(
+            &self,
+            req: impl Into<Request<super::DiscardChangeRequest>>,
+        ) -> Result<Response<super::DiscardChangeResponse>, Status> {
+            self.conn.invoke_unary(DISCARD_CHANGE, req.into()).await
         }
     }
 }

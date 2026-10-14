@@ -28,9 +28,14 @@ pub struct Change {
     /// Position in the Space log once accepted. 
     #[prost(int64, optional, tag = "7")]
     pub accepted_seq: ::core::option::Option<i64>,
-    /// Why it was rejected, if it was. 
+    /// Why it was rejected, if it was; for a paused Change, which rejection
+    /// it waits on. 
     #[prost(string, tag = "8")]
     pub rejection: ::prost::alloc::string::String,
+    /// Changes this one builds on: earlier unaccepted writes to the same
+    /// documents, and the creators of the Objects it refers to. 
+    #[prost(string, repeated, tag = "9")]
+    pub depends_on: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Where a Change is on its way from this device to acceptance. 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -77,6 +82,31 @@ impl ChangeStatus {
             _ => None,
         }
     }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RetryChangeRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RetryChangeResponse {
+    #[prost(message, optional, tag = "1")]
+    pub change: ::core::option::Option<Change>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DiscardChangeRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DiscardChangeResponse {
+    /// Ids of every Change dropped, the requested one included. 
+    #[prost(string, repeated, tag = "1")]
+    pub discarded: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListChangesRequest {

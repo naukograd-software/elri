@@ -9,7 +9,10 @@ use std::sync::Arc;
 use elri_proto::elri::v1::change::change_service_ws::{
     register_change_service_arc, ChangeServiceHandler,
 };
-use elri_proto::elri::v1::change::{ListChangesRequest, ListChangesResponse};
+use elri_proto::elri::v1::change::{
+    DiscardChangeRequest, DiscardChangeResponse, ListChangesRequest, ListChangesResponse,
+    RetryChangeRequest, RetryChangeResponse,
+};
 use elri_proto::elri::v1::core::core_service_ws::{register_core_service_arc, CoreServiceHandler};
 use elri_proto::elri::v1::core::{EndpointKind, GetInfoRequest, GetInfoResponse};
 use elri_proto::elri::v1::object::object_service_ws::{
@@ -106,9 +109,10 @@ fn require_token(token: LaunchToken, next: Handler) -> Handler {
 impl From<StoreError> for Status {
     fn from(e: StoreError) -> Self {
         match e {
-            StoreError::SpaceNotFound(_) | StoreError::ObjectNotFound(_) => {
-                Status::new(Code::NotFound, e.to_string())
-            }
+            StoreError::SpaceNotFound(_)
+            | StoreError::ObjectNotFound(_)
+            | StoreError::ChangeNotFound(_) => Status::new(Code::NotFound, e.to_string()),
+            StoreError::NotRejected(_) => Status::new(Code::FailedPrecondition, e.to_string()),
             StoreError::Model(
                 ModelError::InvalidId(_)
                 | ModelError::EmptyValue(_)
@@ -465,6 +469,38 @@ impl ChangeServiceHandler for Services {
                 .list_changes(limit)
                 .await?,
         }))
+    }
+
+    async fn retry_change(
+        &self,
+        req: Request<RetryChangeRequest>,
+    ) -> Result<Response<RetryChangeResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        parse_id(&req.msg.id, "id")?;
+        let change = self
+            .store
+            .space(space_id)
+            .await?
+            .retry_change(&req.msg.id)
+            .await?;
+        Ok(Response::new(RetryChangeResponse {
+            change: Some(change),
+        }))
+    }
+
+    async fn discard_change(
+        &self,
+        req: Request<DiscardChangeRequest>,
+    ) -> Result<Response<DiscardChangeResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        parse_id(&req.msg.id, "id")?;
+        let discarded = self
+            .store
+            .space(space_id)
+            .await?
+            .discard_change(&req.msg.id)
+            .await?;
+        Ok(Response::new(DiscardChangeResponse { discarded }))
     }
 }
 

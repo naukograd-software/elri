@@ -29,8 +29,9 @@ use crate::change::{accepted, rejected, Outcome, Reason};
 use crate::device::DeviceId;
 use crate::model::{field_def_kind, now_ms, ModelError, ObjectDoc, ObjectId, SpaceId};
 use models::{
-    ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, ObjectRow, ObjectTypeRow,
-    ParticipantRow, PlacementRow, RemoteRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
+    ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, ObjectRow,
+    ObjectTypeRow, ParticipantRow, PlacementRow, RemoteRow, SpaceLogRow, SpaceRow, SyncStateRow,
+    TypeFieldRow,
 };
 
 /// Updates folded into a fresh snapshot once this many accumulate per document.
@@ -56,6 +57,12 @@ pub enum StoreError {
     /// No such Space on this device.
     #[error("space {0} not found")]
     SpaceNotFound(SpaceId),
+    /// Retry or discard of a Change that is not rejected (or paused).
+    #[error("change {0} is not rejected")]
+    NotRejected(String),
+    /// No such Change in the Space.
+    #[error("change {0} not found")]
+    ChangeNotFound(String),
     /// No such Object in the Space.
     #[error("object {0} not found")]
     ObjectNotFound(ObjectId),
@@ -366,6 +373,7 @@ impl SpaceStore {
                 ObjectRow,
                 ObjectTypeRow,
                 FieldValueRow,
+                ChangeDepRow,
                 ParticipantRow,
                 TypeFieldRow,
                 PlacementRow,
@@ -411,8 +419,10 @@ impl SpaceStore {
         };
         let env = self.new_envelope(vec![part]);
         let mut db = self.db.lock().await;
+        let deps = dependencies(&mut db, &rec).await?;
         let mut tx = db.transaction().await?;
         write_change(&mut tx, &env, ChangeStatus::Local, None, "").await?;
+        write_deps(&mut tx, uuid_arg(&env.id)?, &deps).await?;
         write_snapshot(&mut tx, doc, &rec).await?;
         write_projections(&mut tx, &rec).await?;
         tx.commit().await?;
@@ -454,9 +464,11 @@ impl SpaceStore {
             bytes: bytes.clone().into(),
         };
         let env = self.new_envelope(vec![part]);
+        let deps = dependencies(&mut db, &rec).await?;
 
         let mut tx = db.transaction().await?;
         write_change(&mut tx, &env, ChangeStatus::Local, None, "").await?;
+        write_deps(&mut tx, uuid_arg(&env.id)?, &deps).await?;
         toasty::create!(DocUpdateRow {
             object_id: id.uuid(),
             change_id: uuid_arg(&env.id)?,
@@ -600,26 +612,85 @@ impl SpaceStore {
             .await?;
         let mut changes = Vec::with_capacity(rows.len());
         for row in &rows {
-            let env = read_envelope(&mut db, self.id, row).await?;
-            changes.push(Change {
-                id: env.id,
-                space_id: env.space_id,
-                device_id: env.device_id,
-                created_at_ms: env.created_at_ms,
-                status: status_of(row.status)?.into(),
-                parts: env
-                    .parts
-                    .iter()
-                    .map(|p| ChangePart {
-                        object_id: p.object_id.clone(),
-                        bytes_len: u32::try_from(p.bytes.len()).unwrap_or(u32::MAX),
-                    })
-                    .collect(),
-                accepted_seq: row.accepted_seq,
-                rejection: row.rejection.clone().unwrap_or_default(),
-            });
+            changes.push(read_change(&mut db, self.id, row).await?);
         }
         Ok(changes)
+    }
+
+    /// One Change by id, without payload.
+    pub async fn change(&self, id: &str) -> Result<Change, StoreError> {
+        let change_id = uuid_arg(id)?;
+        let mut db = self.db.lock().await;
+        let row = change_row(&mut db, change_id).await?;
+        read_change(&mut db, self.id, &row).await
+    }
+
+    /// Resubmits a rejected Change unchanged: it goes back to the outbox,
+    /// its paused dependents follow it, and their operations return to the
+    /// live documents.
+    pub async fn retry_change(&self, id: &str) -> Result<Change, StoreError> {
+        let change_id = uuid_arg(id)?;
+        let mut db = self.db.lock().await;
+        let row = change_row(&mut db, change_id).await?;
+        if status_of(row.status)? != ChangeStatus::Rejected {
+            return Err(StoreError::NotRejected(id.to_owned()));
+        }
+        let mut revived = dependents(&mut db, change_id, &[ChangeStatus::Paused]).await?;
+        revived.insert(0, change_id);
+        let touched = objects_of(&mut db, &revived).await?;
+        let mut tx = db.transaction().await?;
+        for id in &revived {
+            toasty::update!(ChangeRow::filter(ChangeRow::fields().id().eq(*id)) {
+                status: status_code(ChangeStatus::Local),
+                rejection: None,
+            })
+            .exec(&mut tx)
+            .await?;
+        }
+        for object in touched {
+            rebuild_doc(&mut tx, object).await?;
+        }
+        tx.commit().await?;
+        self.dirty.notify_one();
+        let row = change_row(&mut db, change_id).await?;
+        read_change(&mut db, self.id, &row).await
+    }
+
+    /// Drops a rejected or paused Change and its paused dependents for
+    /// good. Returns the ids dropped.
+    pub async fn discard_change(&self, id: &str) -> Result<Vec<String>, StoreError> {
+        let change_id = uuid_arg(id)?;
+        let mut db = self.db.lock().await;
+        let row = change_row(&mut db, change_id).await?;
+        if !matches!(
+            status_of(row.status)?,
+            ChangeStatus::Rejected | ChangeStatus::Paused
+        ) {
+            return Err(StoreError::NotRejected(id.to_owned()));
+        }
+        let mut dropped = dependents(&mut db, change_id, &[ChangeStatus::Paused]).await?;
+        dropped.insert(0, change_id);
+        let mut tx = db.transaction().await?;
+        for id in &dropped {
+            ChangeRow::filter(ChangeRow::fields().id().eq(*id))
+                .delete()
+                .exec(&mut tx)
+                .await?;
+            ChangePartRow::filter(ChangePartRow::fields().change_id().eq(*id))
+                .delete()
+                .exec(&mut tx)
+                .await?;
+            ChangeDepRow::filter(ChangeDepRow::fields().change_id().eq(*id))
+                .delete()
+                .exec(&mut tx)
+                .await?;
+            ChangeDepRow::filter(ChangeDepRow::fields().depends_on().eq(*id))
+                .delete()
+                .exec(&mut tx)
+                .await?;
+        }
+        tx.commit().await?;
+        Ok(dropped.iter().map(ToString::to_string).collect())
     }
 
     // --- synchronization ------------------------------------------------
@@ -645,7 +716,8 @@ impl SpaceStore {
     }
 
     /// How many Changes are in each of two states: not yet accepted
-    /// (local, queued, waiting) and rejected.
+    /// (local, queued, waiting) and needing the user's decision (rejected,
+    /// paused).
     pub async fn pending_counts(&self) -> Result<(usize, usize), StoreError> {
         let mut db = self.db.lock().await;
         let pending = ChangeRow::filter(ChangeRow::fields().status().in_list([
@@ -656,11 +728,10 @@ impl SpaceStore {
         .exec(&mut *db)
         .await?
         .len();
-        let rejected = ChangeRow::filter(
-            ChangeRow::fields()
-                .status()
-                .eq(status_code(ChangeStatus::Rejected)),
-        )
+        let rejected = ChangeRow::filter(ChangeRow::fields().status().in_list([
+            status_code(ChangeStatus::Rejected),
+            status_code(ChangeStatus::Paused),
+        ]))
         .exec(&mut *db)
         .await?
         .len();
@@ -679,13 +750,38 @@ impl SpaceStore {
                 Some(format!("{}: {}", r.reason().as_str_name(), r.message)),
             ),
         };
+        let paused = if status == ChangeStatus::Rejected {
+            dependents(&mut db, id, &[ChangeStatus::Local, ChangeStatus::Queued]).await?
+        } else {
+            Vec::new()
+        };
+        let mut excluded = paused.clone();
+        excluded.push(id);
+        let touched = if status == ChangeStatus::Rejected {
+            objects_of(&mut db, &excluded).await?
+        } else {
+            Vec::new()
+        };
+        let mut tx = db.transaction().await?;
         toasty::update!(ChangeRow::filter(ChangeRow::fields().id().eq(id)) {
             status: status_code(status),
             accepted_seq: seq,
             rejection,
         })
-        .exec(&mut *db)
+        .exec(&mut tx)
         .await?;
+        for dep in &paused {
+            toasty::update!(ChangeRow::filter(ChangeRow::fields().id().eq(*dep)) {
+                status: status_code(ChangeStatus::Paused),
+                rejection: Some(format!("depends on rejected change {id}")),
+            })
+            .exec(&mut tx)
+            .await?;
+        }
+        for object in touched {
+            rebuild_doc(&mut tx, object).await?;
+        }
+        tx.commit().await?;
         Ok(())
     }
 
@@ -889,6 +985,268 @@ impl SpaceStore {
         tx.commit().await?;
         Ok(())
     }
+}
+
+async fn change_row(db: &mut Db, id: Uuid) -> Result<ChangeRow, StoreError> {
+    ChangeRow::filter(ChangeRow::fields().id().eq(id))
+        .first()
+        .exec(&mut *db)
+        .await?
+        .ok_or_else(|| StoreError::ChangeNotFound(id.to_string()))
+}
+
+async fn read_change(db: &mut Db, space: SpaceId, row: &ChangeRow) -> Result<Change, StoreError> {
+    let env = read_envelope(db, space, row).await?;
+    let deps = ChangeDepRow::filter(ChangeDepRow::fields().change_id().eq(row.id))
+        .exec(&mut *db)
+        .await?;
+    Ok(Change {
+        id: env.id,
+        space_id: env.space_id,
+        device_id: env.device_id,
+        created_at_ms: env.created_at_ms,
+        status: status_of(row.status)?.into(),
+        parts: env
+            .parts
+            .iter()
+            .map(|p| ChangePart {
+                object_id: p.object_id.clone(),
+                bytes_len: u32::try_from(p.bytes.len()).unwrap_or(u32::MAX),
+            })
+            .collect(),
+        accepted_seq: row.accepted_seq,
+        rejection: row.rejection.clone().unwrap_or_default(),
+        depends_on: deps.iter().map(|d| d.depends_on.to_string()).collect(),
+    })
+}
+
+/// Object ids a record refers to: field references, participants and
+/// their roles, placed blocks, the Layer target, and applied definitions.
+fn references(rec: &Object) -> Vec<Uuid> {
+    let mut out: Vec<Uuid> = Vec::new();
+    let mut push = |s: &str| {
+        if let Ok(id) = Uuid::parse_str(s) {
+            out.push(id);
+        }
+    };
+    for v in rec.fields.values() {
+        if let Some(value::Value::Ref(r)) = &v.value {
+            push(r);
+        }
+    }
+    for p in &rec.participants {
+        push(&p.object_id);
+        push(&p.role_id);
+    }
+    for p in &rec.placements {
+        push(&p.block_id);
+    }
+    if let Some(t) = &rec.target_id {
+        push(t);
+    }
+    for t in &rec.types {
+        push(t);
+    }
+    for f in &rec.type_fields {
+        push(&f.field_id);
+    }
+    out.sort_unstable();
+    out.dedup();
+    out
+}
+
+/// The Changes a new write to `rec` builds on: the latest unaccepted Change
+/// to the same document, and the creating Change of every Object `rec`
+/// refers to while that Change is unaccepted.
+async fn dependencies(db: &mut Db, rec: &Object) -> Result<Vec<Uuid>, StoreError> {
+    let own = uuid_arg(&rec.id)?;
+    let mut deps = Vec::new();
+    if let Some(latest) = change_touching(db, own, false).await? {
+        if latest.1 != ChangeStatus::Accepted {
+            deps.push(latest.0);
+        }
+    }
+    for referenced in references(rec) {
+        if referenced == own {
+            continue;
+        }
+        if let Some((id, status)) = change_touching(db, referenced, true).await? {
+            if status != ChangeStatus::Accepted {
+                deps.push(id);
+            }
+        }
+    }
+    deps.sort_unstable();
+    deps.dedup();
+    Ok(deps)
+}
+
+/// The first (creating) or latest Change with a part on `object`.
+async fn change_touching(
+    db: &mut Db,
+    object: Uuid,
+    first: bool,
+) -> Result<Option<(Uuid, ChangeStatus)>, StoreError> {
+    let order = if first { "ASC" } else { "DESC" };
+    let rows = toasty::sql::query(format!(
+        "SELECT c.id, c.status FROM changes c JOIN change_parts p ON p.change_id = c.id \
+         WHERE p.object_id = ?1 ORDER BY c.seq {order} LIMIT 1"
+    ))
+    .bind(uuid_param(object))
+    .exec(&mut *db)
+    .await?;
+    let Some(Value::Record(rec)) = rows.into_iter().next() else {
+        return Ok(None);
+    };
+    let id = uuid_of(&rec[0], "changes", "id")?;
+    let Value::I64(status) = rec[1] else {
+        return Err(StoreError::Corrupt {
+            table: "changes",
+            what: "status",
+        });
+    };
+    Ok(Some((id, status_of(status)?)))
+}
+
+async fn write_deps(
+    tx: &mut toasty::Transaction<'_>,
+    change_id: Uuid,
+    deps: &[Uuid],
+) -> Result<(), StoreError> {
+    for dep in deps {
+        toasty::create!(ChangeDepRow {
+            change_id,
+            depends_on: *dep,
+        })
+        .exec(&mut *tx)
+        .await?;
+    }
+    Ok(())
+}
+
+/// Every Change that transitively depends on `root` and is in one of
+/// `statuses`, in dependency order.
+async fn dependents(
+    db: &mut Db,
+    root: Uuid,
+    statuses: &[ChangeStatus],
+) -> Result<Vec<Uuid>, StoreError> {
+    let mut out: Vec<Uuid> = Vec::new();
+    let mut frontier = vec![root];
+    while let Some(id) = frontier.pop() {
+        let edges = ChangeDepRow::filter(ChangeDepRow::fields().depends_on().eq(id))
+            .exec(&mut *db)
+            .await?;
+        for edge in edges {
+            if out.contains(&edge.change_id) {
+                continue;
+            }
+            let row = change_row(db, edge.change_id).await?;
+            if statuses.contains(&status_of(row.status)?) {
+                out.push(edge.change_id);
+                frontier.push(edge.change_id);
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Objects touched by any of `changes`.
+async fn objects_of(db: &mut Db, changes: &[Uuid]) -> Result<Vec<Uuid>, StoreError> {
+    let mut out: Vec<Uuid> = Vec::new();
+    for id in changes {
+        let parts = ChangePartRow::filter(ChangePartRow::fields().change_id().eq(*id))
+            .exec(&mut *db)
+            .await?;
+        out.extend(parts.iter().map(|p| p.object_id));
+    }
+    out.sort_unstable();
+    out.dedup();
+    Ok(out)
+}
+
+/// Rebuilds a document from the parts of every Change that is neither
+/// rejected nor paused, in recording order, and rewrites its snapshot,
+/// update log, and projections. A document none of them created is
+/// removed from the live state; its parts stay with their Changes.
+async fn rebuild_doc(tx: &mut toasty::Transaction<'_>, object: Uuid) -> Result<(), StoreError> {
+    let rows = toasty::sql::query(
+        "SELECT p.bytes FROM change_parts p JOIN changes c ON c.id = p.change_id \
+         WHERE p.object_id = ?1 AND c.status NOT IN (?2, ?3) ORDER BY c.seq ASC",
+    )
+    .bind(uuid_param(object))
+    .bind(Value::I64(status_code(ChangeStatus::Rejected)))
+    .bind(Value::I64(status_code(ChangeStatus::Paused)))
+    .exec(&mut *tx)
+    .await?;
+    let mut updates: Vec<Vec<u8>> = Vec::with_capacity(rows.len());
+    for row in rows {
+        let Value::Record(rec) = row else {
+            return Err(StoreError::Corrupt {
+                table: "change_parts",
+                what: "row shape",
+            });
+        };
+        match &rec[0] {
+            Value::Bytes(b) => updates.push(b.clone()),
+            _ => {
+                return Err(StoreError::Corrupt {
+                    table: "change_parts",
+                    what: "bytes",
+                })
+            }
+        }
+    }
+    DocUpdateRow::filter(DocUpdateRow::fields().object_id().eq(object))
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    DocRow::filter_by_object_id(object)
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    delete_projections(tx, object).await?;
+    if updates.is_empty() {
+        return Ok(());
+    }
+    let id = ObjectId::from_uuid(object);
+    let doc = match ObjectDoc::from_updates(id, &updates) {
+        Ok(doc) => doc,
+        // Nothing left that created the document: it leaves the live state.
+        Err(ModelError::Malformed(_)) => return Ok(()),
+        Err(e) => return Err(e.into()),
+    };
+    let rec = doc.read()?;
+    write_snapshot(tx, &doc, &rec).await?;
+    write_projections(tx, &rec).await
+}
+
+async fn delete_projections(tx: &mut toasty::Transaction<'_>, id: Uuid) -> Result<(), StoreError> {
+    ObjectRow::filter_by_object_id(id)
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    ObjectTypeRow::filter(ObjectTypeRow::fields().object_id().eq(id))
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    FieldValueRow::filter(FieldValueRow::fields().object_id().eq(id))
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    TypeFieldRow::filter(TypeFieldRow::fields().type_id().eq(id))
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    ParticipantRow::filter(ParticipantRow::fields().relation_id().eq(id))
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    PlacementRow::filter(PlacementRow::fields().document_id().eq(id))
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    Ok(())
 }
 
 async fn read_envelope(

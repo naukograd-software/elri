@@ -7,7 +7,9 @@ use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use elri_core::Endpoint;
 use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
-use elri_proto::elri::v1::change::ListChangesRequest;
+use elri_proto::elri::v1::change::{
+    Change, DiscardChangeRequest, ListChangesRequest, RetryChangeRequest,
+};
 use elri_proto::elri::v1::core::core_service_ws::CoreServiceClient;
 use elri_proto::elri::v1::core::GetInfoRequest;
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
@@ -100,6 +102,18 @@ enum ChangeCmd {
         space: String,
         #[arg(long, default_value_t = 50)]
         limit: i32,
+    },
+    /// Resubmit a rejected Change unchanged, with its paused dependents.
+    Retry {
+        #[arg(long)]
+        space: String,
+        id: String,
+    },
+    /// Drop a rejected or paused Change and its paused dependents for good.
+    Discard {
+        #[arg(long)]
+        space: String,
+        id: String,
     },
 }
 
@@ -583,6 +597,22 @@ async fn place(
     Ok(object_json(&o))
 }
 
+fn change_json(c: &Change) -> serde_json::Value {
+    json!({
+        "id": c.id,
+        "device_id": c.device_id,
+        "created_at_ms": c.created_at_ms,
+        "status": c.status().as_str_name(),
+        "accepted_seq": c.accepted_seq,
+        "rejection": c.rejection,
+        "depends_on": c.depends_on,
+        "parts": c.parts.iter().map(|p| json!({
+            "object_id": p.object_id,
+            "bytes_len": p.bytes_len,
+        })).collect::<Vec<_>>(),
+    })
+}
+
 async fn run_change(
     endpoint: &Endpoint,
     conn: Client,
@@ -600,24 +630,35 @@ async fn run_change(
                     },
                 ))
                 .await?;
-            let changes: Vec<_> = res
-                .msg
-                .changes
-                .iter()
-                .map(|c| {
-                    json!({
-                        "id": c.id,
-                        "device_id": c.device_id,
-                        "created_at_ms": c.created_at_ms,
-                        "status": c.status().as_str_name(),
-                        "parts": c.parts.iter().map(|p| json!({
-                            "object_id": p.object_id,
-                            "bytes_len": p.bytes_len,
-                        })).collect::<Vec<_>>(),
-                    })
-                })
-                .collect();
+            let changes: Vec<_> = res.msg.changes.iter().map(change_json).collect();
             Ok(json!(changes))
+        }
+        ChangeCmd::Retry { space, id } => {
+            let res = client
+                .retry_change(authed(
+                    endpoint,
+                    RetryChangeRequest {
+                        space_id: space,
+                        id,
+                    },
+                ))
+                .await?;
+            let Some(c) = res.msg.change else {
+                bail!("core returned no change");
+            };
+            Ok(change_json(&c))
+        }
+        ChangeCmd::Discard { space, id } => {
+            let res = client
+                .discard_change(authed(
+                    endpoint,
+                    DiscardChangeRequest {
+                        space_id: space,
+                        id,
+                    },
+                ))
+                .await?;
+            Ok(json!({ "discarded": res.msg.discarded }))
         }
     }
 }

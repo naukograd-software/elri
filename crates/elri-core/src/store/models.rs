@@ -81,6 +81,7 @@ pub struct ChangeRow {
 /// The operations a Change added to one document.
 #[derive(Debug, toasty::Model)]
 #[table = "change_parts"]
+#[index(object_id, change_id)]
 pub struct ChangePartRow {
     /// Change id.
     #[key]
@@ -119,6 +120,20 @@ pub struct ObjectRow {
     /// Layers only: the enriched Object.
     #[index]
     pub target_id: Option<Uuid>,
+}
+
+/// A Change that builds on another: it writes to a document the other
+/// changed before acceptance, or refers to an Object the other created.
+#[derive(Debug, toasty::Model)]
+#[table = "change_deps"]
+#[index(depends_on, change_id)]
+pub struct ChangeDepRow {
+    /// The dependent Change.
+    #[key]
+    pub change_id: Uuid,
+    /// The Change it needs accepted first.
+    #[key]
+    pub depends_on: Uuid,
 }
 
 /// Projection: type definitions applied to an Object.

@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { ListChangesRequest, ListChangesResponse } from "./change_pb.ts";
-import { ListChangesRequestSchema, ListChangesResponseSchema } from "./change_pb.ts";
+import type { DiscardChangeRequest, DiscardChangeResponse, ListChangesRequest, ListChangesResponse, RetryChangeRequest, RetryChangeResponse } from "./change_pb.ts";
+import { DiscardChangeRequestSchema, DiscardChangeResponseSchema, ListChangesRequestSchema, ListChangesResponseSchema, RetryChangeRequestSchema, RetryChangeResponseSchema } from "./change_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -27,6 +27,22 @@ const ChangeService_ListChanges: MethodInfo<ListChangesRequest, ListChangesRespo
   output: ListChangesResponseSchema,
 };
 
+const ChangeService_RetryChange: MethodInfo<RetryChangeRequest, RetryChangeResponse> = {
+  typeName: "elri.v1.change.ChangeService",
+  name: "RetryChange",
+  kind: "unary",
+  input: RetryChangeRequestSchema,
+  output: RetryChangeResponseSchema,
+};
+
+const ChangeService_DiscardChange: MethodInfo<DiscardChangeRequest, DiscardChangeResponse> = {
+  typeName: "elri.v1.change.ChangeService",
+  name: "DiscardChange",
+  kind: "unary",
+  input: DiscardChangeRequestSchema,
+  output: DiscardChangeResponseSchema,
+};
+
 /**
  * Inspect the Changes a Space has recorded on this device. 
  *
@@ -42,6 +58,29 @@ export class ChangeServiceClient {
    */
   async listChanges(req: ListChangesRequest, options?: CallOptions): Promise<ListChangesResponse> {
     const res = await this.transport.unary(ChangeService_ListChanges, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   *
+   * Resubmits a rejected Change unchanged, with the same id and payload, and
+   * puts its operations and those of its paused dependents back into the
+   * live documents.
+   *
+   * @generated from rpc elri.v1.change.ChangeService.RetryChange
+   */
+  async retryChange(req: RetryChangeRequest, options?: CallOptions): Promise<RetryChangeResponse> {
+    const res = await this.transport.unary(ChangeService_RetryChange, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Drops a rejected or paused Change and its paused dependents for good. 
+   *
+   * @generated from rpc elri.v1.change.ChangeService.DiscardChange
+   */
+  async discardChange(req: DiscardChangeRequest, options?: CallOptions): Promise<DiscardChangeResponse> {
+    const res = await this.transport.unary(ChangeService_DiscardChange, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

@@ -8,6 +8,33 @@ import "elri/v1/change/domain.proto";
 service ChangeService {
     /* Newest first. */
     rpc ListChanges(ListChangesRequest) returns (ListChangesResponse);
+    /*
+    Resubmits a rejected Change unchanged, with the same id and payload, and
+    puts its operations and those of its paused dependents back into the
+    live documents.
+    */
+    rpc RetryChange(RetryChangeRequest) returns (RetryChangeResponse);
+    /* Drops a rejected or paused Change and its paused dependents for good. */
+    rpc DiscardChange(DiscardChangeRequest) returns (DiscardChangeResponse);
+}
+
+message RetryChangeRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message RetryChangeResponse {
+    Change change = 1;
+}
+
+message DiscardChangeRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message DiscardChangeResponse {
+    /* Ids of every Change dropped, the requested one included. */
+    repeated string discarded = 1;
 }
 
 message ListChangesRequest {

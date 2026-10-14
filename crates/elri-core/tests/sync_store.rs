@@ -3,10 +3,11 @@
 
 #![allow(clippy::expect_used, clippy::panic)]
 
-use elri_core::change::{Outcome, Reason};
+use elri_core::change::{rejected, Outcome, Reason};
 use elri_core::device::DeviceId;
-use elri_core::model::{int_value, string_value, ObjectDoc, ObjectId, SpaceId};
+use elri_core::model::{int_value, ref_value, string_value, ObjectDoc, ObjectId, SpaceId};
 use elri_core::store::{ObjectFilter, Store};
+use elri_proto::elri::v1::change::ChangeStatus;
 use elri_proto::elri::v1::object::{value, ObjectKind, Value};
 use elri_proto::elri::v1::space::Authority;
 
@@ -171,4 +172,165 @@ async fn missing_predecessors_are_rejected() {
     );
     let on_server = s_space.get(created_id).await.expect("get");
     assert_eq!(on_server.fields["n"], int_value(1));
+}
+
+#[tokio::test]
+async fn rejection_pauses_dependents_and_rebuilds_live_state() {
+    let space_id = SpaceId::new();
+    let a = store("a3").await;
+    a.register_space(space_id, "shared", Authority::Server)
+        .await
+        .expect("register");
+    let space = a.space(space_id).await.expect("space");
+
+    // c1 creates X; c2 edits X (causal); c3 creates Y referring to X
+    // (semantic); c4 creates Z, independent.
+    let x = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 1).expect("doc");
+    x.set_field("title", &string_value("x")).expect("set");
+    x.touch(2).expect("touch");
+    let x_id = x.id();
+    space.insert(&x).await.expect("c1");
+    space
+        .update(x_id, |d| d.set_field("n", &int_value(1)))
+        .await
+        .expect("c2");
+    let y = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 3).expect("doc");
+    y.set_field("to", &ref_value(x_id)).expect("set");
+    y.touch(4).expect("touch");
+    let y_id = y.id();
+    space.insert(&y).await.expect("c3");
+    let z = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 5).expect("doc");
+    z.touch(6).expect("touch");
+    let z_id = z.id();
+    space.insert(&z).await.expect("c4");
+
+    let outbox = space.outbox(0).await.expect("outbox");
+    assert_eq!(outbox.len(), 4);
+    let (c1, c2, c3, c4) = (
+        outbox[0].id.clone(),
+        outbox[1].id.clone(),
+        outbox[2].id.clone(),
+        outbox[3].id.clone(),
+    );
+    let changes = space.list_changes(0).await.expect("list");
+    let deps = |id: &str| {
+        changes
+            .iter()
+            .find(|c| c.id == id)
+            .expect("change")
+            .depends_on
+            .clone()
+    };
+    assert_eq!(deps(&c1), Vec::<String>::new());
+    assert_eq!(deps(&c2), vec![c1.clone()]);
+    assert_eq!(deps(&c3), vec![c1.clone()]);
+    assert_eq!(deps(&c4), Vec::<String>::new());
+
+    // The authority rejects c1: c2 and c3 pause, c4 stays in the outbox,
+    // X and Y leave the live state.
+    let refused = rejected(Reason::PermissionDenied, "no");
+    space.record_outcome(&c1, &refused).await.expect("record");
+    let status = |changes: &[elri_proto::elri::v1::change::Change], id: &str| {
+        changes
+            .iter()
+            .find(|c| c.id == id)
+            .expect("change")
+            .status()
+    };
+    let changes = space.list_changes(0).await.expect("list");
+    assert_eq!(status(&changes, &c1), ChangeStatus::Rejected);
+    assert_eq!(status(&changes, &c2), ChangeStatus::Paused);
+    assert_eq!(status(&changes, &c3), ChangeStatus::Paused);
+    assert_eq!(status(&changes, &c4), ChangeStatus::Local);
+    let outbox = space.outbox(0).await.expect("outbox");
+    assert_eq!(outbox.len(), 1);
+    assert_eq!(outbox[0].id, c4);
+    assert!(space.get(x_id).await.is_err(), "X was only created by c1");
+    assert!(space.get(y_id).await.is_err(), "Y was only created by c3");
+    space.get(z_id).await.expect("Z is untouched");
+    let listed = space.list(&ObjectFilter::default()).await.expect("list");
+    assert_eq!(listed.len(), 1);
+
+    // Retry brings everything back, in the outbox and in the live state.
+    let c1_again = space.retry_change(&c1).await.expect("retry");
+    assert_eq!(c1_again.status(), ChangeStatus::Local);
+    let changes = space.list_changes(0).await.expect("list");
+    assert_eq!(status(&changes, &c2), ChangeStatus::Local);
+    assert_eq!(status(&changes, &c3), ChangeStatus::Local);
+    assert_eq!(space.outbox(0).await.expect("outbox").len(), 4);
+    let x_live = space.get(x_id).await.expect("X is back");
+    assert_eq!(x_live.fields["title"], string_value("x"));
+    assert_eq!(x_live.fields["n"], int_value(1));
+    space.get(y_id).await.expect("Y is back");
+
+    // Reject again; only rejected Changes can be retried.
+    space.record_outcome(&c1, &refused).await.expect("record");
+    assert!(space.retry_change(&c4).await.is_err(), "c4 is not rejected");
+
+    // Discard drops the rejected Change and its paused dependents; the
+    // independent one is untouched.
+    let dropped = space.discard_change(&c1).await.expect("discard");
+    assert_eq!(dropped.len(), 3);
+    assert!(dropped.contains(&c1) && dropped.contains(&c2) && dropped.contains(&c3));
+    let changes = space.list_changes(0).await.expect("list");
+    assert_eq!(changes.len(), 1);
+    assert_eq!(changes[0].id, c4);
+    assert!(space.discard_change(&c1).await.is_err());
+}
+
+#[tokio::test]
+async fn rejected_edit_leaves_accepted_state_intact() {
+    let space_id = SpaceId::new();
+    let a = store("a4").await;
+    let server = store("server4").await;
+    for s in [&a, &server] {
+        s.register_space(space_id, "shared", Authority::Server)
+            .await
+            .expect("register");
+    }
+    let a_space = a.space(space_id).await.expect("a space");
+    let s_space = server.space(space_id).await.expect("server space");
+
+    // Creation accepted; the edit rejected: the object stays as accepted.
+    let doc = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 1).expect("doc");
+    doc.set_field("title", &string_value("accepted"))
+        .expect("set");
+    doc.touch(2).expect("touch");
+    let id = doc.id();
+    a_space.insert(&doc).await.expect("insert");
+    let outbox = a_space.outbox(0).await.expect("outbox");
+    let outcome = s_space.admit(&outbox[0]).await.expect("admit");
+    a_space
+        .record_outcome(&outbox[0].id, &outcome)
+        .await
+        .expect("record");
+    a_space
+        .update(id, |d| d.set_field("title", &string_value("rejected")))
+        .await
+        .expect("update");
+    let outbox = a_space.outbox(0).await.expect("outbox");
+    assert_eq!(outbox.len(), 1);
+    let changes = a_space.list_changes(0).await.expect("list");
+    assert!(
+        changes[0].depends_on.is_empty(),
+        "built on accepted state only"
+    );
+    a_space
+        .record_outcome(&outbox[0].id, &rejected(Reason::PermissionDenied, "no"))
+        .await
+        .expect("record");
+    let live = a_space.get(id).await.expect("get");
+    assert_eq!(live.fields["title"], string_value("accepted"));
+
+    // New work on the rebuilt document goes out on its own.
+    a_space
+        .update(id, |d| d.set_field("title", &string_value("repaired")))
+        .await
+        .expect("repair");
+    let outbox = a_space.outbox(0).await.expect("outbox");
+    assert_eq!(outbox.len(), 1);
+    let outcome = s_space.admit(&outbox[0]).await.expect("admit repair");
+    assert_eq!(outcome, Outcome::AcceptedSeq(2));
+    let on_server = s_space.get(id).await.expect("server get");
+    assert_eq!(on_server.fields["title"], string_value("repaired"));
 }

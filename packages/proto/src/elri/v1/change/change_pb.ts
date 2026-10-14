@@ -12,7 +12,139 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/change/change.proto.
  */
 export const file_elri_v1_change_change: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL2NoYW5nZS9jaGFuZ2UucHJvdG8SDmVscmkudjEuY2hhbmdlIjUKEkxpc3RDaGFuZ2VzUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRINCgVsaW1pdBgCIAEoBSI+ChNMaXN0Q2hhbmdlc1Jlc3BvbnNlEicKB2NoYW5nZXMYASADKAsyFi5lbHJpLnYxLmNoYW5nZS5DaGFuZ2UyZwoNQ2hhbmdlU2VydmljZRJWCgtMaXN0Q2hhbmdlcxIiLmVscmkudjEuY2hhbmdlLkxpc3RDaGFuZ2VzUmVxdWVzdBojLmVscmkudjEuY2hhbmdlLkxpc3RDaGFuZ2VzUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_change_domain]);
+  fileDesc("ChtlbHJpL3YxL2NoYW5nZS9jaGFuZ2UucHJvdG8SDmVscmkudjEuY2hhbmdlIjIKElJldHJ5Q2hhbmdlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI9ChNSZXRyeUNoYW5nZVJlc3BvbnNlEiYKBmNoYW5nZRgBIAEoCzIWLmVscmkudjEuY2hhbmdlLkNoYW5nZSI0ChREaXNjYXJkQ2hhbmdlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIqChVEaXNjYXJkQ2hhbmdlUmVzcG9uc2USEQoJZGlzY2FyZGVkGAEgAygJIjUKEkxpc3RDaGFuZ2VzUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRINCgVsaW1pdBgCIAEoBSI+ChNMaXN0Q2hhbmdlc1Jlc3BvbnNlEicKB2NoYW5nZXMYASADKAsyFi5lbHJpLnYxLmNoYW5nZS5DaGFuZ2UynQIKDUNoYW5nZVNlcnZpY2USVgoLTGlzdENoYW5nZXMSIi5lbHJpLnYxLmNoYW5nZS5MaXN0Q2hhbmdlc1JlcXVlc3QaIy5lbHJpLnYxLmNoYW5nZS5MaXN0Q2hhbmdlc1Jlc3BvbnNlElYKC1JldHJ5Q2hhbmdlEiIuZWxyaS52MS5jaGFuZ2UuUmV0cnlDaGFuZ2VSZXF1ZXN0GiMuZWxyaS52MS5jaGFuZ2UuUmV0cnlDaGFuZ2VSZXNwb25zZRJcCg1EaXNjYXJkQ2hhbmdlEiQuZWxyaS52MS5jaGFuZ2UuRGlzY2FyZENoYW5nZVJlcXVlc3QaJS5lbHJpLnYxLmNoYW5nZS5EaXNjYXJkQ2hhbmdlUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_change_domain]);
+
+/**
+ * @generated from message elri.v1.change.RetryChangeRequest
+ */
+export type RetryChangeRequest = Message<"elri.v1.change.RetryChangeRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id: string;
+};
+
+/**
+ * @generated from message elri.v1.change.RetryChangeRequest
+ */
+export type RetryChangeRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id?: string;
+};
+
+/**
+ * Describes the message elri.v1.change.RetryChangeRequest.
+ * Use `create(RetryChangeRequestSchema)` to create a new message.
+ */
+export const RetryChangeRequestSchema: GenMessage<RetryChangeRequest, {jsonType: RetryChangeRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_change_change, 0);
+
+/**
+ * @generated from message elri.v1.change.RetryChangeResponse
+ */
+export type RetryChangeResponse = Message<"elri.v1.change.RetryChangeResponse"> & {
+  /**
+   * @generated from field: elri.v1.change.Change change = 1;
+   */
+  change?: Change | undefined;
+};
+
+/**
+ * @generated from message elri.v1.change.RetryChangeResponse
+ */
+export type RetryChangeResponseJson = {
+  /**
+   * @generated from field: elri.v1.change.Change change = 1;
+   */
+  change?: ChangeJson;
+};
+
+/**
+ * Describes the message elri.v1.change.RetryChangeResponse.
+ * Use `create(RetryChangeResponseSchema)` to create a new message.
+ */
+export const RetryChangeResponseSchema: GenMessage<RetryChangeResponse, {jsonType: RetryChangeResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_change_change, 1);
+
+/**
+ * @generated from message elri.v1.change.DiscardChangeRequest
+ */
+export type DiscardChangeRequest = Message<"elri.v1.change.DiscardChangeRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id: string;
+};
+
+/**
+ * @generated from message elri.v1.change.DiscardChangeRequest
+ */
+export type DiscardChangeRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id?: string;
+};
+
+/**
+ * Describes the message elri.v1.change.DiscardChangeRequest.
+ * Use `create(DiscardChangeRequestSchema)` to create a new message.
+ */
+export const DiscardChangeRequestSchema: GenMessage<DiscardChangeRequest, {jsonType: DiscardChangeRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_change_change, 2);
+
+/**
+ * @generated from message elri.v1.change.DiscardChangeResponse
+ */
+export type DiscardChangeResponse = Message<"elri.v1.change.DiscardChangeResponse"> & {
+  /**
+   * Ids of every Change dropped, the requested one included. 
+   *
+   * @generated from field: repeated string discarded = 1;
+   */
+  discarded: string[];
+};
+
+/**
+ * @generated from message elri.v1.change.DiscardChangeResponse
+ */
+export type DiscardChangeResponseJson = {
+  /**
+   * Ids of every Change dropped, the requested one included. 
+   *
+   * @generated from field: repeated string discarded = 1;
+   */
+  discarded?: string[];
+};
+
+/**
+ * Describes the message elri.v1.change.DiscardChangeResponse.
+ * Use `create(DiscardChangeResponseSchema)` to create a new message.
+ */
+export const DiscardChangeResponseSchema: GenMessage<DiscardChangeResponse, {jsonType: DiscardChangeResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_change_change, 3);
 
 /**
  * @generated from message elri.v1.change.ListChangesRequest
@@ -53,7 +185,7 @@ export type ListChangesRequestJson = {
  * Use `create(ListChangesRequestSchema)` to create a new message.
  */
 export const ListChangesRequestSchema: GenMessage<ListChangesRequest, {jsonType: ListChangesRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_change_change, 0);
+  messageDesc(file_elri_v1_change_change, 4);
 
 /**
  * @generated from message elri.v1.change.ListChangesResponse
@@ -80,7 +212,7 @@ export type ListChangesResponseJson = {
  * Use `create(ListChangesResponseSchema)` to create a new message.
  */
 export const ListChangesResponseSchema: GenMessage<ListChangesResponse, {jsonType: ListChangesResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_change_change, 1);
+  messageDesc(file_elri_v1_change_change, 5);
 
 /**
  * Inspect the Changes a Space has recorded on this device. 
@@ -97,6 +229,29 @@ export const ChangeService: GenService<{
     methodKind: "unary";
     input: typeof ListChangesRequestSchema;
     output: typeof ListChangesResponseSchema;
+  },
+  /**
+   *
+   * Resubmits a rejected Change unchanged, with the same id and payload, and
+   * puts its operations and those of its paused dependents back into the
+   * live documents.
+   *
+   * @generated from rpc elri.v1.change.ChangeService.RetryChange
+   */
+  retryChange: {
+    methodKind: "unary";
+    input: typeof RetryChangeRequestSchema;
+    output: typeof RetryChangeResponseSchema;
+  },
+  /**
+   * Drops a rejected or paused Change and its paused dependents for good. 
+   *
+   * @generated from rpc elri.v1.change.ChangeService.DiscardChange
+   */
+  discardChange: {
+    methodKind: "unary";
+    input: typeof DiscardChangeRequestSchema;
+    output: typeof DiscardChangeResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_change_change, 0);

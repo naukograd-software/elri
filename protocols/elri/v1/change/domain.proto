@@ -35,6 +35,10 @@ message Change {
     repeated ChangePart parts = 6;
     /* Position in the Space log once accepted. */
     optional int64 accepted_seq = 7;
-    /* Why it was rejected, if it was. */
+    /* Why it was rejected, if it was; for a paused Change, which rejection
+       it waits on. */
     string rejection = 8;
+    /* Changes this one builds on: earlier unaccepted writes to the same
+       documents, and the creators of the Objects it refers to. */
+    repeated string depends_on = 9;
 }
