@@ -24,12 +24,13 @@ use std::collections::HashMap;
 
 use elri_proto::elri::v1::definition::{FieldKind, Publication, TypeField};
 use elri_proto::elri::v1::object::{
-    value, Object, ObjectKind, Participant, Placement, Value, ValueList, ValueMap,
+    value, Mark, Object, ObjectKind, Participant, Placement, RichText, Value, ValueList, ValueMap,
 };
 use elri_proto::elri::v1::ui::Node as UiNode;
 use loro::{
-    Container, ExportMode, LoroDoc, LoroMap, LoroMovableList, LoroText, LoroTree, LoroValue,
-    TreeID, TreeParentId, UpdateOptions, ValueOrContainer, VersionVector,
+    Container, ExpandType, ExportMode, LoroDoc, LoroMap, LoroMovableList, LoroText, LoroTree,
+    LoroValue, StyleConfig, StyleConfigMap, TextDelta, TreeID, TreeParentId, UpdateOptions,
+    ValueOrContainer, VersionVector,
 };
 use uuid::Uuid;
 
@@ -151,6 +152,10 @@ pub fn kind_accepts(kind: FieldKind, v: &Value) -> bool {
             | (FieldKind::Text, Some(value::Value::Text(_)))
             | (FieldKind::List, Some(value::Value::List(_)))
             | (FieldKind::Map, Some(value::Value::Map(_)))
+            | (
+                FieldKind::RichText,
+                Some(value::Value::Rich(_) | value::Value::Text(_))
+            )
     )
 }
 
@@ -159,7 +164,12 @@ pub fn kind_accepts(kind: FieldKind, v: &Value) -> bool {
 pub fn is_scalar(v: &Value) -> bool {
     !matches!(
         v.value,
-        Some(value::Value::Text(_) | value::Value::List(_) | value::Value::Map(_)) | None
+        Some(
+            value::Value::Text(_)
+                | value::Value::List(_)
+                | value::Value::Map(_)
+                | value::Value::Rich(_)
+        ) | None
     )
 }
 
@@ -207,7 +217,10 @@ pub fn value_to_loro(v: &Value) -> Option<LoroValue> {
         value::Value::String(s) => LoroValue::from(s.as_str()),
         value::Value::TimeMs(ms) => tagged(TIME_TAG, LoroValue::from(*ms)),
         value::Value::Ref(id) => tagged(REF_TAG, LoroValue::from(id.as_str())),
-        value::Value::Text(_) | value::Value::List(_) | value::Value::Map(_) => return None,
+        value::Value::Text(_)
+        | value::Value::List(_)
+        | value::Value::Map(_)
+        | value::Value::Rich(_) => return None,
     })
 }
 
@@ -264,6 +277,16 @@ pub fn int_value(i: i64) -> Value {
 pub fn bool_value(b: bool) -> Value {
     Value {
         value: Some(value::Value::Bool(b)),
+    }
+}
+
+/// Shorthand for a rich text value.
+pub fn rich_value(text: impl Into<String>, marks: Vec<Mark>) -> Value {
+    Value {
+        value: Some(value::Value::Rich(RichText {
+            text: text.into(),
+            marks,
+        })),
     }
 }
 
@@ -355,7 +378,7 @@ impl ObjectDoc {
         now_ms: i64,
     ) -> Result<Self, ModelError> {
         let doc = LoroDoc::new();
-        doc.set_record_timestamp(true);
+        configure(&doc);
         let meta = doc.get_map("meta");
         meta.insert("kind", i64::from(kind as i32))?;
         meta.insert("space", space.to_string())?;
@@ -381,7 +404,7 @@ impl ObjectDoc {
     /// Loads a document from a snapshot.
     pub fn from_snapshot(id: ObjectId, bytes: &[u8]) -> Result<Self, ModelError> {
         let doc = LoroDoc::from_snapshot(bytes)?;
-        doc.set_record_timestamp(true);
+        configure(&doc);
         Ok(Self { id, doc })
     }
 
@@ -405,7 +428,7 @@ impl ObjectDoc {
     /// creation). Fails if the updates do not form a complete history.
     pub fn from_updates(id: ObjectId, updates: &[Vec<u8>]) -> Result<Self, ModelError> {
         let doc = LoroDoc::new();
-        doc.set_record_timestamp(true);
+        configure(&doc);
         let status = doc.import_batch(updates)?;
         if status.pending.is_some() {
             return Err(ModelError::Malformed("updates with missing predecessors"));
@@ -599,6 +622,13 @@ impl ObjectDoc {
                     .map_err(|_| ModelError::TextTimeout(field_id.to_owned()))?;
                 Ok(())
             }
+            Some(value::Value::Rich(r)) => {
+                let text = self.text_container(field_id)?;
+                text.update(&r.text, UpdateOptions::default())
+                    .map_err(|_| ModelError::TextTimeout(field_id.to_owned()))?;
+                apply_marks(&text, &r.marks)?;
+                Ok(())
+            }
             Some(value::Value::List(l)) => {
                 let mut items = Vec::with_capacity(l.items.len());
                 for it in &l.items {
@@ -744,7 +774,12 @@ impl ObjectDoc {
                 let value = match self.fields().get(key) {
                     Some(ValueOrContainer::Value(v)) => value_from_loro(&v),
                     Some(ValueOrContainer::Container(Container::Text(t))) => {
-                        Some(text_value(t.to_string()))
+                        let marks = marks_of(&t);
+                        if marks.is_empty() {
+                            Some(text_value(t.to_string()))
+                        } else {
+                            Some(rich_value(t.to_string(), marks))
+                        }
                     }
                     Some(ValueOrContainer::Container(Container::MovableList(l))) => {
                         let items: Option<Vec<Value>> =
@@ -965,6 +1000,113 @@ fn write_ui_meta(meta: &LoroMap, node: &UiNode) -> Result<(), ModelError> {
     Ok(())
 }
 
+/// Per-document settings every instance gets: timestamps on commits and
+/// the rich-text styles. Known styles expand the way editors expect; any
+/// other key behaves like a plain style that typing at its end extends.
+fn configure(doc: &LoroDoc) {
+    doc.set_record_timestamp(true);
+    doc.config_text_style(StyleConfigMap::default_rich_text_config());
+    doc.config_default_text_style(Some(StyleConfig {
+        expand: ExpandType::After,
+    }));
+}
+
+/// The marks of a text as ranges in Unicode scalars, adjacent equal runs
+/// merged, in order of start.
+fn marks_of(text: &LoroText) -> Vec<Mark> {
+    let mut out: Vec<Mark> = Vec::new();
+    let mut pos: usize = 0;
+    for delta in text.to_delta() {
+        let TextDelta::Insert { insert, attributes } = delta else {
+            continue;
+        };
+        let len = insert.chars().count();
+        if let Some(attrs) = attributes {
+            let mut keys: Vec<_> = attrs.iter().collect();
+            keys.sort_by(|a, b| a.0.cmp(b.0));
+            for (key, value) in keys {
+                if matches!(value, LoroValue::Null) {
+                    continue;
+                }
+                let value_json = loro_json(value);
+                let start = i32::try_from(pos).unwrap_or(i32::MAX);
+                let end = i32::try_from(pos + len).unwrap_or(i32::MAX);
+                if let Some(last) = out
+                    .iter_mut()
+                    .find(|m| m.key == *key && m.value_json == value_json && m.end == start)
+                {
+                    last.end = end;
+                } else {
+                    out.push(Mark {
+                        start,
+                        end,
+                        key: key.clone(),
+                        value_json,
+                    });
+                }
+            }
+        }
+        pos += len;
+    }
+    out.sort_by_key(|m| (m.start, m.key.clone()));
+    out
+}
+
+/// Makes the text carry exactly `target`: marks not wanted are lifted,
+/// wanted ones not there are set. Untouched marks keep their history.
+fn apply_marks(text: &LoroText, target: &[Mark]) -> Result<(), ModelError> {
+    let current = marks_of(text);
+    let same = |a: &Mark, b: &Mark| {
+        a.start == b.start && a.end == b.end && a.key == b.key && a.value_json == b.value_json
+    };
+    let len = text.len_unicode();
+    for m in &current {
+        if !target.iter().any(|t| same(t, m)) {
+            let (s, e) = clamp(m, len);
+            if s < e {
+                text.unmark(s..e, &m.key)?;
+            }
+        }
+    }
+    for m in target {
+        if !current.iter().any(|c| same(c, m)) {
+            let (s, e) = clamp(m, len);
+            if s < e {
+                text.mark(s..e, &m.key, json_loro(&m.value_json))?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn clamp(m: &Mark, len: usize) -> (usize, usize) {
+    let s = usize::try_from(m.start).unwrap_or(0).min(len);
+    let e = usize::try_from(m.end).unwrap_or(0).min(len);
+    (s, e)
+}
+
+fn loro_json(v: &LoroValue) -> String {
+    match v {
+        LoroValue::Bool(b) => b.to_string(),
+        LoroValue::I64(i) => i.to_string(),
+        LoroValue::Double(d) => d.to_string(),
+        LoroValue::String(s) => serde_json::Value::String(s.to_string()).to_string(),
+        other => format!("{other:?}"),
+    }
+}
+
+fn json_loro(s: &str) -> LoroValue {
+    match serde_json::from_str::<serde_json::Value>(s) {
+        Ok(serde_json::Value::Bool(b)) => LoroValue::from(b),
+        Ok(serde_json::Value::Number(n)) => n.as_i64().map_or_else(
+            || LoroValue::from(n.as_f64().unwrap_or(0.0)),
+            LoroValue::from,
+        ),
+        Ok(serde_json::Value::String(t)) => LoroValue::from(t.as_str()),
+        _ => LoroValue::from(true),
+    }
+}
+
 /// Turns `list` into `target` with the fewest insertions and deletions, so
 /// that concurrent edits to untouched items still merge.
 fn apply_list_diff(list: &LoroMovableList, target: &[LoroValue]) -> Result<(), ModelError> {
@@ -1090,6 +1232,94 @@ mod tests {
         let rec = layer.read().expect("ok");
         assert_eq!(rec.kind(), ObjectKind::Layer);
         assert_eq!(rec.target_id.as_deref(), Some(a.to_string().as_str()));
+    }
+
+    #[test]
+    fn rich_text_marks_survive_edits_and_merge() {
+        let space = ObjectId::new();
+        let doc = ObjectDoc::create(ObjectId::new(), space, ObjectKind::Entity, 1).expect("ok");
+        let bold = Mark {
+            start: 0,
+            end: 5,
+            key: "bold".into(),
+            value_json: "true".into(),
+        };
+        let link = Mark {
+            start: 6,
+            end: 11,
+            key: "link".into(),
+            value_json: "\"https://x\"".into(),
+        };
+        doc.set_field(
+            "body",
+            &rich_value("hello world", vec![bold.clone(), link.clone()]),
+        )
+        .expect("ok");
+        doc.touch(2).expect("ok");
+        let Some(value::Value::Rich(r)) = doc.read().expect("ok").fields["body"].value.clone()
+        else {
+            unreachable!("rich text was written");
+        };
+        assert_eq!(r.text, "hello world");
+        assert_eq!(r.marks, vec![bold.clone(), link.clone()]);
+
+        // Another replica inserts before the marks; they move with the text.
+        let other = ObjectDoc::from_snapshot(doc.id(), &doc.snapshot().expect("ok")).expect("ok");
+        let before = other.version_vector();
+        other
+            .set_field("body", &text_value("oh hello world"))
+            .expect("ok");
+        other.touch(3).expect("ok");
+        // Meanwhile this replica lifts the link and sets italic.
+        let italic = Mark {
+            start: 6,
+            end: 11,
+            key: "italic".into(),
+            value_json: "true".into(),
+        };
+        doc.set_field(
+            "body",
+            &rich_value("hello world", vec![bold.clone(), italic]),
+        )
+        .expect("ok");
+        doc.touch(3).expect("ok");
+        doc.import(&other.updates_since(&before).expect("ok"))
+            .expect("ok");
+        let Some(value::Value::Rich(r)) = doc.read().expect("ok").fields["body"].value.clone()
+        else {
+            unreachable!("rich text");
+        };
+        assert_eq!(r.text, "oh hello world");
+        let keys: Vec<(String, i32, i32)> = r
+            .marks
+            .iter()
+            .map(|m| (m.key.clone(), m.start, m.end))
+            .collect();
+        assert_eq!(
+            keys,
+            vec![("bold".into(), 3, 8), ("italic".into(), 9, 14)],
+            "{:?}",
+            r.marks
+        );
+
+        // Plain text written over rich text keeps the marks; a rich value
+        // without marks lifts them.
+        doc.set_field("body", &text_value("oh hello world!"))
+            .expect("ok");
+        doc.touch(4).expect("ok");
+        assert!(matches!(
+            doc.read().expect("ok").fields["body"].value,
+            Some(value::Value::Rich(_))
+        ));
+        doc.set_field("body", &rich_value("oh hello world!", vec![]))
+            .expect("ok");
+        doc.touch(5).expect("ok");
+        assert_eq!(
+            doc.read().expect("ok").fields["body"],
+            text_value("oh hello world!")
+        );
+        assert!(kind_accepts(FieldKind::RichText, &text_value("x")));
+        assert!(!kind_accepts(FieldKind::Text, &rich_value("x", vec![])));
     }
 
     #[test]

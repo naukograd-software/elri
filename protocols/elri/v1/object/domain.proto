@@ -33,6 +33,23 @@ message ValueList {
     repeated Value items = 1;
 }
 
+/* One formatting mark over a range of rich text, in Unicode scalar offsets. */
+message Mark {
+    int32 start = 1;
+    int32 end = 2;
+    /* `bold`, `italic`, `underline`, `link`, `comment`, or any other key. */
+    string key = 3;
+    /* The mark's value as JSON: `true` for a plain style, a string for a link. */
+    string value_json = 4;
+}
+
+/* Collaborative text with formatting marks. Text edits merge character by
+   character; marks merge by range and survive edits around them. */
+message RichText {
+    string text = 1;
+    repeated Mark marks = 2;
+}
+
 /* Entries of a map value; scalars only. Concurrent edits to different keys
    both land; the same key is last-writer-wins. */
 message ValueMap {
@@ -62,6 +79,7 @@ message Value {
         string text = 7;
         ValueList list = 8;
         ValueMap map = 9;
+        RichText rich = 10;
     }
 }
 

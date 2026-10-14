@@ -24,6 +24,8 @@ enum FieldKind {
     FIELD_KIND_LIST = 8;
     /* String-keyed map of scalars. */
     FIELD_KIND_MAP = 9;
+    /* Collaborative text with formatting marks; plain text values fit too. */
+    FIELD_KIND_RICH_TEXT = 10;
 }
 
 message FieldDefinition {

@@ -656,6 +656,13 @@ fn value_json(v: &Value) -> serde_json::Value {
         Some(value::Value::TimeMs(t)) => json!({ "time_ms": t }),
         Some(value::Value::Ref(r)) => json!({ "ref": r }),
         Some(value::Value::Text(t)) => json!({ "text": t }),
+        Some(value::Value::Rich(r)) => json!({
+            "text": r.text,
+            "marks": r.marks.iter().map(|m| json!({
+                "start": m.start, "end": m.end, "key": m.key,
+                "value": serde_json::from_str::<serde_json::Value>(&m.value_json).unwrap_or(json!(m.value_json)),
+            })).collect::<Vec<_>>(),
+        }),
         Some(value::Value::List(l)) => json!(l.items.iter().map(value_json).collect::<Vec<_>>()),
         Some(value::Value::Map(m)) => json!(m
             .entries

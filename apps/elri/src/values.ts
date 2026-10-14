@@ -13,6 +13,7 @@ export type ValueKind =
   | 'ref'
   | 'list'
   | 'map'
+  | 'rich'
 
 export const VALUE_KINDS: ValueKind[] = [
   'string',
@@ -24,6 +25,7 @@ export const VALUE_KINDS: ValueKind[] = [
   'ref',
   'list',
   'map',
+  'rich',
 ]
 
 export function kindOf(v: Value): ValueKind {
@@ -44,6 +46,8 @@ export function kindOf(v: Value): ValueKind {
       return 'list'
     case 'map':
       return 'map'
+    case 'rich':
+      return 'rich'
     default:
       return 'string'
   }
@@ -67,6 +71,8 @@ export function textOf(v: Value): string {
       return v.value.value
     case 'list':
       return v.value.value.items.map(textOf).join(', ')
+    case 'rich':
+      return v.value.value.text
     case 'map':
       return Object.entries(v.value.value.entries)
         .map(([k, x]) => `${k}=${textOf(x)}`)
@@ -127,5 +133,9 @@ export function parseValue(kind: ValueKind, text: string): Value | string {
       }
       return create(ValueSchema, { value: { case: 'map', value: { entries } } })
     }
+    case 'rich':
+      // Marks are kept by the core across text edits; the inspector edits
+      // the text only.
+      return create(ValueSchema, { value: { case: 'rich', value: { text, marks: [] } } })
   }
 }

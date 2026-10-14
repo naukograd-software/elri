@@ -6,6 +6,29 @@ pub struct ValueList {
     #[prost(message, repeated, tag = "1")]
     pub items: ::prost::alloc::vec::Vec<Value>,
 }
+/// One formatting mark over a range of rich text, in Unicode scalar offsets. 
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Mark {
+    #[prost(int32, tag = "1")]
+    pub start: i32,
+    #[prost(int32, tag = "2")]
+    pub end: i32,
+    /// `bold`, `italic`, `underline`, `link`, `comment`, or any other key. 
+    #[prost(string, tag = "3")]
+    pub key: ::prost::alloc::string::String,
+    /// The mark's value as JSON: `true` for a plain style, a string for a link. 
+    #[prost(string, tag = "4")]
+    pub value_json: ::prost::alloc::string::String,
+}
+/// Collaborative text with formatting marks. Text edits merge character by
+/// character; marks merge by range and survive edits around them. 
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct RichText {
+    #[prost(string, tag = "1")]
+    pub text: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag = "2")]
+    pub marks: ::prost::alloc::vec::Vec<Mark>,
+}
 /// Entries of a map value; scalars only. Concurrent edits to different keys
 /// both land; the same key is last-writer-wins. 
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -24,7 +47,7 @@ pub struct ValueMap {
 /// deletions.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Value {
-    #[prost(oneof = "value::Value", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9")]
+    #[prost(oneof = "value::Value", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9, 10")]
     pub value: ::core::option::Option<value::Value>,
 }
 /// Nested message and enum types in `Value`.
@@ -51,6 +74,8 @@ pub mod value {
         List(super::ValueList),
         #[prost(message, tag = "9")]
         Map(super::ValueMap),
+        #[prost(message, tag = "10")]
+        Rich(super::RichText),
     }
 }
 /// One participant of a Relation. 

@@ -136,6 +136,8 @@ pub enum FieldKind {
     List = 8,
     /// String-keyed map of scalars. 
     Map = 9,
+    /// Collaborative text with formatting marks; plain text values fit too. 
+    RichText = 10,
 }
 impl FieldKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -154,6 +156,7 @@ impl FieldKind {
             Self::Text => "FIELD_KIND_TEXT",
             Self::List => "FIELD_KIND_LIST",
             Self::Map => "FIELD_KIND_MAP",
+            Self::RichText => "FIELD_KIND_RICH_TEXT",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -169,6 +172,7 @@ impl FieldKind {
             "FIELD_KIND_TEXT" => Some(Self::Text),
             "FIELD_KIND_LIST" => Some(Self::List),
             "FIELD_KIND_MAP" => Some(Self::Map),
+            "FIELD_KIND_RICH_TEXT" => Some(Self::RichText),
             _ => None,
         }
     }

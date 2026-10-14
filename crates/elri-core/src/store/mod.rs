@@ -2660,6 +2660,7 @@ async fn write_projections(
             Some(value::Value::TimeMs(t)) => row.v_time = Some(*t),
             Some(value::Value::Ref(r)) => row.v_ref = Some(uuid_arg(r)?),
             Some(value::Value::Text(t)) => row.v_text = Some(t.clone()),
+            Some(value::Value::Rich(r)) => row.v_text = Some(r.text.clone()),
             // Lists and maps are not projected; they are read from the document.
             Some(value::Value::List(_) | value::Value::Map(_)) | None => continue,
         }

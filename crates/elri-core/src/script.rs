@@ -775,6 +775,21 @@ fn value_to_lua(lua: &Lua, v: &Value) -> mlua::Result<LuaValue> {
             }
             LuaValue::Table(entries)
         }
+        Some(value::Value::Rich(r)) => {
+            let t = lua.create_table()?;
+            t.set("text", r.text.clone())?;
+            let marks = lua.create_table()?;
+            for (i, m) in r.marks.iter().enumerate() {
+                let mt = lua.create_table()?;
+                mt.set("start", m.start)?;
+                mt.set("end", m.end)?;
+                mt.set("key", m.key.clone())?;
+                mt.set("value", m.value_json.clone())?;
+                marks.set(i + 1, mt)?;
+            }
+            t.set("marks", marks)?;
+            LuaValue::Table(t)
+        }
         None => LuaValue::Nil,
     })
 }
@@ -792,7 +807,27 @@ fn value_from_lua(v: LuaValue) -> mlua::Result<Option<Value>> {
             } else if let Some(ms) = t.get::<Option<i64>>("time")? {
                 value::Value::TimeMs(ms)
             } else if let Some(text) = t.get::<Option<String>>("text")? {
-                value::Value::Text(text)
+                match t.get::<Option<Table>>("marks")? {
+                    Some(marks) => {
+                        let mut out = Vec::new();
+                        for m in marks.sequence_values::<Table>() {
+                            let m = m?;
+                            out.push(elri_proto::elri::v1::object::Mark {
+                                start: m.get("start")?,
+                                end: m.get("end")?,
+                                key: m.get("key")?,
+                                value_json: m
+                                    .get::<Option<String>>("value")?
+                                    .unwrap_or_else(|| "true".to_owned()),
+                            });
+                        }
+                        value::Value::Rich(elri_proto::elri::v1::object::RichText {
+                            text,
+                            marks: out,
+                        })
+                    }
+                    None => value::Value::Text(text),
+                }
             } else {
                 // A table with any string key is a map; otherwise a list.
                 let mut entries = HashMap::new();
