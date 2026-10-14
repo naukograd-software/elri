@@ -17,7 +17,7 @@ use elri_proto::elri::v1::ai::agent_service_ws::AgentServiceClient;
 use elri_proto::elri::v1::ai::ai_service_ws::AiServiceClient;
 use elri_proto::elri::v1::ai::{
     turn_event, Agent, CreateAgentRequest, GetConversationRequest, GetSignInRequest,
-    ListModelsRequest, MessageRole, SendRequest, SignInState, SignOutRequest,
+    GrantAgentRequest, ListModelsRequest, MessageRole, SendRequest, SignInState, SignOutRequest,
     StartConversationRequest, StartSignInRequest, TurnEvent,
 };
 use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
@@ -533,7 +533,7 @@ async fn sign_in_with_chatgpt_and_run_an_agent() {
         "short-lived tokens refresh"
     );
 
-    // An agent of this Space only: benign, so granted under the policy.
+    // Even an agent of this Space only waits for the user's grant.
     let agent = agents
         .create_agent(a.req(CreateAgentRequest {
             space_id: space.clone(),
@@ -548,7 +548,7 @@ async fn sign_in_with_chatgpt_and_run_an_agent() {
         .msg
         .agent
         .expect("agent");
-    assert!(agent.benign);
+    assert!(!agent.benign);
     let chat = agents
         .start_conversation(a.req(StartConversationRequest {
             space_id: space.clone(),
@@ -560,6 +560,22 @@ async fn sign_in_with_chatgpt_and_run_an_agent() {
         .msg
         .conversation
         .expect("conversation");
+    let refused = turn(&agents, &a, &space, &chat.id, "hello").await;
+    match refused.last().and_then(|e| e.event.as_ref()) {
+        Some(turn_event::Event::Error(e)) => {
+            assert_eq!(e.code, "consent");
+            assert!(e.message.contains("not granted"), "{}", e.message);
+        }
+        other => panic!("expected a consent error, got {other:?}"),
+    }
+    agents
+        .grant_agent(a.req(GrantAgentRequest {
+            space_id: space.clone(),
+            agent_id: agent.id.clone(),
+            expected_version: agent.version.clone(),
+        }))
+        .await
+        .expect("grant");
 
     let events = turn(&agents, &a, &space, &chat.id, "make a note").await;
     let kinds: Vec<&str> = events

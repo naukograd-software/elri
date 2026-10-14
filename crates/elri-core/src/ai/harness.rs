@@ -92,7 +92,6 @@ pub fn agent_version(a: &Agent) -> String {
 pub fn agent_of(o: &Object) -> Agent {
     let manifest = script::manifest_from_json(string_field(o, field::MANIFEST).unwrap_or("{}"))
         .unwrap_or_default();
-    let space = ObjectId::parse(&o.space_id).unwrap_or_else(|_| ObjectId::new());
     let mut a = Agent {
         id: o.id.clone(),
         space_id: o.space_id.clone(),
@@ -106,7 +105,10 @@ pub fn agent_of(o: &Object) -> Agent {
         instructions: text_of(o, field::INSTRUCTIONS),
         prompt_ids: json_list(o, field::PROMPTS),
         skills: json_list(o, field::SKILLS),
-        benign: script::is_benign(space, &manifest),
+        // Never benign: every turn sends the Space to the provider, and an
+        // agent may rewrite its own instructions, so each version waits
+        // for the user's grant.
+        benign: false,
         manifest: Some(manifest),
         version: String::new(),
         created_at_ms: o.created_at_ms,

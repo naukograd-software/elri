@@ -160,8 +160,17 @@ fn require_token(token: LaunchToken, agent_token: LaunchToken, next: Handler) ->
             .then(|| stream.header().get(ACTOR_HEADER).cloned())
             .flatten()
             .filter(|a| a.starts_with("agent:"));
+        // The same gate the harness applies, so a call carrying the agent
+        // token can never reach a method agents are denied.
+        let gated =
+            agent.is_some() && !crate::ai::call::allowed(stream.method().trim_start_matches('/'));
         Box::pin(async move {
-            if let Some(actor) = agent {
+            if gated {
+                Err(Status::new(
+                    Code::PermissionDenied,
+                    "this method is not available to agents",
+                ))
+            } else if let Some(actor) = agent {
                 crate::store::with_actor(actor, next(stream)).await
             } else if ok {
                 next(stream).await
