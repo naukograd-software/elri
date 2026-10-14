@@ -368,6 +368,26 @@ pub struct ExtensionRow {
     pub installed_at: i64,
 }
 
+/// One execution of a rule on this device.
+#[derive(Debug, toasty::Model)]
+#[table = "rule_runs"]
+#[index(rule_id, started_at)]
+pub struct RuleRunRow {
+    /// Run id.
+    #[key]
+    pub id: Uuid,
+    /// The rule.
+    pub rule_id: Uuid,
+    /// Start instant.
+    pub started_at: i64,
+    /// How long it took.
+    pub duration_ms: i64,
+    /// `event` or `schedule`.
+    pub cause: String,
+    /// Empty when the run succeeded.
+    pub error: String,
+}
+
 /// Device-wide settings: small named values.
 #[derive(Debug, toasty::Model)]
 #[table = "settings"]

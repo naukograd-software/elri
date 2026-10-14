@@ -84,7 +84,23 @@ fn context_of(o: &Object) -> Context {
     }
 }
 
+/// Bounds on a selection, so resolving one is a handful of queries.
+const MAX_SPACES: usize = 32;
+const MAX_TYPES: usize = 32;
+const MAX_HIDDEN: usize = 10_000;
+
 fn check_selection(s: &Selection) -> Result<(), Status> {
+    if s.space_ids.len() > MAX_SPACES {
+        return Err(invalid(format!("selection: at most {MAX_SPACES} spaces")));
+    }
+    if s.type_ids.len() > MAX_TYPES {
+        return Err(invalid(format!("selection: at most {MAX_TYPES} types")));
+    }
+    if s.hidden_ids.len() > MAX_HIDDEN {
+        return Err(invalid(format!(
+            "selection: at most {MAX_HIDDEN} hidden objects"
+        )));
+    }
     for id in s
         .space_ids
         .iter()
@@ -222,33 +238,43 @@ impl ContextServiceHandler for Services {
                 .collect()
         };
         let hidden: BTreeSet<&str> = sel.hidden_ids.iter().map(String::as_str).collect();
-        let mut objects = Vec::new();
+        let mut seen: BTreeSet<String> = BTreeSet::new();
+        let mut objects: Vec<Object> = Vec::new();
         let mut missing = Vec::new();
-        for s in spaces {
+        // Kinds and types are deduplicated so a selection cannot multiply
+        // the queries; the loops stop once the limit is reached.
+        let kinds: BTreeSet<i32> = kinds.iter().map(|k| *k as i32).collect();
+        let kinds: Vec<ObjectKind> = kinds
+            .into_iter()
+            .filter_map(|k| ObjectKind::try_from(k).ok())
+            .collect();
+        let type_ids: BTreeSet<String> = sel.type_ids.iter().cloned().collect();
+        'spaces: for s in spaces {
             let Ok(store) = self.store.space(s).await else {
                 missing.push(s.to_string());
                 continue;
             };
             for kind in &kinds {
                 // One query per type when types are named, one otherwise.
-                let type_filters: Vec<Option<String>> = if sel.type_ids.is_empty() {
+                let type_filters: Vec<Option<String>> = if type_ids.is_empty() {
                     vec![None]
                 } else {
-                    sel.type_ids.iter().cloned().map(Some).collect()
+                    type_ids.iter().cloned().map(Some).collect()
                 };
                 for type_id in type_filters {
+                    if objects.len() >= limit {
+                        break 'spaces;
+                    }
                     let found = store
                         .list(&ObjectFilter {
                             kind: Some(*kind),
                             type_id,
-                            limit,
+                            limit: limit - objects.len(),
                             ..ObjectFilter::default()
                         })
                         .await?;
                     for o in found {
-                        if hidden.contains(o.id.as_str())
-                            || objects.iter().any(|x: &Object| x.id == o.id)
-                        {
+                        if hidden.contains(o.id.as_str()) || !seen.insert(o.id.clone()) {
                             continue;
                         }
                         objects.push(o);

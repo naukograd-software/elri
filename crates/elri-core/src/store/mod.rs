@@ -20,7 +20,7 @@ use elri_proto::elri::v1::events::{
     event, ChangeEvent, Event, ObjectEvent, RemoteEvent, SpaceEvent,
 };
 use elri_proto::elri::v1::object::{value, Object, ObjectKind, Value as PbValue};
-use elri_proto::elri::v1::script::Grant;
+use elri_proto::elri::v1::script::{Grant, RuleRun};
 use elri_proto::elri::v1::space::{Authority, Role, Space};
 use elri_proto::elri::v1::sync::{Entry, Envelope, Part};
 use loro::VersionVector;
@@ -39,7 +39,8 @@ use crate::model::{
 use models::{
     BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, ExtensionRow,
     FieldValueRow, GrantRow, GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow,
-    PinRow, PlacementRow, RemoteRow, SettingRow, SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
+    PinRow, PlacementRow, RemoteRow, RuleRunRow, SettingRow, SpaceLogRow, SpaceRow, SyncStateRow,
+    TypeFieldRow,
 };
 
 mod coordinator;
@@ -247,7 +248,8 @@ impl Store {
                 JournalRow,
                 GrantRow,
                 SettingRow,
-                ExtensionRow
+                ExtensionRow,
+                RuleRunRow
             ),
         )
         .await?;
@@ -360,6 +362,78 @@ impl Store {
             count += space.purge_expired(now).await?.len();
         }
         Ok(count)
+    }
+
+    // --- rule runs ----------------------------------------------------------
+
+    /// Records a rule run; the last 200 per rule are kept.
+    pub async fn record_rule_run(&self, run: &RuleRun) -> Result<(), StoreError> {
+        let rule_id = uuid_arg(&run.rule_id)?;
+        let mut db = self.device.lock().await;
+        toasty::create!(RuleRunRow {
+            id: Uuid::now_v7(),
+            rule_id,
+            started_at: run.started_at_ms,
+            duration_ms: run.duration_ms,
+            cause: run.cause.clone(),
+            error: run.error.clone(),
+        })
+        .exec(&mut *db)
+        .await?;
+        let mut rows = RuleRunRow::filter(RuleRunRow::fields().rule_id().eq(rule_id))
+            .exec(&mut *db)
+            .await?;
+        if rows.len() > 200 {
+            rows.sort_by_key(|r| r.started_at);
+            for old in &rows[..rows.len() - 200] {
+                RuleRunRow::filter_by_id(old.id)
+                    .delete()
+                    .exec(&mut *db)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Runs of a rule, newest first.
+    pub async fn rule_runs(
+        &self,
+        rule_id: ObjectId,
+        limit: usize,
+    ) -> Result<Vec<RuleRun>, StoreError> {
+        let limit = if limit == 0 { 50 } else { limit };
+        let mut db = self.device.lock().await;
+        let mut rows = RuleRunRow::filter(RuleRunRow::fields().rule_id().eq(rule_id.uuid()))
+            .exec(&mut *db)
+            .await?;
+        rows.sort_by_key(|r| std::cmp::Reverse(r.started_at));
+        rows.truncate(limit);
+        Ok(rows
+            .into_iter()
+            .map(|r| RuleRun {
+                rule_id: rule_id.to_string(),
+                started_at_ms: r.started_at,
+                duration_ms: r.duration_ms,
+                cause: r.cause,
+                error: r.error,
+            })
+            .collect())
+    }
+
+    /// When a rule last ran on a schedule here; 0 = never.
+    pub async fn rule_last_scheduled(&self, rule_id: ObjectId) -> Result<i64, StoreError> {
+        self.setting(&format!("rule_last_scheduled:{rule_id}"), 0)
+            .await
+    }
+
+    /// Records a scheduled run instant.
+    pub async fn set_rule_last_scheduled(
+        &self,
+        rule_id: ObjectId,
+        at: i64,
+    ) -> Result<(), StoreError> {
+        self.set_setting(&format!("rule_last_scheduled:{rule_id}"), at)
+            .await
     }
 
     // --- extensions -------------------------------------------------------
@@ -1474,13 +1548,46 @@ impl SpaceStore {
 
     /// Changes recorded in this Space, newest first, without payloads.
     pub async fn list_changes(&self, limit: usize) -> Result<Vec<Change>, StoreError> {
+        self.list_changes_of(limit, None).await
+    }
+
+    /// Changes newest first, only those that touched `object` when given:
+    /// an Object's history.
+    pub async fn list_changes_of(
+        &self,
+        limit: usize,
+        object: Option<ObjectId>,
+    ) -> Result<Vec<Change>, StoreError> {
         let limit = if limit == 0 { 50 } else { limit };
         let mut db = self.db.lock().await;
-        let rows = ChangeRow::all()
-            .order_by(ChangeRow::fields().seq().desc())
-            .limit(limit)
-            .exec(&mut *db)
-            .await?;
+        let rows = match object {
+            None => {
+                ChangeRow::all()
+                    .order_by(ChangeRow::fields().seq().desc())
+                    .limit(limit)
+                    .exec(&mut *db)
+                    .await?
+            }
+            Some(id) => {
+                let parts =
+                    ChangePartRow::filter(ChangePartRow::fields().object_id().eq(id.uuid()))
+                        .exec(&mut *db)
+                        .await?;
+                let mut rows = Vec::with_capacity(parts.len());
+                for p in parts {
+                    if let Some(row) = ChangeRow::filter(ChangeRow::fields().id().eq(p.change_id))
+                        .first()
+                        .exec(&mut *db)
+                        .await?
+                    {
+                        rows.push(row);
+                    }
+                }
+                rows.sort_by_key(|r| std::cmp::Reverse(r.seq));
+                rows.truncate(limit);
+                rows
+            }
+        };
         let mut changes = Vec::with_capacity(rows.len());
         for row in &rows {
             changes.push(read_change(&mut db, self.id, row).await?);

@@ -41,6 +41,8 @@ message ListChangesRequest {
     string space_id = 1;
     /* 0 = server default. */
     int32 limit = 2;
+    /* Only Changes that touched this Object: its history, newest first. */
+    string object_id = 3;
 }
 
 message ListChangesResponse {

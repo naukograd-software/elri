@@ -32,6 +32,19 @@ service RuleService {
     rpc CreateRule(CreateRuleRequest) returns (CreateRuleResponse);
     rpc UpdateRule(UpdateRuleRequest) returns (UpdateRuleResponse);
     rpc ListRules(ListRulesRequest) returns (ListRulesResponse);
+    /* Recent runs of a rule on this device, newest first. */
+    rpc ListRuleRuns(ListRuleRunsRequest) returns (ListRuleRunsResponse);
+}
+
+message ListRuleRunsRequest {
+    string space_id = 1;
+    string id = 2;
+    /* 0 = default. */
+    int32 limit = 3;
+}
+
+message ListRuleRunsResponse {
+    repeated RuleRun runs = 1;
 }
 
 message CreateScriptRequest {

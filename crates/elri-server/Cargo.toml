@@ -32,6 +32,9 @@ uuid.workspace = true
 rand.workspace = true
 sha2.workspace = true
 serde_json.workspace = true
+tokio-rustls.workspace = true
+rustls-pemfile.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true
+rcgen = "0.14.10"

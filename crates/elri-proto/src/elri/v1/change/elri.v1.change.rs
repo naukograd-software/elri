@@ -118,6 +118,9 @@ pub struct ListChangesRequest {
     /// 0 = server default. 
     #[prost(int32, tag = "2")]
     pub limit: i32,
+    /// Only Changes that touched this Object: its history, newest first. 
+    #[prost(string, tag = "3")]
+    pub object_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListChangesResponse {

@@ -411,6 +411,10 @@ pub mod rule_service_ws {
         route: "/elri.v1.script.RuleService/ListRules",
         kind: StreamKind::Unary,
     };
+    pub const LIST_RULE_RUNS: MethodSpec = MethodSpec {
+        route: "/elri.v1.script.RuleService/ListRuleRuns",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `RuleService` service. Implement with `async fn`.
     pub trait RuleServiceHandler: Send + Sync + 'static {
         fn create_rule(
@@ -430,6 +434,13 @@ pub mod rule_service_ws {
             req: Request<super::ListRulesRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::ListRulesResponse>, Status>,
+        > + Send;
+        ///  Recent runs of a rule on this device, newest first.
+        fn list_rule_runs(
+            &self,
+            req: Request<super::ListRuleRunsRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::ListRuleRunsResponse>, Status>,
         > + Send;
     }
     /// Registers `handler` on `server` for every `RuleService` method.
@@ -474,6 +485,17 @@ pub mod rule_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    LIST_RULE_RUNS.route,
+                    move |req: Request<super::ListRuleRunsRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.list_rule_runs(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `RuleService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -505,6 +527,13 @@ pub mod rule_service_ws {
             req: impl Into<Request<super::ListRulesRequest>>,
         ) -> Result<Response<super::ListRulesResponse>, Status> {
             self.conn.invoke_unary(LIST_RULES, req.into()).await
+        }
+        ///  Recent runs of a rule on this device, newest first.
+        pub async fn list_rule_runs(
+            &self,
+            req: impl Into<Request<super::ListRuleRunsRequest>>,
+        ) -> Result<Response<super::ListRuleRunsResponse>, Status> {
+            self.conn.invoke_unary(LIST_RULE_RUNS, req.into()).await
         }
     }
 }

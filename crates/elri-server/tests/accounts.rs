@@ -28,6 +28,7 @@ async fn admins_create_users_and_tokens_are_revocable() {
     let server = Server::start(Config {
         data_dir: tmp_dir("server"),
         bind: "127.0.0.1:0".parse().expect("addr"),
+        tls: None,
     })
     .await
     .expect("server");

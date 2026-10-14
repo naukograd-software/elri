@@ -27,6 +27,19 @@ pub struct Config {
     pub data_dir: PathBuf,
     /// Address to listen on.
     pub bind: SocketAddr,
+    /// Serve `wss://` with this certificate chain and key (PEM files); plain
+    /// `ws://` when absent, which belongs behind a TLS terminator or on a
+    /// private network only.
+    pub tls: Option<Tls>,
+}
+
+/// TLS material for the listener.
+#[derive(Debug, Clone)]
+pub struct Tls {
+    /// PEM file with the certificate chain.
+    pub cert: PathBuf,
+    /// PEM file with the private key.
+    pub key: PathBuf,
 }
 
 /// Errors raised while starting the server.
@@ -49,6 +62,9 @@ pub enum ServerError {
         /// Underlying error.
         source: std::io::Error,
     },
+    /// The TLS files could not be read or used.
+    #[error("tls: {0}")]
+    Tls(String),
 }
 
 /// Shared state behind every handler.
@@ -66,6 +82,7 @@ pub struct State {
 /// A running server.
 pub struct Server {
     addr: SocketAddr,
+    scheme: &'static str,
     task: JoinHandle<()>,
     retention: JoinHandle<()>,
     state: Arc<State>,
@@ -103,9 +120,34 @@ impl Server {
             ..WsConfig::default()
         });
         service::register(&ws, Arc::clone(&state));
+        let acceptor = config.tls.as_ref().map(tls_acceptor).transpose()?;
+        let scheme = if acceptor.is_some() { "wss" } else { "ws" };
         let task = tokio::spawn(async move {
-            if let Err(e) = ws.serve_listener(listener).await {
-                tracing::error!(error = %e, "listener stopped");
+            match acceptor {
+                None => {
+                    if let Err(e) = ws.serve_listener(listener).await {
+                        tracing::error!(error = %e, "listener stopped");
+                    }
+                }
+                Some(acceptor) => loop {
+                    let (tcp, _) = match listener.accept().await {
+                        Ok(c) => c,
+                        Err(e) => {
+                            tracing::error!(error = %e, "listener stopped");
+                            return;
+                        }
+                    };
+                    let acceptor = acceptor.clone();
+                    let srv = ws.clone();
+                    tokio::spawn(async move {
+                        match acceptor.accept(tcp).await {
+                            Ok(tls) => {
+                                let _ = srv.accept(tls).await;
+                            }
+                            Err(e) => tracing::debug!(error = %e, "tls handshake failed"),
+                        }
+                    });
+                },
             }
         });
         let retention = {
@@ -122,9 +164,10 @@ impl Server {
                 }
             })
         };
-        tracing::info!(%addr, "elri-server listening");
+        tracing::info!(%addr, scheme, "elri-server listening");
         Ok(Self {
             addr,
+            scheme,
             task,
             retention,
             state,
@@ -138,7 +181,7 @@ impl Server {
 
     /// WebSocket URL of this server.
     pub fn url(&self) -> String {
-        format!("ws://{}/", self.addr)
+        format!("{}://{}/", self.scheme, self.addr)
     }
 
     /// Registry access, for administration.
@@ -151,4 +194,24 @@ impl Server {
         self.task.abort();
         self.retention.abort();
     }
+}
+
+fn tls_acceptor(tls: &Tls) -> Result<tokio_rustls::TlsAcceptor, ServerError> {
+    let read = |p: &PathBuf| {
+        std::fs::read(p).map_err(|e| ServerError::Tls(format!("{}: {e}", p.display())))
+    };
+    let certs: Vec<_> = rustls_pemfile::certs(&mut read(&tls.cert)?.as_slice())
+        .collect::<Result<_, _>>()
+        .map_err(|e| ServerError::Tls(e.to_string()))?;
+    if certs.is_empty() {
+        return Err(ServerError::Tls("no certificate in the chain file".into()));
+    }
+    let key = rustls_pemfile::private_key(&mut read(&tls.key)?.as_slice())
+        .map_err(|e| ServerError::Tls(e.to_string()))?
+        .ok_or_else(|| ServerError::Tls("no private key in the key file".into()))?;
+    let config = tokio_rustls::rustls::ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(certs, key)
+        .map_err(|e| ServerError::Tls(e.to_string()))?;
+    Ok(tokio_rustls::TlsAcceptor::from(Arc::new(config)))
 }

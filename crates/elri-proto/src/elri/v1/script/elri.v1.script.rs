@@ -77,6 +77,31 @@ pub struct Trigger {
     /// Changes made by scripts and rules do not fire rules (depth one). 
     #[prost(string, tag = "2")]
     pub type_id: ::prost::alloc::string::String,
+    /// Also run on a schedule: every this many seconds, on the executing
+    /// device, while the application is open. 0 = events only. A run the
+    /// device slept through happens once at the next tick, not once per
+    /// missed interval. 
+    #[prost(int64, tag = "3")]
+    pub every_seconds: i64,
+    /// Fire on events at all; a rule may be schedule-only. 
+    #[prost(bool, tag = "4")]
+    pub on_events: bool,
+}
+/// One execution of a rule, as the executing device recorded it. 
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RuleRun {
+    #[prost(string, tag = "1")]
+    pub rule_id: ::prost::alloc::string::String,
+    #[prost(int64, tag = "2")]
+    pub started_at_ms: i64,
+    #[prost(int64, tag = "3")]
+    pub duration_ms: i64,
+    /// `event` or `schedule`. 
+    #[prost(string, tag = "4")]
+    pub cause: ::prost::alloc::string::String,
+    /// Empty when the run succeeded. 
+    #[prost(string, tag = "5")]
+    pub error: ::prost::alloc::string::String,
 }
 /// Runs a script on its executing device when the trigger matches. 
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
@@ -122,6 +147,21 @@ pub struct RunResult {
     /// The grant the run used. 
     #[prost(string, tag = "6")]
     pub grant_id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListRuleRunsRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub id: ::prost::alloc::string::String,
+    /// 0 = default. 
+    #[prost(int32, tag = "3")]
+    pub limit: i32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListRuleRunsResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub runs: ::prost::alloc::vec::Vec<RuleRun>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CreateScriptRequest {

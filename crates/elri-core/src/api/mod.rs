@@ -752,12 +752,17 @@ impl ChangeServiceHandler for Services {
     ) -> Result<Response<ListChangesResponse>, Status> {
         let space_id = parse_id(&req.msg.space_id, "space_id")?;
         let limit = usize::try_from(req.msg.limit).unwrap_or(0);
+        let object = if req.msg.object_id.is_empty() {
+            None
+        } else {
+            Some(parse_id(&req.msg.object_id, "object_id")?)
+        };
         Ok(Response::new(ListChangesResponse {
             changes: self
                 .store
                 .space(space_id)
                 .await?
-                .list_changes(limit)
+                .list_changes_of(limit, object)
                 .await?,
         }))
     }

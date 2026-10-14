@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/script/domain.proto.
  */
 export const file_elri_v1_script_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL3NjcmlwdC9kb21haW4ucHJvdG8SDmVscmkudjEuc2NyaXB0IlcKCE1hbmlmZXN0Eg0KBXJlYWRzGAEgAygJEg4KBndyaXRlcxgCIAMoCRIMCgRodHRwGAMgASgIEgoKAmFpGAQgASgIEhIKCmV4dGVuc2lvbnMYBSADKAki7QEKBlNjcmlwdBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnNvdXJjZRgEIAEoCRIqCghtYW5pZmVzdBgFIAEoCzIYLmVscmkudjEuc2NyaXB0Lk1hbmlmZXN0Eg8KB3ZlcnNpb24YBiABKAkSDgoGYmVuaWduGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMingEKBUdyYW50EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIPCgd2ZXJzaW9uGAQgASgJEg4KBmJlbmlnbhgFIAEoCBIVCg1ncmFudGVkX2F0X21zGAYgASgDEhoKDXJldm9rZWRfYXRfbXMYByABKANIAIgBAUIQCg5fcmV2b2tlZF9hdF9tcyJFCgdUcmlnZ2VyEikKBWtpbmRzGAEgAygOMhouZWxyaS52MS5vYmplY3QuT2JqZWN0S2luZBIPCgd0eXBlX2lkGAIgASgJIvgBCgRSdWxlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEQoJc2NyaXB0X2lkGAQgASgJEigKB3RyaWdnZXIYBSABKAsyFy5lbHJpLnYxLnNjcmlwdC5UcmlnZ2VyEhoKEmV4ZWN1dG9yX2RldmljZV9pZBgGIAEoCRIPCgdlbmFibGVkGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMidAoJUnVuUmVzdWx0EhMKC291dHB1dF9qc29uGAEgASgJEgwKBGxvZ3MYAiADKAkSEwoLZHVyYXRpb25fbXMYAyABKAMSDQoFZXJyb3IYBCABKAkSDgoGbGFiZWxzGAUgAygJEhAKCGdyYW50X2lkGAYgASgJYgZwcm90bzM", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL3NjcmlwdC9kb21haW4ucHJvdG8SDmVscmkudjEuc2NyaXB0IlcKCE1hbmlmZXN0Eg0KBXJlYWRzGAEgAygJEg4KBndyaXRlcxgCIAMoCRIMCgRodHRwGAMgASgIEgoKAmFpGAQgASgIEhIKCmV4dGVuc2lvbnMYBSADKAki7QEKBlNjcmlwdBIKCgJpZBgBIAEoCRIQCghzcGFjZV9pZBgCIAEoCRIMCgRuYW1lGAMgASgJEg4KBnNvdXJjZRgEIAEoCRIqCghtYW5pZmVzdBgFIAEoCzIYLmVscmkudjEuc2NyaXB0Lk1hbmlmZXN0Eg8KB3ZlcnNpb24YBiABKAkSDgoGYmVuaWduGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMingEKBUdyYW50EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCXNjcmlwdF9pZBgDIAEoCRIPCgd2ZXJzaW9uGAQgASgJEg4KBmJlbmlnbhgFIAEoCBIVCg1ncmFudGVkX2F0X21zGAYgASgDEhoKDXJldm9rZWRfYXRfbXMYByABKANIAIgBAUIQCg5fcmV2b2tlZF9hdF9tcyJvCgdUcmlnZ2VyEikKBWtpbmRzGAEgAygOMhouZWxyaS52MS5vYmplY3QuT2JqZWN0S2luZBIPCgd0eXBlX2lkGAIgASgJEhUKDWV2ZXJ5X3NlY29uZHMYAyABKAMSEQoJb25fZXZlbnRzGAQgASgIImQKB1J1bGVSdW4SDwoHcnVsZV9pZBgBIAEoCRIVCg1zdGFydGVkX2F0X21zGAIgASgDEhMKC2R1cmF0aW9uX21zGAMgASgDEg0KBWNhdXNlGAQgASgJEg0KBWVycm9yGAUgASgJIvgBCgRSdWxlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEgwKBG5hbWUYAyABKAkSEQoJc2NyaXB0X2lkGAQgASgJEigKB3RyaWdnZXIYBSABKAsyFy5lbHJpLnYxLnNjcmlwdC5UcmlnZ2VyEhoKEmV4ZWN1dG9yX2RldmljZV9pZBgGIAEoCRIPCgdlbmFibGVkGAcgASgIEhUKDWNyZWF0ZWRfYXRfbXMYCCABKAMSFQoNdXBkYXRlZF9hdF9tcxgJIAEoAxIaCg1kZWxldGVkX2F0X21zGAogASgDSACIAQFCEAoOX2RlbGV0ZWRfYXRfbXMidAoJUnVuUmVzdWx0EhMKC291dHB1dF9qc29uGAEgASgJEgwKBGxvZ3MYAiADKAkSEwoLZHVyYXRpb25fbXMYAyABKAMSDQoFZXJyb3IYBCABKAkSDgoGbGFiZWxzGAUgAygJEhAKCGdyYW50X2lkGAYgASgJYgZwcm90bzM", [file_elri_v1_object_domain]);
 
 /**
  *
@@ -352,6 +352,23 @@ export type Trigger = Message<"elri.v1.script.Trigger"> & {
    * @generated from field: string type_id = 2;
    */
   typeId: string;
+
+  /**
+   * Also run on a schedule: every this many seconds, on the executing
+   * device, while the application is open. 0 = events only. A run the
+   * device slept through happens once at the next tick, not once per
+   * missed interval. 
+   *
+   * @generated from field: int64 every_seconds = 3;
+   */
+  everySeconds: bigint;
+
+  /**
+   * Fire on events at all; a rule may be schedule-only. 
+   *
+   * @generated from field: bool on_events = 4;
+   */
+  onEvents: boolean;
 };
 
 /**
@@ -375,6 +392,23 @@ export type TriggerJson = {
    * @generated from field: string type_id = 2;
    */
   typeId?: string;
+
+  /**
+   * Also run on a schedule: every this many seconds, on the executing
+   * device, while the application is open. 0 = events only. A run the
+   * device slept through happens once at the next tick, not once per
+   * missed interval. 
+   *
+   * @generated from field: int64 every_seconds = 3;
+   */
+  everySeconds?: string;
+
+  /**
+   * Fire on events at all; a rule may be schedule-only. 
+   *
+   * @generated from field: bool on_events = 4;
+   */
+  onEvents?: boolean;
 };
 
 /**
@@ -383,6 +417,85 @@ export type TriggerJson = {
  */
 export const TriggerSchema: GenMessage<Trigger, {jsonType: TriggerJson}> = /*@__PURE__*/
   messageDesc(file_elri_v1_script_domain, 3);
+
+/**
+ * One execution of a rule, as the executing device recorded it. 
+ *
+ * @generated from message elri.v1.script.RuleRun
+ */
+export type RuleRun = Message<"elri.v1.script.RuleRun"> & {
+  /**
+   * @generated from field: string rule_id = 1;
+   */
+  ruleId: string;
+
+  /**
+   * @generated from field: int64 started_at_ms = 2;
+   */
+  startedAtMs: bigint;
+
+  /**
+   * @generated from field: int64 duration_ms = 3;
+   */
+  durationMs: bigint;
+
+  /**
+   * `event` or `schedule`. 
+   *
+   * @generated from field: string cause = 4;
+   */
+  cause: string;
+
+  /**
+   * Empty when the run succeeded. 
+   *
+   * @generated from field: string error = 5;
+   */
+  error: string;
+};
+
+/**
+ * One execution of a rule, as the executing device recorded it. 
+ *
+ * @generated from message elri.v1.script.RuleRun
+ */
+export type RuleRunJson = {
+  /**
+   * @generated from field: string rule_id = 1;
+   */
+  ruleId?: string;
+
+  /**
+   * @generated from field: int64 started_at_ms = 2;
+   */
+  startedAtMs?: string;
+
+  /**
+   * @generated from field: int64 duration_ms = 3;
+   */
+  durationMs?: string;
+
+  /**
+   * `event` or `schedule`. 
+   *
+   * @generated from field: string cause = 4;
+   */
+  cause?: string;
+
+  /**
+   * Empty when the run succeeded. 
+   *
+   * @generated from field: string error = 5;
+   */
+  error?: string;
+};
+
+/**
+ * Describes the message elri.v1.script.RuleRun.
+ * Use `create(RuleRunSchema)` to create a new message.
+ */
+export const RuleRunSchema: GenMessage<RuleRun, {jsonType: RuleRunJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_script_domain, 4);
 
 /**
  * Runs a script on its executing device when the trigger matches. 
@@ -507,7 +620,7 @@ export type RuleJson = {
  * Use `create(RuleSchema)` to create a new message.
  */
 export const RuleSchema: GenMessage<Rule, {jsonType: RuleJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_domain, 4);
+  messageDesc(file_elri_v1_script_domain, 5);
 
 /**
  * What a run produced. 
@@ -604,5 +717,5 @@ export type RunResultJson = {
  * Use `create(RunResultSchema)` to create a new message.
  */
 export const RunResultSchema: GenMessage<RunResult, {jsonType: RunResultJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_script_domain, 5);
+  messageDesc(file_elri_v1_script_domain, 6);
 

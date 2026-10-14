@@ -14,6 +14,7 @@ workspace = true
 elri-proto.workspace = true
 prost.workspace = true
 ws-proto.workspace = true
+tokio-tungstenite.workspace = true
 loro.workspace = true
 toasty.workspace = true
 toasty-driver-turso.workspace = true

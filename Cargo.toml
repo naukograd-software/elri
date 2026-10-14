@@ -56,6 +56,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 rand = "0.9"
 sha2 = "0.11.1"
 keyring = "4.2.0"
+tokio-rustls = "0.26.6"
+rustls-pemfile = "2.2.0"
+# Turns on TLS in the WebSocket client ws-proto uses, so `wss://` dials work.
+tokio-tungstenite = { version = "0.30", default-features = false, features = ["rustls-tls-native-roots"] }
 clap = { version = "4", features = ["derive", "env"] }
 
 # shell

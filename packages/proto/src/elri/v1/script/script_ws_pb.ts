@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CheckScriptRequest, CheckScriptResponse, CreateRuleRequest, CreateRuleResponse, CreateScriptRequest, CreateScriptResponse, GetPolicyRequest, GetPolicyResponse, GetScriptRequest, GetScriptResponse, GrantScriptRequest, GrantScriptResponse, ListGrantsRequest, ListGrantsResponse, ListRulesRequest, ListRulesResponse, ListScriptsRequest, ListScriptsResponse, RevokeGrantRequest, RevokeGrantResponse, RunScriptRequest, RunScriptResponse, SetPolicyRequest, SetPolicyResponse, UpdateRuleRequest, UpdateRuleResponse, UpdateScriptRequest, UpdateScriptResponse } from "./script_pb.ts";
-import { CheckScriptRequestSchema, CheckScriptResponseSchema, CreateRuleRequestSchema, CreateRuleResponseSchema, CreateScriptRequestSchema, CreateScriptResponseSchema, GetPolicyRequestSchema, GetPolicyResponseSchema, GetScriptRequestSchema, GetScriptResponseSchema, GrantScriptRequestSchema, GrantScriptResponseSchema, ListGrantsRequestSchema, ListGrantsResponseSchema, ListRulesRequestSchema, ListRulesResponseSchema, ListScriptsRequestSchema, ListScriptsResponseSchema, RevokeGrantRequestSchema, RevokeGrantResponseSchema, RunScriptRequestSchema, RunScriptResponseSchema, SetPolicyRequestSchema, SetPolicyResponseSchema, UpdateRuleRequestSchema, UpdateRuleResponseSchema, UpdateScriptRequestSchema, UpdateScriptResponseSchema } from "./script_pb.ts";
+import type { CheckScriptRequest, CheckScriptResponse, CreateRuleRequest, CreateRuleResponse, CreateScriptRequest, CreateScriptResponse, GetPolicyRequest, GetPolicyResponse, GetScriptRequest, GetScriptResponse, GrantScriptRequest, GrantScriptResponse, ListGrantsRequest, ListGrantsResponse, ListRuleRunsRequest, ListRuleRunsResponse, ListRulesRequest, ListRulesResponse, ListScriptsRequest, ListScriptsResponse, RevokeGrantRequest, RevokeGrantResponse, RunScriptRequest, RunScriptResponse, SetPolicyRequest, SetPolicyResponse, UpdateRuleRequest, UpdateRuleResponse, UpdateScriptRequest, UpdateScriptResponse } from "./script_pb.ts";
+import { CheckScriptRequestSchema, CheckScriptResponseSchema, CreateRuleRequestSchema, CreateRuleResponseSchema, CreateScriptRequestSchema, CreateScriptResponseSchema, GetPolicyRequestSchema, GetPolicyResponseSchema, GetScriptRequestSchema, GetScriptResponseSchema, GrantScriptRequestSchema, GrantScriptResponseSchema, ListGrantsRequestSchema, ListGrantsResponseSchema, ListRuleRunsRequestSchema, ListRuleRunsResponseSchema, ListRulesRequestSchema, ListRulesResponseSchema, ListScriptsRequestSchema, ListScriptsResponseSchema, RevokeGrantRequestSchema, RevokeGrantResponseSchema, RunScriptRequestSchema, RunScriptResponseSchema, SetPolicyRequestSchema, SetPolicyResponseSchema, UpdateRuleRequestSchema, UpdateRuleResponseSchema, UpdateScriptRequestSchema, UpdateScriptResponseSchema } from "./script_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -247,6 +247,14 @@ const RuleService_ListRules: MethodInfo<ListRulesRequest, ListRulesResponse> = {
   output: ListRulesResponseSchema,
 };
 
+const RuleService_ListRuleRuns: MethodInfo<ListRuleRunsRequest, ListRuleRunsResponse> = {
+  typeName: "elri.v1.script.RuleService",
+  name: "ListRuleRuns",
+  kind: "unary",
+  input: ListRuleRunsRequestSchema,
+  output: ListRuleRunsResponseSchema,
+};
+
 /**
  * Rules: scripts that run when something happens. 
  *
@@ -276,6 +284,16 @@ export class RuleServiceClient {
    */
   async listRules(req: ListRulesRequest, options?: CallOptions): Promise<ListRulesResponse> {
     const res = await this.transport.unary(RuleService_ListRules, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Recent runs of a rule on this device, newest first. 
+   *
+   * @generated from rpc elri.v1.script.RuleService.ListRuleRuns
+   */
+  async listRuleRuns(req: ListRuleRunsRequest, options?: CallOptions): Promise<ListRuleRunsResponse> {
+    const res = await this.transport.unary(RuleService_ListRuleRuns, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

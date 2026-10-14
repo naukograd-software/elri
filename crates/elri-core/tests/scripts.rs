@@ -17,8 +17,8 @@ use elri_proto::elri::v1::script::grant_service_ws::GrantServiceClient;
 use elri_proto::elri::v1::script::rule_service_ws::RuleServiceClient;
 use elri_proto::elri::v1::script::script_service_ws::ScriptServiceClient;
 use elri_proto::elri::v1::script::{
-    CreateRuleRequest, CreateScriptRequest, GrantScriptRequest, ListGrantsRequest, Manifest,
-    RevokeGrantRequest, RunScriptRequest, SetPolicyRequest, Trigger,
+    CreateRuleRequest, CreateScriptRequest, GrantScriptRequest, ListGrantsRequest,
+    ListRuleRunsRequest, Manifest, RevokeGrantRequest, RunScriptRequest, SetPolicyRequest, Trigger,
 };
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::CreateSpaceRequest;
@@ -194,6 +194,7 @@ async fn scripts_run_within_their_manifest_and_grants() {
             ListChangesRequest {
                 space_id: home.clone(),
                 limit: 10,
+                object_id: String::new(),
             },
         ))
         .await
@@ -339,6 +340,8 @@ async fn rules_fire_on_user_changes_but_not_on_their_own() {
                 trigger: Some(Trigger {
                     kinds: vec![ObjectKind::Entity.into()],
                     type_id: "task".into(),
+                    every_seconds: 0,
+                    on_events: true,
                 }),
                 executor_device_id: String::new(),
             },
@@ -431,6 +434,7 @@ async fn rules_fire_on_user_changes_but_not_on_their_own() {
             ListChangesRequest {
                 space_id: home.clone(),
                 limit: 50,
+                object_id: String::new(),
             },
         ))
         .await
@@ -445,4 +449,137 @@ async fn rules_fire_on_user_changes_but_not_on_their_own() {
     assert!(on_task
         .iter()
         .any(|ch| ch.actor == format!("rule:{}/script:{}", rule.id, script.id)));
+}
+
+#[tokio::test]
+async fn scheduled_rules_run_and_record_their_runs() {
+    let dir = tmp_dir("schedule");
+    let _core = Core::start(Config::new(&dir, build()))
+        .await
+        .expect("start");
+    let c = open(&dir).await;
+    let home = c.space("home").await;
+    let script = c
+        .script(
+            &home,
+            "ticker",
+            r#"elri.create({ fields = { tick = elri.args.schedule.at } }); return "ticked""#,
+            Manifest::default(),
+        )
+        .await
+        .expect("create");
+    let rule = c
+        .rules
+        .create_rule(authed(
+            &c.endpoint,
+            CreateRuleRequest {
+                space_id: home.clone(),
+                name: "every second".into(),
+                script_id: script.id.clone(),
+                trigger: Some(Trigger {
+                    every_seconds: 1,
+                    on_events: false,
+                    ..Default::default()
+                }),
+                executor_device_id: String::new(),
+            },
+        ))
+        .await
+        .expect("rule")
+        .msg
+        .rule
+        .expect("rule");
+    assert_eq!(rule.trigger.as_ref().expect("trigger").every_seconds, 1);
+
+    // The first scheduled run happens right after creation; it is recorded.
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+    let runs = loop {
+        let runs = c
+            .rules
+            .list_rule_runs(authed(
+                &c.endpoint,
+                ListRuleRunsRequest {
+                    space_id: home.clone(),
+                    id: rule.id.clone(),
+                    limit: 0,
+                },
+            ))
+            .await
+            .expect("runs")
+            .msg
+            .runs;
+        if !runs.is_empty() {
+            break runs;
+        }
+        assert!(tokio::time::Instant::now() < deadline, "never ran");
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    };
+    assert_eq!(runs[0].cause, "schedule");
+    assert_eq!(runs[0].error, "");
+    let objs = c
+        .objects
+        .list_objects(authed(
+            &c.endpoint,
+            ListObjectsRequest {
+                space_id: home.clone(),
+                kind: ObjectKind::Entity.into(),
+                ..Default::default()
+            },
+        ))
+        .await
+        .expect("list")
+        .msg
+        .objects;
+    assert_eq!(objs.len(), 1, "the scheduled run created one object");
+    assert!(objs[0].fields.contains_key("tick"));
+
+    // Schedule-only: a user write does not fire it.
+    c.objects
+        .create_object(authed(
+            &c.endpoint,
+            CreateObjectRequest {
+                space_id: home.clone(),
+                kind: ObjectKind::Entity.into(),
+                ..Default::default()
+            },
+        ))
+        .await
+        .expect("object");
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let runs = c
+        .rules
+        .list_rule_runs(authed(
+            &c.endpoint,
+            ListRuleRunsRequest {
+                space_id: home.clone(),
+                id: rule.id.clone(),
+                limit: 0,
+            },
+        ))
+        .await
+        .expect("runs")
+        .msg
+        .runs;
+    assert_eq!(runs.len(), 1);
+
+    // An Object's history names the Changes that touched it, newest first.
+    let history = c
+        .changes
+        .list_changes(authed(
+            &c.endpoint,
+            ListChangesRequest {
+                space_id: home.clone(),
+                limit: 10,
+                object_id: objs[0].id.clone(),
+            },
+        ))
+        .await
+        .expect("history")
+        .msg
+        .changes;
+    assert_eq!(history.len(), 1);
+    assert_eq!(
+        history[0].actor,
+        format!("rule:{}/script:{}", rule.id, script.id)
+    );
 }

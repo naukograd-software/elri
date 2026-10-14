@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/change/change.proto.
  */
 export const file_elri_v1_change_change: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL2NoYW5nZS9jaGFuZ2UucHJvdG8SDmVscmkudjEuY2hhbmdlIjIKElJldHJ5Q2hhbmdlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI9ChNSZXRyeUNoYW5nZVJlc3BvbnNlEiYKBmNoYW5nZRgBIAEoCzIWLmVscmkudjEuY2hhbmdlLkNoYW5nZSI0ChREaXNjYXJkQ2hhbmdlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIqChVEaXNjYXJkQ2hhbmdlUmVzcG9uc2USEQoJZGlzY2FyZGVkGAEgAygJIjUKEkxpc3RDaGFuZ2VzUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRINCgVsaW1pdBgCIAEoBSI+ChNMaXN0Q2hhbmdlc1Jlc3BvbnNlEicKB2NoYW5nZXMYASADKAsyFi5lbHJpLnYxLmNoYW5nZS5DaGFuZ2UynQIKDUNoYW5nZVNlcnZpY2USVgoLTGlzdENoYW5nZXMSIi5lbHJpLnYxLmNoYW5nZS5MaXN0Q2hhbmdlc1JlcXVlc3QaIy5lbHJpLnYxLmNoYW5nZS5MaXN0Q2hhbmdlc1Jlc3BvbnNlElYKC1JldHJ5Q2hhbmdlEiIuZWxyaS52MS5jaGFuZ2UuUmV0cnlDaGFuZ2VSZXF1ZXN0GiMuZWxyaS52MS5jaGFuZ2UuUmV0cnlDaGFuZ2VSZXNwb25zZRJcCg1EaXNjYXJkQ2hhbmdlEiQuZWxyaS52MS5jaGFuZ2UuRGlzY2FyZENoYW5nZVJlcXVlc3QaJS5lbHJpLnYxLmNoYW5nZS5EaXNjYXJkQ2hhbmdlUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_change_domain]);
+  fileDesc("ChtlbHJpL3YxL2NoYW5nZS9jaGFuZ2UucHJvdG8SDmVscmkudjEuY2hhbmdlIjIKElJldHJ5Q2hhbmdlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI9ChNSZXRyeUNoYW5nZVJlc3BvbnNlEiYKBmNoYW5nZRgBIAEoCzIWLmVscmkudjEuY2hhbmdlLkNoYW5nZSI0ChREaXNjYXJkQ2hhbmdlUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIqChVEaXNjYXJkQ2hhbmdlUmVzcG9uc2USEQoJZGlzY2FyZGVkGAEgAygJIkgKEkxpc3RDaGFuZ2VzUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRINCgVsaW1pdBgCIAEoBRIRCglvYmplY3RfaWQYAyABKAkiPgoTTGlzdENoYW5nZXNSZXNwb25zZRInCgdjaGFuZ2VzGAEgAygLMhYuZWxyaS52MS5jaGFuZ2UuQ2hhbmdlMp0CCg1DaGFuZ2VTZXJ2aWNlElYKC0xpc3RDaGFuZ2VzEiIuZWxyaS52MS5jaGFuZ2UuTGlzdENoYW5nZXNSZXF1ZXN0GiMuZWxyaS52MS5jaGFuZ2UuTGlzdENoYW5nZXNSZXNwb25zZRJWCgtSZXRyeUNoYW5nZRIiLmVscmkudjEuY2hhbmdlLlJldHJ5Q2hhbmdlUmVxdWVzdBojLmVscmkudjEuY2hhbmdlLlJldHJ5Q2hhbmdlUmVzcG9uc2USXAoNRGlzY2FyZENoYW5nZRIkLmVscmkudjEuY2hhbmdlLkRpc2NhcmRDaGFuZ2VSZXF1ZXN0GiUuZWxyaS52MS5jaGFuZ2UuRGlzY2FyZENoYW5nZVJlc3BvbnNlYgZwcm90bzM", [file_elri_v1_change_domain]);
 
 /**
  * @generated from message elri.v1.change.RetryChangeRequest
@@ -161,6 +161,13 @@ export type ListChangesRequest = Message<"elri.v1.change.ListChangesRequest"> & 
    * @generated from field: int32 limit = 2;
    */
   limit: number;
+
+  /**
+   * Only Changes that touched this Object: its history, newest first. 
+   *
+   * @generated from field: string object_id = 3;
+   */
+  objectId: string;
 };
 
 /**
@@ -178,6 +185,13 @@ export type ListChangesRequestJson = {
    * @generated from field: int32 limit = 2;
    */
   limit?: number;
+
+  /**
+   * Only Changes that touched this Object: its history, newest first. 
+   *
+   * @generated from field: string object_id = 3;
+   */
+  objectId?: string;
 };
 
 /**

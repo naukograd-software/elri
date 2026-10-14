@@ -26,6 +26,12 @@ pub const ENABLED: &str = "$enabled";
 pub const TRIGGER_KINDS: &str = "$trigger_kinds";
 /// Reserved field: the type that fires the rule.
 pub const TRIGGER_TYPE: &str = "$trigger_type";
+/// Reserved field: schedule interval in seconds; 0 = none.
+pub const EVERY_SECONDS: &str = "$every_seconds";
+/// Reserved field: whether events fire the rule.
+pub const ON_EVENTS: &str = "$on_events";
+/// How often the scheduler looks for due rules.
+const SCHEDULER_TICK: std::time::Duration = std::time::Duration::from_secs(15);
 /// Device setting: benign scripts are granted without asking.
 pub const AUTO_GRANT_BENIGN: &str = "auto_grant_benign";
 
@@ -52,6 +58,11 @@ pub fn rule_of(o: &Object) -> Rule {
         trigger: Some(Trigger {
             kinds,
             type_id: string_field(o, TRIGGER_TYPE).unwrap_or_default().to_owned(),
+            every_seconds: crate::model::int_field(o, EVERY_SECONDS).unwrap_or(0),
+            on_events: matches!(
+                o.fields.get(ON_EVENTS).and_then(|v| v.value.as_ref()),
+                Some(elri_proto::elri::v1::object::value::Value::Bool(true))
+            ),
         }),
         executor_device_id: string_field(o, EXECUTOR).unwrap_or_default().to_owned(),
         enabled: matches!(
@@ -75,15 +86,37 @@ pub fn write_trigger(doc: &ObjectDoc, t: &Trigger) -> Result<(), crate::model::M
     } else {
         doc.set_field(TRIGGER_TYPE, &string_value(t.type_id.trim()))?;
     }
+    doc.set_field(EVERY_SECONDS, &int_value(t.every_seconds.max(0)))?;
+    // Events fire unless the rule is schedule-only: a schedule with
+    // `on_events` left unset means schedule only.
+    let on_events = t.on_events || t.every_seconds <= 0;
+    doc.set_field(ON_EVENTS, &crate::model::bool_value(on_events))?;
     Ok(())
 }
 
-/// Watches the event stream and runs the rules of this device.
+/// Whether events fire the rule.
+pub fn fires_on_events(t: &Trigger) -> bool {
+    t.on_events || t.every_seconds <= 0
+}
+
+/// Watches the event stream and the clock and runs the rules of this
+/// device: on matching changes, and on schedule.
 pub fn spawn_runner(store: Arc<Store>, host: Host, device_id: String) -> JoinHandle<()> {
     tokio::spawn(async move {
         let mut events = store.watch();
+        let mut tick = tokio::time::interval(SCHEDULER_TICK);
+        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
         loop {
-            let ev = match events.recv().await {
+            let ev = tokio::select! {
+                ev = events.recv() => ev,
+                _ = tick.tick() => {
+                    if let Err(e) = run_due(&store, &host, &device_id).await {
+                        tracing::warn!(error = %e, "scheduled rules failed");
+                    }
+                    continue;
+                }
+            };
+            let ev = match ev {
                 Ok(ev) => ev,
                 Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
                     tracing::warn!(missed = n, "rule runner fell behind the event stream");
@@ -98,8 +131,15 @@ pub fn spawn_runner(store: Arc<Store>, host: Host, device_id: String) -> JoinHan
             if o.actor != ACTOR_USER && o.actor != crate::store::ACTOR_REMOTE {
                 continue;
             }
-            if o.removed || o.kind == ObjectKind::Rule as i32 || o.kind == ObjectKind::Script as i32
-            {
+            if o.kind == ObjectKind::Rule as i32 {
+                // A new or changed rule with a schedule gets its first run
+                // now rather than at the next tick.
+                if let Err(e) = run_due(&store, &host, &device_id).await {
+                    tracing::warn!(error = %e, "scheduled rules failed");
+                }
+                continue;
+            }
+            if o.removed || o.kind == ObjectKind::Script as i32 {
                 continue;
             }
             if let Err(e) = fire(&store, &host, &device_id, &o).await {
@@ -130,7 +170,7 @@ async fn fire(
             continue;
         }
         let trigger = r.trigger.clone().unwrap_or_default();
-        if !script::kind_matches(&trigger.kinds, o.kind) {
+        if !fires_on_events(&trigger) || !script::kind_matches(&trigger.kinds, o.kind) {
             continue;
         }
         if !trigger.type_id.is_empty() {
@@ -151,18 +191,6 @@ async fn fire(
                 continue;
             }
         }
-        let Ok(script_id) = ObjectId::parse(&r.script_id) else {
-            continue;
-        };
-        let Ok(script_obj) = space.get(script_id).await else {
-            tracing::warn!(rule = %r.id, "rule names a missing script");
-            continue;
-        };
-        let script = script::script_of(&script_obj)?;
-        let Some(grant) = grant_or_auto(store, space_id, &script).await? else {
-            tracing::info!(rule = %r.id, script = %script.id, "rule skipped: no grant for this version");
-            continue;
-        };
         let args = serde_json::json!({
             "event": {
                 "object_id": o.object_id,
@@ -172,24 +200,101 @@ async fn fire(
             },
             "rule": r.id,
         });
-        let result = host
-            .run(
-                space_id,
-                &script,
-                args,
-                RunIdentity {
-                    script_id: script.id.clone(),
-                    rule_id: Some(r.id.clone()),
-                    grant_id: grant.id,
-                },
-            )
-            .await;
-        if result.error.is_empty() {
-            tracing::debug!(rule = %r.id, ms = result.duration_ms, "rule ran");
-        } else {
-            tracing::warn!(rule = %r.id, error = %result.error, "rule run failed");
+        run_rule(store, host, &space, space_id, &r, args, "event").await?;
+    }
+    Ok(())
+}
+
+/// Runs every scheduled rule of this device whose interval has elapsed.
+/// A rule the device slept through runs once, not once per missed tick.
+async fn run_due(
+    store: &Arc<Store>,
+    host: &Host,
+    device_id: &str,
+) -> Result<(), crate::script::ScriptError> {
+    let now = crate::model::now_ms();
+    for info in store.list_spaces().await? {
+        let space_id = ObjectId::parse(&info.id).map_err(crate::store::StoreError::from)?;
+        let space = store.space(space_id).await?;
+        let rules = space
+            .list(&ObjectFilter {
+                kind: Some(ObjectKind::Rule),
+                limit: 1000,
+                ..ObjectFilter::default()
+            })
+            .await?;
+        for r in rules.iter().map(rule_of) {
+            let every = r.trigger.as_ref().map_or(0, |t| t.every_seconds);
+            if !r.enabled || r.executor_device_id != device_id || every <= 0 {
+                continue;
+            }
+            let Ok(rule_id) = ObjectId::parse(&r.id) else {
+                continue;
+            };
+            let last = store.rule_last_scheduled(rule_id).await?;
+            if now - last < every * 1000 {
+                continue;
+            }
+            store.set_rule_last_scheduled(rule_id, now).await?;
+            let args = serde_json::json!({ "schedule": { "at": now }, "rule": r.id });
+            run_rule(store, host, &space, space_id, &r, args, "schedule").await?;
         }
     }
+    Ok(())
+}
+
+/// Runs a rule's script under its grant and records the run.
+async fn run_rule(
+    store: &Arc<Store>,
+    host: &Host,
+    space: &crate::store::SpaceStore,
+    space_id: SpaceId,
+    r: &Rule,
+    args: serde_json::Value,
+    cause: &str,
+) -> Result<(), crate::script::ScriptError> {
+    let started = crate::model::now_ms();
+    let Ok(script_id) = ObjectId::parse(&r.script_id) else {
+        return Ok(());
+    };
+    let outcome = match space.get(script_id).await {
+        Ok(script_obj) => {
+            let script = script::script_of(&script_obj)?;
+            match grant_or_auto(store, space_id, &script).await? {
+                Some(grant) => {
+                    let result = host
+                        .run(
+                            space_id,
+                            &script,
+                            args,
+                            RunIdentity {
+                                script_id: script.id.clone(),
+                                rule_id: Some(r.id.clone()),
+                                grant_id: grant.id,
+                            },
+                        )
+                        .await;
+                    result.error
+                }
+                None => "no grant for this version of the script on this device".to_owned(),
+            }
+        }
+        Err(_) => "rule names a missing script".to_owned(),
+    };
+    if outcome.is_empty() {
+        tracing::debug!(rule = %r.id, cause, "rule ran");
+    } else {
+        tracing::warn!(rule = %r.id, cause, error = %outcome, "rule run failed");
+    }
+    store
+        .record_rule_run(&elri_proto::elri::v1::script::RuleRun {
+            rule_id: r.id.clone(),
+            started_at_ms: started,
+            duration_ms: crate::model::now_ms() - started,
+            cause: cause.to_owned(),
+            error: outcome,
+        })
+        .await?;
     Ok(())
 }
 

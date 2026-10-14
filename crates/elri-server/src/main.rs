@@ -39,6 +39,12 @@ enum Cmd {
         /// Address to listen on.
         #[arg(long, default_value = "127.0.0.1:8710")]
         bind: SocketAddr,
+        /// PEM certificate chain; with --tls-key, serves wss://.
+        #[arg(long, requires = "tls_key")]
+        tls_cert: Option<PathBuf>,
+        /// PEM private key.
+        #[arg(long, requires = "tls_cert")]
+        tls_key: Option<PathBuf>,
     },
     /// Manage users directly in the database; the server must be stopped.
     /// This is how the first admin is created.
@@ -117,10 +123,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init();
     let args = Args::parse();
     match args.cmd {
-        Cmd::Serve { bind } => {
+        Cmd::Serve {
+            bind,
+            tls_cert,
+            tls_key,
+        } => {
+            let tls = match (tls_cert, tls_key) {
+                (Some(cert), Some(key)) => Some(elri_server::Tls { cert, key }),
+                _ => None,
+            };
             let server = Server::start(Config {
                 data_dir: args.data_dir,
                 bind,
+                tls,
             })
             .await?;
             println!("listening on {}", server.url());

@@ -16,10 +16,11 @@ use elri_proto::elri::v1::script::{
     CheckScriptRequest, CheckScriptResponse, CreateRuleRequest, CreateRuleResponse,
     CreateScriptRequest, CreateScriptResponse, GetPolicyRequest, GetPolicyResponse,
     GetScriptRequest, GetScriptResponse, GrantScriptRequest, GrantScriptResponse,
-    ListGrantsRequest, ListGrantsResponse, ListRulesRequest, ListRulesResponse, ListScriptsRequest,
-    ListScriptsResponse, RevokeGrantRequest, RevokeGrantResponse, RunScriptRequest,
-    RunScriptResponse, SetPolicyRequest, SetPolicyResponse, UpdateRuleRequest, UpdateRuleResponse,
-    UpdateScriptRequest, UpdateScriptResponse,
+    ListGrantsRequest, ListGrantsResponse, ListRuleRunsRequest, ListRuleRunsResponse,
+    ListRulesRequest, ListRulesResponse, ListScriptsRequest, ListScriptsResponse,
+    RevokeGrantRequest, RevokeGrantResponse, RunScriptRequest, RunScriptResponse, SetPolicyRequest,
+    SetPolicyResponse, UpdateRuleRequest, UpdateRuleResponse, UpdateScriptRequest,
+    UpdateScriptResponse,
 };
 use ws_proto::{Code, Request, Response, Server, Status};
 
@@ -349,6 +350,22 @@ impl RuleServiceHandler for Services {
         Ok(Response::new(UpdateRuleResponse {
             rule: Some(rule_of(&rec)),
         }))
+    }
+
+    async fn list_rule_runs(
+        &self,
+        req: Request<ListRuleRunsRequest>,
+    ) -> Result<Response<ListRuleRunsResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let id = parse_id(&req.msg.id, "id")?;
+        if self.store.space(space_id).await?.get(id).await?.kind() != ObjectKind::Rule {
+            return Err(Status::new(Code::NotFound, "not a rule"));
+        }
+        let runs = self
+            .store
+            .rule_runs(id, usize::try_from(req.msg.limit).unwrap_or(0))
+            .await?;
+        Ok(Response::new(ListRuleRunsResponse { runs }))
     }
 
     async fn list_rules(

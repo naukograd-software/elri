@@ -103,6 +103,7 @@ async fn changes_flow_between_devices_through_the_server() {
     let server = Server::start(ServerConfig {
         data_dir: tmp_dir("server"),
         bind: "127.0.0.1:0".parse().expect("addr"),
+        tls: None,
     })
     .await
     .expect("server");
@@ -254,6 +255,7 @@ async fn changes_flow_between_devices_through_the_server() {
             .list_changes(a.authed(ListChangesRequest {
                 space_id: space.id.clone(),
                 limit: 10,
+                object_id: String::new(),
             }))
             .await
             .is_ok_and(|r| {
@@ -320,6 +322,7 @@ async fn changes_flow_between_devices_through_the_server() {
             .list_changes(v.authed(ListChangesRequest {
                 space_id: space.id.clone(),
                 limit: 10,
+                object_id: String::new(),
             }))
             .await
             .is_ok_and(|r| {
@@ -556,6 +559,7 @@ async fn changes_flow_between_devices_through_the_server() {
             .list_changes(a.authed(ListChangesRequest {
                 space_id: second.id.clone(),
                 limit: 10,
+                object_id: String::new(),
             }))
             .await
             .is_ok_and(|r| {

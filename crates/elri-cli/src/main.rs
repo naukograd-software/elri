@@ -43,9 +43,9 @@ use elri_proto::elri::v1::script::rule_service_ws::RuleServiceClient;
 use elri_proto::elri::v1::script::script_service_ws::ScriptServiceClient;
 use elri_proto::elri::v1::script::{
     CheckScriptRequest, CreateRuleRequest, CreateScriptRequest, GetPolicyRequest,
-    GrantScriptRequest, ListGrantsRequest, ListRulesRequest, ListScriptsRequest, Manifest,
-    RevokeGrantRequest, Rule, RunScriptRequest, Script, SetPolicyRequest, Trigger,
-    UpdateRuleRequest,
+    GrantScriptRequest, ListGrantsRequest, ListRuleRunsRequest, ListRulesRequest,
+    ListScriptsRequest, Manifest, RevokeGrantRequest, Rule, RunScriptRequest, Script,
+    SetPolicyRequest, Trigger, UpdateRuleRequest,
 };
 use elri_proto::elri::v1::search::search_service_ws::SearchServiceClient;
 use elri_proto::elri::v1::search::SearchRequest;
@@ -261,6 +261,18 @@ enum RuleCmd {
         /// Only Objects of this type.
         #[arg(long = "type")]
         type_id: Option<String>,
+        /// Also run every N seconds on this device.
+        #[arg(long, default_value_t = 0)]
+        every: i64,
+        /// With --every: also fire on events (default: schedule only).
+        #[arg(long)]
+        on_events: bool,
+    },
+    /// Recent runs of a rule on this device.
+    Runs {
+        #[arg(long)]
+        space: String,
+        id: String,
     },
     /// List rules of a Space.
     List {
@@ -501,6 +513,9 @@ enum ChangeCmd {
         space: String,
         #[arg(long, default_value_t = 50)]
         limit: i32,
+        /// Only Changes that touched this Object: its history.
+        #[arg(long)]
+        object: Option<String>,
     },
     /// Resubmit a rejected Change unchanged, with its paused dependents.
     Retry {
@@ -1003,12 +1018,35 @@ async fn run_grant(endpoint: &Endpoint, conn: Client, cmd: GrantCmd) -> Result<s
 async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<serde_json::Value> {
     let client = RuleServiceClient::new(conn);
     match cmd {
+        RuleCmd::Runs { space, id } => {
+            let res = client
+                .list_rule_runs(authed(
+                    endpoint,
+                    ListRuleRunsRequest {
+                        space_id: space,
+                        id,
+                        limit: 0,
+                    },
+                ))
+                .await?;
+            Ok(json!(res
+                .msg
+                .runs
+                .iter()
+                .map(|r| json!({
+                    "started_at_ms": r.started_at_ms, "duration_ms": r.duration_ms,
+                    "cause": r.cause, "error": r.error,
+                }))
+                .collect::<Vec<_>>()))
+        }
         RuleCmd::Create {
             space,
             name,
             script,
             kinds,
             type_id,
+            every,
+            on_events,
         } => {
             let res = client
                 .create_rule(authed(
@@ -1020,6 +1058,8 @@ async fn run_rule(endpoint: &Endpoint, conn: Client, cmd: RuleCmd) -> Result<ser
                         trigger: Some(Trigger {
                             kinds: kinds.into_iter().map(i32::from).collect(),
                             type_id: type_id.unwrap_or_default(),
+                            every_seconds: every,
+                            on_events,
                         }),
                         executor_device_id: String::new(),
                     },
@@ -2017,13 +2057,18 @@ async fn run_change(
 ) -> Result<serde_json::Value> {
     let client = ChangeServiceClient::new(conn);
     match cmd {
-        ChangeCmd::List { space, limit } => {
+        ChangeCmd::List {
+            space,
+            limit,
+            object,
+        } => {
             let res = client
                 .list_changes(authed(
                     endpoint,
                     ListChangesRequest {
                         space_id: space,
                         limit,
+                        object_id: object.unwrap_or_default(),
                     },
                 ))
                 .await?;

@@ -56,6 +56,24 @@ message Trigger {
     /* Only Objects carrying this type, if set. */
     string type_id = 2;
     /* Changes made by scripts and rules do not fire rules (depth one). */
+    /* Also run on a schedule: every this many seconds, on the executing
+       device, while the application is open. 0 = events only. A run the
+       device slept through happens once at the next tick, not once per
+       missed interval. */
+    int64 every_seconds = 3;
+    /* Fire on events at all; a rule may be schedule-only. */
+    bool on_events = 4;
+}
+
+/* One execution of a rule, as the executing device recorded it. */
+message RuleRun {
+    string rule_id = 1;
+    int64 started_at_ms = 2;
+    int64 duration_ms = 3;
+    /* `event` or `schedule`. */
+    string cause = 4;
+    /* Empty when the run succeeded. */
+    string error = 5;
 }
 
 /* Runs a script on its executing device when the trigger matches. */

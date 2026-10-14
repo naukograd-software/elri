@@ -390,6 +390,7 @@ async fn every_write_is_a_change_and_snapshots_compact() {
         .list_changes(sess.authed(ListChangesRequest {
             space_id: space.id.clone(),
             limit: 1000,
+            object_id: String::new(),
         }))
         .await
         .expect("list changes")
