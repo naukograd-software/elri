@@ -76,6 +76,18 @@ pub struct CreateSpaceResponse {
     #[prost(message, optional, tag = "1")]
     pub space: ::core::option::Option<super::space::Space>,
 }
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AddMemberRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub user_name: ::prost::alloc::string::String,
+    #[prost(enumeration = "super::space::Role", tag = "3")]
+    pub role: i32,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct AddMemberResponse {
+}
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SubmitRequest {
     #[prost(message, optional, tag = "1")]

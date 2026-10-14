@@ -9,7 +9,8 @@
 //! | `model`  | Objects, Loro containers, definitions, publications |
 //! | `store`  | Turso per Space, device database, projections |
 //! | `change` | Change, dependency DAG, outbox, commit coordinator |
-//! | `sync`   | discovery, delivery envelopes, replication |
+//! | `sync`   | wire conversions of Changes |
+//! | `remote` | server link and per-Space replication workers |
 //! | `search` | lexical and semantic indexes |
 //! | `script` | Luau runtime, WASM host, native extensions |
 
@@ -17,6 +18,7 @@ pub mod api;
 pub mod change;
 pub mod device;
 pub mod model;
+pub mod remote;
 pub mod script;
 pub mod search;
 pub mod store;

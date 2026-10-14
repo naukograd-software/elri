@@ -202,3 +202,20 @@ pub struct SyncStateRow {
     /// Value.
     pub value: i64,
 }
+
+/// The server this device synchronizes with; at most one row.
+#[derive(Debug, toasty::Model)]
+#[table = "remote"]
+pub struct RemoteRow {
+    /// Always `server`.
+    #[key]
+    pub key: String,
+    /// WebSocket URL.
+    pub url: String,
+    /// Access token.
+    pub token: String,
+    /// User id on the server.
+    pub user_id: String,
+    /// User name on the server.
+    pub user_name: String,
+}

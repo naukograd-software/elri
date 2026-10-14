@@ -1,58 +1,76 @@
-//! Authoritative server. Serves the same protobuf contract as the local core;
-//! for now only `CoreService.GetInfo` answers.
+//! `elri-server`: serve, or administer users without serving.
 
 use std::net::SocketAddr;
+use std::path::PathBuf;
 
-use clap::Parser;
-use elri_proto::elri::v1::core::core_service_ws::{register_core_service, CoreServiceHandler};
-use elri_proto::elri::v1::core::{EndpointKind, GetInfoRequest, GetInfoResponse};
-use ws_proto::server::OriginPolicy;
-use ws_proto::{Request, Response, Server, ServerConfig, Status};
+use clap::{Parser, Subcommand};
+use elri_server::store::ServerStore;
+use elri_server::{Config, Server};
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
 struct Args {
-    /// Address to listen on.
-    #[arg(long, default_value = "127.0.0.1:8710")]
-    bind: SocketAddr,
+    /// Directory holding the server database and Space files.
+    #[arg(
+        long,
+        env = "ELRI_SERVER_DATA_DIR",
+        default_value = "./elri-server-data"
+    )]
+    data_dir: PathBuf,
+    #[command(subcommand)]
+    cmd: Cmd,
 }
 
-struct ServerServices;
+#[derive(Subcommand, Debug)]
+enum Cmd {
+    /// Run the server.
+    Serve {
+        /// Address to listen on.
+        #[arg(long, default_value = "127.0.0.1:8710")]
+        bind: SocketAddr,
+    },
+    /// Manage users.
+    User {
+        #[command(subcommand)]
+        cmd: UserCmd,
+    },
+}
 
-impl CoreServiceHandler for ServerServices {
-    async fn get_info(
-        &self,
-        _req: Request<GetInfoRequest>,
-    ) -> Result<Response<GetInfoResponse>, Status> {
-        Ok(Response::new(GetInfoResponse {
-            version: env!("CARGO_PKG_VERSION").to_owned(),
-            commit: option_env!("ELRI_COMMIT").unwrap_or("").to_owned(),
-            kind: EndpointKind::Server.into(),
-            device_id: String::new(),
-        }))
-    }
+#[derive(Subcommand, Debug)]
+enum UserCmd {
+    /// Create a user and print its token once.
+    Add {
+        /// Unique user name.
+        name: String,
+    },
 }
 
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
     let args = Args::parse();
-
-    let server = Server::new(ServerConfig {
-        origin: OriginPolicy::same_origin_only(),
-        ..ServerConfig::default()
-    });
-    register_core_service(&server, ServerServices);
-
-    let listener = tokio::net::TcpListener::bind(args.bind).await?;
-    tracing::info!(addr = %args.bind, "elri-server listening");
-    tokio::select! {
-        r = server.serve_listener(listener) => r,
-        _ = tokio::signal::ctrl_c() => {
-            tracing::info!("shutting down");
+    match args.cmd {
+        Cmd::Serve { bind } => {
+            let server = Server::start(Config {
+                data_dir: args.data_dir,
+                bind,
+            })
+            .await?;
+            println!("listening on {}", server.url());
+            tokio::signal::ctrl_c().await?;
+            server.shutdown();
             Ok(())
         }
+        Cmd::User { cmd } => match cmd {
+            UserCmd::Add { name } => {
+                let registry = ServerStore::open(&args.data_dir).await?;
+                let (user, token) = registry.create_user(&name).await?;
+                println!("user {} ({})", user.name, user.id);
+                println!("token {token}");
+                Ok(())
+            }
+        },
     }
 }

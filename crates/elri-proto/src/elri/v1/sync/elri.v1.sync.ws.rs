@@ -25,6 +25,10 @@ pub mod sync_service_ws {
         route: "/elri.v1.sync.SyncService/CreateSpace",
         kind: StreamKind::Unary,
     };
+    pub const ADD_MEMBER: MethodSpec = MethodSpec {
+        route: "/elri.v1.sync.SyncService/AddMember",
+        kind: StreamKind::Unary,
+    };
     pub const SUBMIT: MethodSpec = MethodSpec {
         route: "/elri.v1.sync.SyncService/Submit",
         kind: StreamKind::Unary,
@@ -59,6 +63,13 @@ pub mod sync_service_ws {
             req: Request<super::CreateSpaceRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::CreateSpaceResponse>, Status>,
+        > + Send;
+        ///  Adds or changes a member; Owner and Admin only.
+        fn add_member(
+            &self,
+            req: Request<super::AddMemberRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::AddMemberResponse>, Status>,
         > + Send;
         ///  Submits one Change; accepted or rejected as a whole. Resubmitting the
         /// same id returns the recorded outcome.
@@ -163,6 +174,17 @@ pub mod sync_service_ws {
             let h = ::std::sync::Arc::clone(&handler);
             server
                 .register_unary(
+                    ADD_MEMBER.route,
+                    move |req: Request<super::AddMemberRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.add_member(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
                     SUBMIT.route,
                     move |req: Request<super::SubmitRequest>| {
                         let h = ::std::sync::Arc::clone(&h);
@@ -237,6 +259,13 @@ pub mod sync_service_ws {
             req: impl Into<Request<super::CreateSpaceRequest>>,
         ) -> Result<Response<super::CreateSpaceResponse>, Status> {
             self.conn.invoke_unary(CREATE_SPACE, req.into()).await
+        }
+        ///  Adds or changes a member; Owner and Admin only.
+        pub async fn add_member(
+            &self,
+            req: impl Into<Request<super::AddMemberRequest>>,
+        ) -> Result<Response<super::AddMemberResponse>, Status> {
+            self.conn.invoke_unary(ADD_MEMBER, req.into()).await
         }
         ///  Submits one Change; accepted or rejected as a whole. Resubmitting the
         /// same id returns the recorded outcome.

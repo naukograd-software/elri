@@ -11,6 +11,7 @@ use tokio::task::JoinHandle;
 
 use crate::api;
 use crate::device::{DeviceError, DeviceId, LaunchToken};
+use crate::remote::Remote;
 use crate::store::{Store, StoreError};
 
 /// Version information baked into the binary that embeds the core.
@@ -146,6 +147,7 @@ struct Inner {
     token: LaunchToken,
     endpoint: Endpoint,
     store: Arc<Store>,
+    remote: Arc<Remote>,
 }
 
 impl Core {
@@ -155,6 +157,7 @@ impl Core {
         let device_id = DeviceId::load_or_create(&config.data_dir)?;
         let token = LaunchToken::generate();
         let store = Arc::new(Store::open(&config.data_dir, device_id).await?);
+        let remote = Arc::new(Remote::new(Arc::clone(&store), device_id.as_string()));
 
         let listener = TcpListener::bind(config.bind)
             .await
@@ -179,6 +182,7 @@ impl Core {
             device_id,
             token: token.clone(),
             store: Arc::clone(&store),
+            remote: Arc::clone(&remote),
         });
         let listener_task = tokio::spawn(async move {
             if let Err(e) = server.serve_listener(listener).await {
@@ -186,6 +190,10 @@ impl Core {
             }
         });
         tracing::info!(url = %endpoint.url, device = %device_id.as_string(), "core started");
+        {
+            let remote = Arc::clone(&remote);
+            tokio::spawn(async move { remote.resume().await });
+        }
 
         Ok(Self {
             inner: Arc::new(Inner {
@@ -194,6 +202,7 @@ impl Core {
                 token,
                 endpoint,
                 store,
+                remote,
             }),
             listener_task,
         })
@@ -219,8 +228,15 @@ impl Core {
         &self.inner.store
     }
 
+    /// Server link of this device.
+    pub fn remote(&self) -> &Arc<Remote> {
+        &self.inner.remote
+    }
+
     /// Stops the listener and removes the endpoint file.
     pub fn shutdown(self) {
+        let remote = Arc::clone(&self.inner.remote);
+        tokio::spawn(async move { remote.close().await });
         self.listener_task.abort();
         remove_endpoint(&self.inner.config.data_dir);
         tracing::info!("core stopped");

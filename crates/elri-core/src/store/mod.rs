@@ -26,7 +26,7 @@ use crate::model::{
 };
 use models::{
     ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, ObjectRow, ObjectTypeRow,
-    ParticipantRow, SpaceLogRow, SpaceRow, SyncStateRow,
+    ParticipantRow, RemoteRow, SpaceLogRow, SpaceRow, SyncStateRow,
 };
 use tokio::sync::Notify;
 
@@ -94,6 +94,19 @@ impl Authority {
     }
 }
 
+/// The server this device synchronizes with.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RemoteConfig {
+    /// WebSocket URL.
+    pub url: String,
+    /// Access token.
+    pub token: String,
+    /// User id on the server.
+    pub user_id: String,
+    /// User name on the server.
+    pub user_name: String,
+}
+
 /// A Space as the device registry knows it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SpaceInfo {
@@ -152,7 +165,11 @@ impl Store {
     /// Opens `root/device.db` and prepares `root/spaces/` for Space files.
     pub async fn open(root: impl Into<PathBuf>, device_id: DeviceId) -> Result<Self, StoreError> {
         let root = root.into();
-        let db = open_db(&root.join("device.db"), toasty::models!(SpaceRow)).await?;
+        let db = open_db(
+            &root.join("device.db"),
+            toasty::models!(SpaceRow, RemoteRow),
+        )
+        .await?;
         Ok(Self {
             root,
             device_id,
@@ -234,6 +251,50 @@ impl Store {
 
     fn space_path(&self, id: SpaceId) -> PathBuf {
         self.root.join("spaces").join(format!("{id}.db"))
+    }
+
+    /// The configured server, if any.
+    pub async fn remote(&self) -> Result<Option<RemoteConfig>, StoreError> {
+        let mut db = self.device.lock().await;
+        Ok(RemoteRow::filter_by_key("server".to_owned())
+            .first()
+            .exec(&mut *db)
+            .await?
+            .map(|r| RemoteConfig {
+                url: r.url,
+                token: r.token,
+                user_id: r.user_id,
+                user_name: r.user_name,
+            }))
+    }
+
+    /// Stores the server configuration, replacing any previous one.
+    pub async fn set_remote(&self, cfg: &RemoteConfig) -> Result<(), StoreError> {
+        let mut db = self.device.lock().await;
+        RemoteRow::filter_by_key("server".to_owned())
+            .delete()
+            .exec(&mut *db)
+            .await?;
+        toasty::create!(RemoteRow {
+            key: "server".to_owned(),
+            url: cfg.url.clone(),
+            token: cfg.token.clone(),
+            user_id: cfg.user_id.clone(),
+            user_name: cfg.user_name.clone(),
+        })
+        .exec(&mut *db)
+        .await?;
+        Ok(())
+    }
+
+    /// Forgets the server configuration.
+    pub async fn clear_remote(&self) -> Result<(), StoreError> {
+        let mut db = self.device.lock().await;
+        RemoteRow::filter_by_key("server".to_owned())
+            .delete()
+            .exec(&mut *db)
+            .await?;
+        Ok(())
     }
 }
 
@@ -412,6 +473,29 @@ impl SpaceStore {
             out.push(read_change(&mut db, row).await?);
         }
         Ok(out)
+    }
+
+    /// How many Changes are in each of two states: not yet accepted
+    /// (local, queued, waiting) and rejected.
+    pub async fn pending_counts(&self) -> Result<(usize, usize), StoreError> {
+        let mut db = self.db.lock().await;
+        let pending = ChangeRow::filter(ChangeRow::fields().status().in_list([
+            ChangeStatus::Local.code(),
+            ChangeStatus::Queued.code(),
+            ChangeStatus::Waiting.code(),
+        ]))
+        .exec(&mut *db)
+        .await?
+        .len();
+        let rejected = ChangeRow::filter(
+            ChangeRow::fields()
+                .status()
+                .eq(ChangeStatus::Rejected.code()),
+        )
+        .exec(&mut *db)
+        .await?
+        .len();
+        Ok((pending, rejected))
     }
 
     /// Records the authority's answer for a submitted Change.

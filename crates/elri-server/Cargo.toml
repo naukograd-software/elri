@@ -7,13 +7,30 @@ license.workspace = true
 rust-version.workspace = true
 publish = false
 
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "elri-server"
+path = "src/main.rs"
+
 [lints]
 workspace = true
 
 [dependencies]
+elri-core.workspace = true
 elri-proto.workspace = true
 ws-proto.workspace = true
-tokio = { workspace = true, features = ["rt-multi-thread", "net", "macros", "signal"] }
+toasty.workspace = true
+toasty-driver-turso.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "net", "macros", "signal", "sync"] }
 clap.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+rand.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+anyhow.workspace = true

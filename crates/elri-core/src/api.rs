@@ -18,6 +18,15 @@ use elri_proto::elri::v1::object::{
     DeleteObjectResponse, GetObjectRequest, GetObjectResponse, ListObjectsRequest,
     ListObjectsResponse, UpdateObjectRequest, UpdateObjectResponse,
 };
+use elri_proto::elri::v1::remote::remote_service_ws::{
+    register_remote_service_arc, RemoteServiceHandler,
+};
+use elri_proto::elri::v1::remote::{
+    AddMemberRequest, AddMemberResponse, ConnectRequest, ConnectResponse, CreateRemoteSpaceRequest,
+    CreateRemoteSpaceResponse, DisconnectRequest, DisconnectResponse, GetStatusRequest,
+    GetStatusResponse, JoinSpaceRequest, JoinSpaceResponse, ListRemoteSpacesRequest,
+    ListRemoteSpacesResponse, RemoteSpace, SpaceSyncStatus,
+};
 use elri_proto::elri::v1::space::space_service_ws::{
     register_space_service_arc, SpaceServiceHandler,
 };
@@ -32,6 +41,7 @@ use crate::device::{DeviceId, LaunchToken};
 use crate::model::{
     now_ms, FieldValue, ModelError, ObjectDoc, ObjectId, ObjectKind, ObjectRecord, Participant,
 };
+use crate::remote::{Remote, RemoteError};
 use crate::store::{Authority, ObjectFilter, SpaceInfo, Store, StoreError};
 use crate::BuildInfo;
 
@@ -45,6 +55,8 @@ pub struct Services {
     pub token: LaunchToken,
     /// Storage.
     pub store: Arc<Store>,
+    /// Server link.
+    pub remote: Arc<Remote>,
 }
 
 /// Builds the loopback server: same-origin policy, bearer-token middleware,
@@ -61,7 +73,8 @@ pub fn build_server(services: Services) -> Server {
     register_core_service_arc(&server, Arc::clone(&services));
     register_space_service_arc(&server, Arc::clone(&services));
     register_object_service_arc(&server, Arc::clone(&services));
-    register_change_service_arc(&server, services);
+    register_change_service_arc(&server, Arc::clone(&services));
+    register_remote_service_arc(&server, services);
     server
 }
 
@@ -100,6 +113,17 @@ impl From<StoreError> for Status {
                 tracing::error!(error = %other, "storage failure");
                 Status::new(Code::Internal, "storage failure")
             }
+        }
+    }
+}
+
+impl From<RemoteError> for Status {
+    fn from(e: RemoteError) -> Self {
+        match e {
+            RemoteError::NotConfigured => Status::new(Code::FailedPrecondition, e.to_string()),
+            RemoteError::Rpc(status) => status,
+            RemoteError::Store(s) => s.into(),
+            RemoteError::BadReply(_) => Status::new(Code::Internal, e.to_string()),
         }
     }
 }
@@ -466,5 +490,107 @@ impl ChangeServiceHandler for Services {
                 .map(|c| change_to_pb(&req.msg.space_id, c))
                 .collect(),
         }))
+    }
+}
+
+impl RemoteServiceHandler for Services {
+    async fn connect(
+        &self,
+        req: Request<ConnectRequest>,
+    ) -> Result<Response<ConnectResponse>, Status> {
+        let url = req.msg.url.trim();
+        if url.is_empty() || req.msg.token.is_empty() {
+            return Err(invalid("url and token are required"));
+        }
+        let cfg = self.remote.connect(url, &req.msg.token).await?;
+        Ok(Response::new(ConnectResponse {
+            user_id: cfg.user_id,
+            user_name: cfg.user_name,
+        }))
+    }
+
+    async fn disconnect(
+        &self,
+        _req: Request<DisconnectRequest>,
+    ) -> Result<Response<DisconnectResponse>, Status> {
+        self.remote.disconnect().await?;
+        Ok(Response::new(DisconnectResponse {}))
+    }
+
+    async fn get_status(
+        &self,
+        _req: Request<GetStatusRequest>,
+    ) -> Result<Response<GetStatusResponse>, Status> {
+        let st = self.remote.status().await?;
+        Ok(Response::new(GetStatusResponse {
+            configured: st.configured,
+            url: st.url,
+            user_name: st.user_name,
+            connected: st.connected,
+            spaces: st
+                .spaces
+                .iter()
+                .map(|s| SpaceSyncStatus {
+                    space_id: s.space_id.to_string(),
+                    cursor: s.cursor,
+                    pending: i32::try_from(s.pending).unwrap_or(i32::MAX),
+                    rejected: i32::try_from(s.rejected).unwrap_or(i32::MAX),
+                    connected: st.connected,
+                })
+                .collect(),
+        }))
+    }
+
+    async fn list_remote_spaces(
+        &self,
+        _req: Request<ListRemoteSpacesRequest>,
+    ) -> Result<Response<ListRemoteSpacesResponse>, Status> {
+        let spaces = self.remote.list_remote_spaces().await?;
+        Ok(Response::new(ListRemoteSpacesResponse {
+            spaces: spaces
+                .into_iter()
+                .map(|(space, joined)| RemoteSpace {
+                    space: Some(space),
+                    joined,
+                })
+                .collect(),
+        }))
+    }
+
+    async fn create_remote_space(
+        &self,
+        req: Request<CreateRemoteSpaceRequest>,
+    ) -> Result<Response<CreateRemoteSpaceResponse>, Status> {
+        let name = req.msg.name.trim();
+        if name.is_empty() {
+            return Err(invalid("name is required"));
+        }
+        let space = self.remote.create_remote_space(name).await?;
+        Ok(Response::new(CreateRemoteSpaceResponse {
+            space: Some(space),
+        }))
+    }
+
+    async fn join_space(
+        &self,
+        req: Request<JoinSpaceRequest>,
+    ) -> Result<Response<JoinSpaceResponse>, Status> {
+        let id = parse_id(&req.msg.space_id, "space_id")?;
+        let space = self.remote.join_space(id).await?;
+        Ok(Response::new(JoinSpaceResponse { space: Some(space) }))
+    }
+
+    async fn add_member(
+        &self,
+        req: Request<AddMemberRequest>,
+    ) -> Result<Response<AddMemberResponse>, Status> {
+        let id = parse_id(&req.msg.space_id, "space_id")?;
+        if req.msg.user_name.trim().is_empty() {
+            return Err(invalid("user_name is required"));
+        }
+        self.remote
+            .add_member(id, req.msg.user_name.trim(), req.msg.role)
+            .await?;
+        Ok(Response::new(AddMemberResponse {}))
     }
 }

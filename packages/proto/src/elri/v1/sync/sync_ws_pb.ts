@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, iterateStream, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CreateSpaceRequest, CreateSpaceResponse, HelloRequest, HelloResponse, ListSpacesRequest, ListSpacesResponse, PullRequest, PullResponse, SubmitRequest, SubmitResponse, SubscribeEvent, SubscribeRequest } from "./sync_pb.ts";
-import { CreateSpaceRequestSchema, CreateSpaceResponseSchema, HelloRequestSchema, HelloResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, PullRequestSchema, PullResponseSchema, SubmitRequestSchema, SubmitResponseSchema, SubscribeEventSchema, SubscribeRequestSchema } from "./sync_pb.ts";
+import type { AddMemberRequest, AddMemberResponse, CreateSpaceRequest, CreateSpaceResponse, HelloRequest, HelloResponse, ListSpacesRequest, ListSpacesResponse, PullRequest, PullResponse, SubmitRequest, SubmitResponse, SubscribeEvent, SubscribeRequest } from "./sync_pb.ts";
+import { AddMemberRequestSchema, AddMemberResponseSchema, CreateSpaceRequestSchema, CreateSpaceResponseSchema, HelloRequestSchema, HelloResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, PullRequestSchema, PullResponseSchema, SubmitRequestSchema, SubmitResponseSchema, SubscribeEventSchema, SubscribeRequestSchema } from "./sync_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -41,6 +41,14 @@ const SyncService_CreateSpace: MethodInfo<CreateSpaceRequest, CreateSpaceRespons
   kind: "unary",
   input: CreateSpaceRequestSchema,
   output: CreateSpaceResponseSchema,
+};
+
+const SyncService_AddMember: MethodInfo<AddMemberRequest, AddMemberResponse> = {
+  typeName: "elri.v1.sync.SyncService",
+  name: "AddMember",
+  kind: "unary",
+  input: AddMemberRequestSchema,
+  output: AddMemberResponseSchema,
 };
 
 const SyncService_Submit: MethodInfo<SubmitRequest, SubmitResponse> = {
@@ -104,6 +112,16 @@ export class SyncServiceClient {
    */
   async createSpace(req: CreateSpaceRequest, options?: CallOptions): Promise<CreateSpaceResponse> {
     const res = await this.transport.unary(SyncService_CreateSpace, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Adds or changes a member; Owner and Admin only. 
+   *
+   * @generated from rpc elri.v1.sync.SyncService.AddMember
+   */
+  async addMember(req: AddMemberRequest, options?: CallOptions): Promise<AddMemberResponse> {
+    const res = await this.transport.unary(SyncService_AddMember, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

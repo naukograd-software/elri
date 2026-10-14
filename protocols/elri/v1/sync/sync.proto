@@ -16,6 +16,8 @@ service SyncService {
     rpc ListSpaces(ListSpacesRequest) returns (ListSpacesResponse);
     /* Creates a server Space owned by the caller. */
     rpc CreateSpace(CreateSpaceRequest) returns (CreateSpaceResponse);
+    /* Adds or changes a member; Owner and Admin only. */
+    rpc AddMember(AddMemberRequest) returns (AddMemberResponse);
     /* Submits one Change; accepted or rejected as a whole. Resubmitting the
        same id returns the recorded outcome. */
     rpc Submit(SubmitRequest) returns (SubmitResponse);
@@ -49,6 +51,14 @@ message CreateSpaceRequest {
 message CreateSpaceResponse {
     elri.v1.space.Space space = 1;
 }
+
+message AddMemberRequest {
+    string space_id = 1;
+    string user_name = 2;
+    elri.v1.space.Role role = 3;
+}
+
+message AddMemberResponse {}
 
 message SubmitRequest {
     Envelope change = 1;

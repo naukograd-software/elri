@@ -4,7 +4,7 @@
 
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Space, SpaceJson } from "../space/domain_pb.ts";
+import type { Role, RoleJson, Space, SpaceJson } from "../space/domain_pb.ts";
 import { file_elri_v1_space_domain } from "../space/domain_pb.ts";
 import type { Entry, EntryJson, Envelope, EnvelopeJson } from "./domain_pb.ts";
 import { file_elri_v1_sync_domain } from "./domain_pb.ts";
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/sync/sync.proto.
  */
 export const file_elri_v1_sync_sync: GenFile = /*@__PURE__*/
-  fileDesc("ChdlbHJpL3YxL3N5bmMvc3luYy5wcm90bxIMZWxyaS52MS5zeW5jIjsKDEhlbGxvUmVxdWVzdBIRCglkZXZpY2VfaWQYASABKAkSGAoQcHJvdG9jb2xfdmVyc2lvbhgCIAEoDSJNCg1IZWxsb1Jlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSEQoJdXNlcl9uYW1lGAIgASgJEhgKEHByb3RvY29sX3ZlcnNpb24YAyABKA0iEwoRTGlzdFNwYWNlc1JlcXVlc3QiOgoSTGlzdFNwYWNlc1Jlc3BvbnNlEiQKBnNwYWNlcxgBIAMoCzIULmVscmkudjEuc3BhY2UuU3BhY2UiIgoSQ3JlYXRlU3BhY2VSZXF1ZXN0EgwKBG5hbWUYASABKAkiOgoTQ3JlYXRlU3BhY2VSZXNwb25zZRIjCgVzcGFjZRgBIAEoCzIULmVscmkudjEuc3BhY2UuU3BhY2UiNwoNU3VibWl0UmVxdWVzdBImCgZjaGFuZ2UYASABKAsyFi5lbHJpLnYxLnN5bmMuRW52ZWxvcGUi2AEKCVJlamVjdGlvbhIuCgZyZWFzb24YASABKA4yHi5lbHJpLnYxLnN5bmMuUmVqZWN0aW9uLlJlYXNvbhIPCgdtZXNzYWdlGAIgASgJIokBCgZSZWFzb24SFgoSUkVBU09OX1VOU1BFQ0lGSUVEEAASHAoYUkVBU09OX1BFUk1JU1NJT05fREVOSUVEEAESHwobUkVBU09OX01JU1NJTkdfUFJFREVDRVNTT1JTEAISEgoOUkVBU09OX0lOVkFMSUQQAxIUChBSRUFTT05fUFJPVEVDVEVEEAQiYAoOU3VibWl0UmVzcG9uc2USFgoMYWNjZXB0ZWRfc2VxGAEgASgDSAASKwoIcmVqZWN0ZWQYAiABKAsyFy5lbHJpLnYxLnN5bmMuUmVqZWN0aW9uSABCCQoHb3V0Y29tZSJBCgtQdWxsUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIRCglhZnRlcl9zZXEYAiABKAMSDQoFbGltaXQYAyABKAUiRgoMUHVsbFJlc3BvbnNlEiQKB2VudHJpZXMYASADKAsyEy5lbHJpLnYxLnN5bmMuRW50cnkSEAoIaGFzX21vcmUYAiABKAgiJQoQU3Vic2NyaWJlUmVxdWVzdBIRCglzcGFjZV9pZHMYASADKAkiLwoOU3Vic2NyaWJlRXZlbnQSEAoIc3BhY2VfaWQYASABKAkSCwoDc2VxGAIgASgDMsUDCgtTeW5jU2VydmljZRJACgVIZWxsbxIaLmVscmkudjEuc3luYy5IZWxsb1JlcXVlc3QaGy5lbHJpLnYxLnN5bmMuSGVsbG9SZXNwb25zZRJPCgpMaXN0U3BhY2VzEh8uZWxyaS52MS5zeW5jLkxpc3RTcGFjZXNSZXF1ZXN0GiAuZWxyaS52MS5zeW5jLkxpc3RTcGFjZXNSZXNwb25zZRJSCgtDcmVhdGVTcGFjZRIgLmVscmkudjEuc3luYy5DcmVhdGVTcGFjZVJlcXVlc3QaIS5lbHJpLnYxLnN5bmMuQ3JlYXRlU3BhY2VSZXNwb25zZRJDCgZTdWJtaXQSGy5lbHJpLnYxLnN5bmMuU3VibWl0UmVxdWVzdBocLmVscmkudjEuc3luYy5TdWJtaXRSZXNwb25zZRI9CgRQdWxsEhkuZWxyaS52MS5zeW5jLlB1bGxSZXF1ZXN0GhouZWxyaS52MS5zeW5jLlB1bGxSZXNwb25zZRJLCglTdWJzY3JpYmUSHi5lbHJpLnYxLnN5bmMuU3Vic2NyaWJlUmVxdWVzdBocLmVscmkudjEuc3luYy5TdWJzY3JpYmVFdmVudDABYgZwcm90bzM", [file_elri_v1_space_domain, file_elri_v1_sync_domain]);
+  fileDesc("ChdlbHJpL3YxL3N5bmMvc3luYy5wcm90bxIMZWxyaS52MS5zeW5jIjsKDEhlbGxvUmVxdWVzdBIRCglkZXZpY2VfaWQYASABKAkSGAoQcHJvdG9jb2xfdmVyc2lvbhgCIAEoDSJNCg1IZWxsb1Jlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSEQoJdXNlcl9uYW1lGAIgASgJEhgKEHByb3RvY29sX3ZlcnNpb24YAyABKA0iEwoRTGlzdFNwYWNlc1JlcXVlc3QiOgoSTGlzdFNwYWNlc1Jlc3BvbnNlEiQKBnNwYWNlcxgBIAMoCzIULmVscmkudjEuc3BhY2UuU3BhY2UiIgoSQ3JlYXRlU3BhY2VSZXF1ZXN0EgwKBG5hbWUYASABKAkiOgoTQ3JlYXRlU3BhY2VSZXNwb25zZRIjCgVzcGFjZRgBIAEoCzIULmVscmkudjEuc3BhY2UuU3BhY2UiWgoQQWRkTWVtYmVyUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIRCgl1c2VyX25hbWUYAiABKAkSIQoEcm9sZRgDIAEoDjITLmVscmkudjEuc3BhY2UuUm9sZSITChFBZGRNZW1iZXJSZXNwb25zZSI3Cg1TdWJtaXRSZXF1ZXN0EiYKBmNoYW5nZRgBIAEoCzIWLmVscmkudjEuc3luYy5FbnZlbG9wZSLYAQoJUmVqZWN0aW9uEi4KBnJlYXNvbhgBIAEoDjIeLmVscmkudjEuc3luYy5SZWplY3Rpb24uUmVhc29uEg8KB21lc3NhZ2UYAiABKAkiiQEKBlJlYXNvbhIWChJSRUFTT05fVU5TUEVDSUZJRUQQABIcChhSRUFTT05fUEVSTUlTU0lPTl9ERU5JRUQQARIfChtSRUFTT05fTUlTU0lOR19QUkVERUNFU1NPUlMQAhISCg5SRUFTT05fSU5WQUxJRBADEhQKEFJFQVNPTl9QUk9URUNURUQQBCJgCg5TdWJtaXRSZXNwb25zZRIWCgxhY2NlcHRlZF9zZXEYASABKANIABIrCghyZWplY3RlZBgCIAEoCzIXLmVscmkudjEuc3luYy5SZWplY3Rpb25IAEIJCgdvdXRjb21lIkEKC1B1bGxSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCWFmdGVyX3NlcRgCIAEoAxINCgVsaW1pdBgDIAEoBSJGCgxQdWxsUmVzcG9uc2USJAoHZW50cmllcxgBIAMoCzITLmVscmkudjEuc3luYy5FbnRyeRIQCghoYXNfbW9yZRgCIAEoCCIlChBTdWJzY3JpYmVSZXF1ZXN0EhEKCXNwYWNlX2lkcxgBIAMoCSIvCg5TdWJzY3JpYmVFdmVudBIQCghzcGFjZV9pZBgBIAEoCRILCgNzZXEYAiABKAMykwQKC1N5bmNTZXJ2aWNlEkAKBUhlbGxvEhouZWxyaS52MS5zeW5jLkhlbGxvUmVxdWVzdBobLmVscmkudjEuc3luYy5IZWxsb1Jlc3BvbnNlEk8KCkxpc3RTcGFjZXMSHy5lbHJpLnYxLnN5bmMuTGlzdFNwYWNlc1JlcXVlc3QaIC5lbHJpLnYxLnN5bmMuTGlzdFNwYWNlc1Jlc3BvbnNlElIKC0NyZWF0ZVNwYWNlEiAuZWxyaS52MS5zeW5jLkNyZWF0ZVNwYWNlUmVxdWVzdBohLmVscmkudjEuc3luYy5DcmVhdGVTcGFjZVJlc3BvbnNlEkwKCUFkZE1lbWJlchIeLmVscmkudjEuc3luYy5BZGRNZW1iZXJSZXF1ZXN0Gh8uZWxyaS52MS5zeW5jLkFkZE1lbWJlclJlc3BvbnNlEkMKBlN1Ym1pdBIbLmVscmkudjEuc3luYy5TdWJtaXRSZXF1ZXN0GhwuZWxyaS52MS5zeW5jLlN1Ym1pdFJlc3BvbnNlEj0KBFB1bGwSGS5lbHJpLnYxLnN5bmMuUHVsbFJlcXVlc3QaGi5lbHJpLnYxLnN5bmMuUHVsbFJlc3BvbnNlEksKCVN1YnNjcmliZRIeLmVscmkudjEuc3luYy5TdWJzY3JpYmVSZXF1ZXN0GhwuZWxyaS52MS5zeW5jLlN1YnNjcmliZUV2ZW50MAFiBnByb3RvMw", [file_elri_v1_space_domain, file_elri_v1_sync_domain]);
 
 /**
  * @generated from message elri.v1.sync.HelloRequest
@@ -201,6 +201,72 @@ export const CreateSpaceResponseSchema: GenMessage<CreateSpaceResponse, {jsonTyp
   messageDesc(file_elri_v1_sync_sync, 5);
 
 /**
+ * @generated from message elri.v1.sync.AddMemberRequest
+ */
+export type AddMemberRequest = Message<"elri.v1.sync.AddMemberRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string user_name = 2;
+   */
+  userName: string;
+
+  /**
+   * @generated from field: elri.v1.space.Role role = 3;
+   */
+  role: Role;
+};
+
+/**
+ * @generated from message elri.v1.sync.AddMemberRequest
+ */
+export type AddMemberRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string user_name = 2;
+   */
+  userName?: string;
+
+  /**
+   * @generated from field: elri.v1.space.Role role = 3;
+   */
+  role?: RoleJson;
+};
+
+/**
+ * Describes the message elri.v1.sync.AddMemberRequest.
+ * Use `create(AddMemberRequestSchema)` to create a new message.
+ */
+export const AddMemberRequestSchema: GenMessage<AddMemberRequest, {jsonType: AddMemberRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_sync_sync, 6);
+
+/**
+ * @generated from message elri.v1.sync.AddMemberResponse
+ */
+export type AddMemberResponse = Message<"elri.v1.sync.AddMemberResponse"> & {
+};
+
+/**
+ * @generated from message elri.v1.sync.AddMemberResponse
+ */
+export type AddMemberResponseJson = {
+};
+
+/**
+ * Describes the message elri.v1.sync.AddMemberResponse.
+ * Use `create(AddMemberResponseSchema)` to create a new message.
+ */
+export const AddMemberResponseSchema: GenMessage<AddMemberResponse, {jsonType: AddMemberResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_sync_sync, 7);
+
+/**
  * @generated from message elri.v1.sync.SubmitRequest
  */
 export type SubmitRequest = Message<"elri.v1.sync.SubmitRequest"> & {
@@ -225,7 +291,7 @@ export type SubmitRequestJson = {
  * Use `create(SubmitRequestSchema)` to create a new message.
  */
 export const SubmitRequestSchema: GenMessage<SubmitRequest, {jsonType: SubmitRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 6);
+  messageDesc(file_elri_v1_sync_sync, 8);
 
 /**
  * @generated from message elri.v1.sync.Rejection
@@ -262,7 +328,7 @@ export type RejectionJson = {
  * Use `create(RejectionSchema)` to create a new message.
  */
 export const RejectionSchema: GenMessage<Rejection, {jsonType: RejectionJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 7);
+  messageDesc(file_elri_v1_sync_sync, 9);
 
 /**
  * @generated from enum elri.v1.sync.Rejection.Reason
@@ -311,7 +377,7 @@ export type Rejection_ReasonJson = "REASON_UNSPECIFIED" | "REASON_PERMISSION_DEN
  * Describes the enum elri.v1.sync.Rejection.Reason.
  */
 export const Rejection_ReasonSchema: GenEnum<Rejection_Reason, Rejection_ReasonJson> = /*@__PURE__*/
-  enumDesc(file_elri_v1_sync_sync, 7, 0);
+  enumDesc(file_elri_v1_sync_sync, 9, 0);
 
 /**
  * @generated from message elri.v1.sync.SubmitResponse
@@ -355,7 +421,7 @@ export type SubmitResponseJson = {
  * Use `create(SubmitResponseSchema)` to create a new message.
  */
 export const SubmitResponseSchema: GenMessage<SubmitResponse, {jsonType: SubmitResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 8);
+  messageDesc(file_elri_v1_sync_sync, 10);
 
 /**
  * @generated from message elri.v1.sync.PullRequest
@@ -406,7 +472,7 @@ export type PullRequestJson = {
  * Use `create(PullRequestSchema)` to create a new message.
  */
 export const PullRequestSchema: GenMessage<PullRequest, {jsonType: PullRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 9);
+  messageDesc(file_elri_v1_sync_sync, 11);
 
 /**
  * @generated from message elri.v1.sync.PullResponse
@@ -443,7 +509,7 @@ export type PullResponseJson = {
  * Use `create(PullResponseSchema)` to create a new message.
  */
 export const PullResponseSchema: GenMessage<PullResponse, {jsonType: PullResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 10);
+  messageDesc(file_elri_v1_sync_sync, 12);
 
 /**
  * @generated from message elri.v1.sync.SubscribeRequest
@@ -470,7 +536,7 @@ export type SubscribeRequestJson = {
  * Use `create(SubscribeRequestSchema)` to create a new message.
  */
 export const SubscribeRequestSchema: GenMessage<SubscribeRequest, {jsonType: SubscribeRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 11);
+  messageDesc(file_elri_v1_sync_sync, 13);
 
 /**
  * @generated from message elri.v1.sync.SubscribeEvent
@@ -507,7 +573,7 @@ export type SubscribeEventJson = {
  * Use `create(SubscribeEventSchema)` to create a new message.
  */
 export const SubscribeEventSchema: GenMessage<SubscribeEvent, {jsonType: SubscribeEventJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 12);
+  messageDesc(file_elri_v1_sync_sync, 14);
 
 /**
  *
@@ -546,6 +612,16 @@ export const SyncService: GenService<{
     methodKind: "unary";
     input: typeof CreateSpaceRequestSchema;
     output: typeof CreateSpaceResponseSchema;
+  },
+  /**
+   * Adds or changes a member; Owner and Admin only. 
+   *
+   * @generated from rpc elri.v1.sync.SyncService.AddMember
+   */
+  addMember: {
+    methodKind: "unary";
+    input: typeof AddMemberRequestSchema;
+    output: typeof AddMemberResponseSchema;
   },
   /**
    * Submits one Change; accepted or rejected as a whole. Resubmitting the

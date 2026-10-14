@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package elri.v1.remote;
+
+import "elri/v1/space/domain.proto";
+
+/*
+The local core's view of its server connection. One server per device in
+this version. Credentials never leave the device.
+*/
+service RemoteService {
+    /* Stores the server URL and token and verifies them with a Hello. */
+    rpc Connect(ConnectRequest) returns (ConnectResponse);
+    /* Forgets the server; replicated Spaces stay readable and editable locally. */
+    rpc Disconnect(DisconnectRequest) returns (DisconnectResponse);
+    rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+    /* Spaces the user can see on the server, with whether each is joined. */
+    rpc ListRemoteSpaces(ListRemoteSpacesRequest) returns (ListRemoteSpacesResponse);
+    /* Creates a server Space and joins it. */
+    rpc CreateRemoteSpace(CreateRemoteSpaceRequest) returns (CreateRemoteSpaceResponse);
+    /* Replicates a server Space to this device. */
+    rpc JoinSpace(JoinSpaceRequest) returns (JoinSpaceResponse);
+    /* Owner/Admin: adds a member by user name. */
+    rpc AddMember(AddMemberRequest) returns (AddMemberResponse);
+}
+
+message ConnectRequest {
+    string url = 1;
+    string token = 2;
+}
+
+message ConnectResponse {
+    string user_id = 1;
+    string user_name = 2;
+}
+
+message DisconnectRequest {}
+message DisconnectResponse {}
+
+message GetStatusRequest {}
+
+message SpaceSyncStatus {
+    string space_id = 1;
+    /* Highest server sequence installed locally. */
+    int64 cursor = 2;
+    /* Local Changes not yet accepted. */
+    int32 pending = 3;
+    /* Rejected Changes awaiting the user. */
+    int32 rejected = 4;
+    bool connected = 5;
+}
+
+message GetStatusResponse {
+    bool configured = 1;
+    string url = 2;
+    string user_name = 3;
+    bool connected = 4;
+    repeated SpaceSyncStatus spaces = 5;
+}
+
+message ListRemoteSpacesRequest {}
+
+message RemoteSpace {
+    elri.v1.space.Space space = 1;
+    bool joined = 2;
+}
+
+message ListRemoteSpacesResponse {
+    repeated RemoteSpace spaces = 1;
+}
+
+message CreateRemoteSpaceRequest {
+    string name = 1;
+}
+
+message CreateRemoteSpaceResponse {
+    elri.v1.space.Space space = 1;
+}
+
+message JoinSpaceRequest {
+    string space_id = 1;
+}
+
+message JoinSpaceResponse {
+    elri.v1.space.Space space = 1;
+}
+
+message AddMemberRequest {
+    string space_id = 1;
+    string user_name = 2;
+    elri.v1.space.Role role = 3;
+}
+
+message AddMemberResponse {}
