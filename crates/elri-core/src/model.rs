@@ -84,6 +84,28 @@ pub fn is_definition(kind: ObjectKind) -> bool {
     )
 }
 
+/// Whether a kind is created through its own service rather than
+/// `ObjectService`: definitions and attachments.
+pub fn is_managed(kind: ObjectKind) -> bool {
+    is_definition(kind) || kind == ObjectKind::Attachment
+}
+
+/// An integer field, if present.
+pub fn int_field(o: &Object, id: &str) -> Option<i64> {
+    match o.fields.get(id).and_then(|v| v.value.as_ref()) {
+        Some(value::Value::Int(i)) => Some(*i),
+        _ => None,
+    }
+}
+
+/// The attachment digest recorded on an Object, if it is an attachment.
+pub fn attachment_sha256(o: &Object) -> Option<&str> {
+    if o.kind() != ObjectKind::Attachment {
+        return None;
+    }
+    string_field(o, reserved::SHA256)
+}
+
 /// Whether `value` is of `kind`.
 pub fn kind_accepts(kind: FieldKind, v: &Value) -> bool {
     matches!(
@@ -116,6 +138,12 @@ pub mod reserved {
     pub const DESCRIPTION: &str = "$description";
     /// `FieldKind` code of a field definition, as an integer.
     pub const FIELD_KIND: &str = "$field_kind";
+    /// Hex SHA-256 of an attachment's bytes.
+    pub const SHA256: &str = "$sha256";
+    /// Size of an attachment's bytes.
+    pub const SIZE: &str = "$size";
+    /// Media type of an attachment.
+    pub const MEDIA_TYPE: &str = "$media_type";
 }
 
 const REF_TAG: &str = "$ref";

@@ -35,3 +35,4 @@ keyring = ["dep:keyring"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt-multi-thread", "test-util"] }
+sha2.workspace = true

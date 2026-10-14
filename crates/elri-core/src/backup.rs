@@ -131,9 +131,44 @@ pub async fn create(store: &Store, dest: &Path) -> Result<(Manifest, PathBuf), B
 
     let (device_id, spaces) = store.backup_into(&dir).await?;
 
-    let mut files = Vec::with_capacity(spaces.len() + 1);
+    // Attachment bytes: every blob a Space holds is copied; every digest
+    // a Space names but does not hold is an omission.
     let mut names = vec!["device.db".to_owned()];
     names.extend(spaces.iter().map(|s| format!("spaces/{}.db", s.id)));
+    let mut missing: Vec<String> = Vec::new();
+    for s in &spaces {
+        let space_id = crate::model::ObjectId::parse(&s.id).map_err(StoreError::from)?;
+        let space = store.space(space_id).await?;
+        let held: std::collections::HashSet<String> = space
+            .blobs_held()
+            .await?
+            .into_iter()
+            .map(|(sha, _)| sha)
+            .collect();
+        let blob_dir = dir.join("blobs").join(&s.id);
+        for sha in &held {
+            if !space.blobs().exists(space_id, sha) {
+                continue;
+            }
+            std::fs::create_dir_all(&blob_dir).map_err(io(&blob_dir))?;
+            restrict(&blob_dir);
+            let from = space.blobs().path(space_id, sha);
+            let to = blob_dir.join(sha);
+            std::fs::copy(&from, &to).map_err(io(&from))?;
+            restrict(&to);
+            names.push(format!("blobs/{}/{sha}", s.id));
+        }
+        for sha in space.attachment_digests().await? {
+            if !space.blobs().exists(space_id, &sha) {
+                missing.push(format!(
+                    "attachment {sha} of space {}: bytes not on this device",
+                    s.id
+                ));
+            }
+        }
+    }
+
+    let mut files = Vec::with_capacity(names.len());
     for name in names {
         let path = dir.join(&name);
         let (sha256, bytes) = hash_file(&path)?;
@@ -149,10 +184,11 @@ pub async fn create(store: &Store, dest: &Path) -> Result<(Manifest, PathBuf), B
         device_id: device_id.as_string(),
         spaces,
         files,
-        omissions: vec![
+        omissions: std::iter::once(
             "secrets: the server token is not copied; connect again after restore".to_owned(),
-            "attachments: none exist yet".to_owned(),
-        ],
+        )
+        .chain(missing)
+        .collect(),
         verified: false,
     };
     write_manifest(&dir, &manifest)?;
@@ -228,6 +264,10 @@ pub async fn restore(
     for f in &manifest.files {
         let from = backup_dir.join(&f.path);
         let to = data_dir.join(&f.path);
+        if let Some(parent) = to.parent() {
+            std::fs::create_dir_all(parent).map_err(io(parent))?;
+            restrict(parent);
+        }
         std::fs::copy(&from, &to).map_err(io(&from))?;
         restrict(&to);
     }
@@ -240,18 +280,25 @@ pub async fn restore(
     Ok(manifest)
 }
 
-/// Accepts only `device.db` or `spaces/<uuid>.db`: no other names, no
-/// separators, no parent components.
+/// Accepts only `device.db`, `spaces/<uuid>.db`, or `blobs/<uuid>/<sha256>`:
+/// no other names, no separators, no parent components.
 fn known_entry(path: &str) -> Result<(), BackupError> {
+    let bad = || BackupError::BadEntry(path.to_owned());
     if path == "device.db" {
+        return Ok(());
+    }
+    if let Some(rest) = path.strip_prefix("blobs/") {
+        let (space, sha) = rest.split_once('/').ok_or_else(bad)?;
+        uuid::Uuid::parse_str(space).map_err(|_| bad())?;
+        crate::blobs::check_digest(sha).map_err(|_| bad())?;
         return Ok(());
     }
     let id = path
         .strip_prefix("spaces/")
         .and_then(|rest| rest.strip_suffix(".db"))
         .filter(|id| !id.contains(['/', '\\']))
-        .ok_or_else(|| BackupError::BadEntry(path.to_owned()))?;
-    uuid::Uuid::parse_str(id).map_err(|_| BackupError::BadEntry(path.to_owned()))?;
+        .ok_or_else(bad)?;
+    uuid::Uuid::parse_str(id).map_err(|_| bad())?;
     Ok(())
 }
 

@@ -6,6 +6,11 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use elri_core::Endpoint;
+use elri_proto::elri::v1::attachment::attachment_service_ws::AttachmentServiceClient;
+use elri_proto::elri::v1::attachment::{
+    upload_request, Attachment, DownloadRequest, ListAttachmentsRequest, PinRequest, UploadHeader,
+    UploadRequest,
+};
 use elri_proto::elri::v1::backup::backup_service_ws::BackupServiceClient;
 use elri_proto::elri::v1::backup::CreateBackupRequest;
 use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
@@ -76,6 +81,11 @@ enum Cmd {
         #[arg(long, default_value_t = 20)]
         limit: i32,
     },
+    /// Attachments: files kept beside a Space.
+    Attachment {
+        #[command(subcommand)]
+        cmd: AttachmentCmd,
+    },
     /// Local backups.
     Backup {
         #[command(subcommand)]
@@ -120,6 +130,46 @@ enum RemoteCmd {
         /// Role: admin, editor, or viewer.
         #[arg(long, default_value = "editor", value_parser = parse_role)]
         role: Role,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum AttachmentCmd {
+    /// Upload a file as an attachment.
+    Upload {
+        #[arg(long)]
+        space: String,
+        /// File to upload.
+        file: PathBuf,
+        /// Display name; the file name when omitted.
+        #[arg(long)]
+        name: Option<String>,
+        /// Media type.
+        #[arg(long = "type", default_value = "application/octet-stream")]
+        media_type: String,
+    },
+    /// Download an attachment's bytes to a file.
+    Download {
+        #[arg(long)]
+        space: String,
+        id: String,
+        /// Where to write the bytes.
+        out: PathBuf,
+    },
+    /// List attachments of a Space.
+    List {
+        #[arg(long)]
+        space: String,
+        #[arg(long)]
+        include_deleted: bool,
+    },
+    /// Keep the bytes on this device (fetching them if needed), or stop.
+    Pin {
+        #[arg(long)]
+        space: String,
+        id: String,
+        #[arg(long)]
+        off: bool,
     },
 }
 
@@ -431,6 +481,143 @@ fn object_json(o: &Object) -> serde_json::Value {
     })
 }
 
+fn attachment_json(a: &Attachment) -> serde_json::Value {
+    json!({
+        "id": a.id,
+        "space_id": a.space_id,
+        "name": a.name,
+        "media_type": a.media_type,
+        "size": a.size,
+        "sha256": a.sha256,
+        "available": a.available,
+        "pinned": a.pinned,
+        "created_at_ms": a.created_at_ms,
+        "deleted_at_ms": a.deleted_at_ms,
+    })
+}
+
+async fn upload_attachment(
+    client: &AttachmentServiceClient,
+    endpoint: &Endpoint,
+    space: String,
+    file: PathBuf,
+    name: Option<String>,
+    media_type: String,
+) -> Result<serde_json::Value> {
+    use std::io::Read as _;
+    let name = name.unwrap_or_else(|| {
+        file.file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    });
+    let size = i64::try_from(std::fs::metadata(&file)?.len())?;
+    let stream = client
+        .upload(
+            ws_proto::CallOptions::new()
+                .with_header("authorization", format!("Bearer {}", endpoint.token)),
+        )
+        .await?;
+    stream
+        .send(&UploadRequest {
+            request: Some(upload_request::Request::Header(UploadHeader {
+                space_id: space,
+                name,
+                media_type,
+                size,
+            })),
+        })
+        .await?;
+    let mut f = std::fs::File::open(&file)?;
+    let mut buf = vec![0u8; 64 * 1024];
+    loop {
+        let n = f.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        stream
+            .send(&UploadRequest {
+                request: Some(upload_request::Request::Chunk(buf[..n].to_vec().into())),
+            })
+            .await?;
+    }
+    let res = stream.close_and_recv().await?;
+    let Some(a) = res.msg.attachment else {
+        bail!("core returned no attachment");
+    };
+    Ok(attachment_json(&a))
+}
+
+async fn run_attachment(
+    endpoint: &Endpoint,
+    conn: Client,
+    cmd: AttachmentCmd,
+) -> Result<serde_json::Value> {
+    let client = AttachmentServiceClient::new(conn);
+    match cmd {
+        AttachmentCmd::Upload {
+            space,
+            file,
+            name,
+            media_type,
+        } => upload_attachment(&client, endpoint, space, file, name, media_type).await,
+        AttachmentCmd::Download { space, id, out } => {
+            use std::io::Write as _;
+            let stream = client
+                .download(authed(
+                    endpoint,
+                    DownloadRequest {
+                        space_id: space,
+                        id,
+                    },
+                ))
+                .await?;
+            let mut f = std::fs::File::create(&out)?;
+            let mut total = 0u64;
+            while let Some(chunk) = stream.recv().await? {
+                f.write_all(&chunk.data)?;
+                total += chunk.data.len() as u64;
+            }
+            Ok(json!({ "written": out.display().to_string(), "bytes": total }))
+        }
+        AttachmentCmd::List {
+            space,
+            include_deleted,
+        } => {
+            let res = client
+                .list_attachments(authed(
+                    endpoint,
+                    ListAttachmentsRequest {
+                        space_id: space,
+                        include_deleted,
+                    },
+                ))
+                .await?;
+            Ok(json!(res
+                .msg
+                .attachments
+                .iter()
+                .map(attachment_json)
+                .collect::<Vec<_>>()))
+        }
+        AttachmentCmd::Pin { space, id, off } => {
+            let res = client
+                .pin(authed(
+                    endpoint,
+                    PinRequest {
+                        space_id: space,
+                        id,
+                        pinned: !off,
+                    },
+                ))
+                .await?;
+            let Some(a) = res.msg.attachment else {
+                bail!("core returned no attachment");
+            };
+            Ok(attachment_json(&a))
+        }
+    }
+}
+
 async fn run_backup_offline(data_dir: &Path, cmd: &BackupCmd) -> Result<()> {
     match cmd {
         BackupCmd::Check { dir } => {
@@ -531,6 +718,7 @@ async fn main() -> Result<()> {
             json!(hits)
         }
         Cmd::Change { cmd } => run_change(&endpoint, conn, cmd).await?,
+        Cmd::Attachment { cmd } => run_attachment(&endpoint, conn, cmd).await?,
         Cmd::Backup {
             cmd: BackupCmd::Create { dest },
         } => {

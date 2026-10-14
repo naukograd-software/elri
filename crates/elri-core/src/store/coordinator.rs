@@ -320,6 +320,7 @@ impl Store {
     pub async fn admit_coordinated(
         &self,
         env: &Envelope,
+        check: &(dyn Fn(&Object) -> Result<(), String> + Sync),
     ) -> Result<Result<Vec<(SpaceId, i64)>, Outcome>, StoreError> {
         let spaces = envelope_spaces(env)?;
         let change_id = uuid_arg(&env.id)?;
@@ -351,7 +352,14 @@ impl Store {
                 return Ok(Err(rejected(Reason::Invalid, "a space without parts")));
             }
             match stage_admit(guard, &sub).await? {
-                Ok(docs) => staged.push(docs),
+                Ok(docs) => {
+                    for d in &docs {
+                        if let Err(msg) = check(&d.rec) {
+                            return Ok(Err(rejected(Reason::Invalid, msg)));
+                        }
+                    }
+                    staged.push(docs);
+                }
                 Err(outcome) => return Ok(Err(outcome)),
             }
         }

@@ -246,6 +246,23 @@ pub struct SpaceLogRow {
     pub purged_object_id: Option<Uuid>,
 }
 
+/// Attachment bytes this device holds for the Space, by digest.
+#[derive(Debug, toasty::Model)]
+#[table = "blobs"]
+pub struct BlobRow {
+    /// Hex SHA-256.
+    #[key]
+    pub sha256: String,
+    /// Size in bytes.
+    pub size: i64,
+    /// Kept regardless of cache limits.
+    pub pinned: bool,
+    /// The authority has the bytes (always true where this is the authority).
+    pub uploaded: bool,
+    /// When the bytes arrived here.
+    pub created_at: i64,
+}
+
 /// Identities of purged Objects: the minimum kept so that a stale device
 /// can neither resurrect nor recreate one.
 #[derive(Debug, toasty::Model)]

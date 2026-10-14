@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package elri.v1.attachment;
+
+import "elri/v1/attachment/domain.proto";
+
+/*
+Attachments of a Space. Bytes travel in chunks; an upload is finalized
+only when the whole hash checks out. A server Space uploads the bytes
+before the Change naming them is submitted, so no accepted reference
+points at bytes the server lacks.
+*/
+service AttachmentService {
+    /* First message is the header, then the chunks in order. */
+    rpc Upload(stream UploadRequest) returns (UploadResponse);
+    /* Streams the bytes; fetches them from the server first if needed. */
+    rpc Download(DownloadRequest) returns (stream Chunk);
+    rpc GetAttachment(GetAttachmentRequest) returns (GetAttachmentResponse);
+    rpc ListAttachments(ListAttachmentsRequest) returns (ListAttachmentsResponse);
+    /* Keeps (or stops keeping) the bytes on this device; pinning fetches them. */
+    rpc Pin(PinRequest) returns (PinResponse);
+}
+
+message UploadHeader {
+    string space_id = 1;
+    string name = 2;
+    string media_type = 3;
+    /* Total size; the upload is refused if the chunks disagree. */
+    int64 size = 4;
+}
+
+message UploadRequest {
+    oneof request {
+        UploadHeader header = 1;
+        bytes chunk = 2;
+    }
+}
+
+message UploadResponse {
+    Attachment attachment = 1;
+}
+
+message DownloadRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message Chunk {
+    bytes data = 1;
+}
+
+message GetAttachmentRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message GetAttachmentResponse {
+    Attachment attachment = 1;
+}
+
+message ListAttachmentsRequest {
+    string space_id = 1;
+    bool include_deleted = 2;
+}
+
+message ListAttachmentsResponse {
+    repeated Attachment attachments = 1;
+}
+
+message PinRequest {
+    string space_id = 1;
+    string id = 2;
+    bool pinned = 3;
+}
+
+message PinResponse {
+    Attachment attachment = 1;
+}

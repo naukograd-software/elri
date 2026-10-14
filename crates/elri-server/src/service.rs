@@ -2,7 +2,9 @@
 
 use std::sync::Arc;
 
+use elri_core::blobs::{check_digest, BlobError};
 use elri_core::change::{rejected, Outcome, Reason};
+use elri_core::model::attachment_sha256;
 use elri_core::model::ObjectId;
 use elri_core::sync::{envelope_space, envelope_spaces, validate_envelope};
 use elri_proto::elri::v1::account::account_service_ws::{
@@ -20,13 +22,15 @@ use elri_proto::elri::v1::account::{
 };
 use elri_proto::elri::v1::space::{self as spb, Authority};
 use elri_proto::elri::v1::sync::sync_service_ws::{
-    register_sync_service_arc, SubscribeServerStream, SyncServiceHandler,
+    register_sync_service_arc, DownloadBlobServerStream, SubscribeServerStream, SyncServiceHandler,
+    UploadBlobServerStream,
 };
 use elri_proto::elri::v1::sync::{
-    AddMemberRequest, AddMemberResponse, CreateSpaceRequest, CreateSpaceResponse, HelloRequest,
-    HelloResponse, ListSpacesRequest, ListSpacesResponse, PullRequest, PullResponse,
-    PurgeObjectRequest, PurgeObjectResponse, SubmitRequest, SubmitResponse, SubscribeEvent,
-    SubscribeRequest,
+    upload_blob_request, AddMemberRequest, AddMemberResponse, BlobChunk, CreateSpaceRequest,
+    CreateSpaceResponse, DownloadBlobRequest, HelloRequest, HelloResponse, ListSpacesRequest,
+    ListSpacesResponse, PullRequest, PullResponse, PurgeObjectRequest, PurgeObjectResponse,
+    SubmitRequest, SubmitResponse, SubscribeEvent, SubscribeRequest, UploadBlobRequest,
+    UploadBlobResponse,
 };
 use uuid::Uuid;
 use ws_proto::{Code, Metadata, Request, Response, Server, Status};
@@ -72,6 +76,19 @@ fn storage(e: elri_core::store::StoreError) -> Status {
 
 fn invalid(msg: impl Into<String>) -> Status {
     Status::new(Code::InvalidArgument, msg)
+}
+
+fn blob_status(e: BlobError) -> Status {
+    match e {
+        BlobError::Hash { .. }
+        | BlobError::Size { .. }
+        | BlobError::TooLarge
+        | BlobError::BadDigest(_) => invalid(e.to_string()),
+        other @ BlobError::Io { .. } => {
+            tracing::error!(error = %other, "blob storage failure");
+            Status::new(Code::Internal, "blob storage failure")
+        }
+    }
 }
 
 fn parse_id(s: &str, what: &str) -> Result<Uuid, Status> {
@@ -439,9 +456,25 @@ impl SyncServiceHandler for State {
                 ));
             }
         }
+        // An accepted attachment must name bytes this server holds.
+        let blobs = self.blobs.clone();
+        let check = move |o: &elri_proto::elri::v1::object::Object| -> Result<(), String> {
+            if let Some(sha) = attachment_sha256(o) {
+                let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
+                if !blobs.exists(space, sha) {
+                    return Err(format!("attachment {} bytes were not uploaded", o.id));
+                }
+            }
+            Ok(())
+        };
         if spaces.len() > 1 {
             // Whole or nothing across Spaces: the coordinator admits it.
-            return match self.spaces.admit_coordinated(&env).await.map_err(storage)? {
+            return match self
+                .spaces
+                .admit_coordinated(&env, &check)
+                .await
+                .map_err(storage)?
+            {
                 Ok(seqs) => {
                     let mut first = 0;
                     for (space_id, seq) in &seqs {
@@ -457,7 +490,7 @@ impl SyncServiceHandler for State {
         }
         let space_id = spaces[0];
         let space = self.spaces.space(space_id).await.map_err(storage)?;
-        let outcome = space.admit(&env).await.map_err(storage)?;
+        let outcome = space.admit_with(&env, &check).await.map_err(storage)?;
         if let Outcome::AcceptedSeq(seq) = outcome {
             let _ = self.events.send((space_id.uuid(), seq));
         }
@@ -482,6 +515,78 @@ impl SyncServiceHandler for State {
         let has_more = entries.len() > limit;
         let entries = entries.into_iter().take(limit).collect();
         Ok(Response::new(PullResponse { entries, has_more }))
+    }
+
+    async fn upload_blob(
+        &self,
+        stream: UploadBlobServerStream,
+    ) -> Result<Response<UploadBlobResponse>, Status> {
+        let user = self.user(&stream.header()).await?;
+        let Some(UploadBlobRequest {
+            chunk: Some(upload_blob_request::Chunk::Header(header)),
+        }) = stream.recv().await?
+        else {
+            return Err(invalid("the first message must be the header"));
+        };
+        let space_id = parse_id(&header.space_id, "space_id")?;
+        if !self.role(space_id, &user).await?.can_write() {
+            return Err(Status::new(Code::PermissionDenied, "viewer cannot write"));
+        }
+        check_digest(&header.sha256).map_err(blob_status)?;
+        let space = ObjectId::from_uuid(space_id);
+        if self.blobs.exists(space, &header.sha256) {
+            // Drain politely; the bytes are already here.
+            while stream.recv().await?.is_some() {}
+            return Ok(Response::new(UploadBlobResponse { existed: true }));
+        }
+        let mut writer = self.blobs.begin(space).map_err(blob_status)?;
+        while let Some(m) = stream.recv().await? {
+            match m.chunk {
+                Some(upload_blob_request::Chunk::Data(d)) => {
+                    writer.write(&d).map_err(blob_status)?;
+                }
+                Some(upload_blob_request::Chunk::Header(_)) => {
+                    return Err(invalid("a second header"))
+                }
+                None => {}
+            }
+        }
+        writer
+            .finish(Some(&header.sha256), u64::try_from(header.size).ok())
+            .map_err(blob_status)?;
+        Ok(Response::new(UploadBlobResponse { existed: false }))
+    }
+
+    async fn download_blob(
+        &self,
+        req: Request<DownloadBlobRequest>,
+        stream: DownloadBlobServerStream,
+    ) -> Result<(), Status> {
+        let user = self.user(&req.header).await?;
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        self.role(space_id, &user).await?;
+        check_digest(&req.msg.sha256).map_err(blob_status)?;
+        let space = ObjectId::from_uuid(space_id);
+        if !self.blobs.exists(space, &req.msg.sha256) {
+            return Err(Status::new(Code::NotFound, "no such attachment bytes"));
+        }
+        let (tx, mut rx) = tokio::sync::mpsc::channel::<Vec<u8>>(4);
+        let blobs = self.blobs.clone();
+        let sha = req.msg.sha256.clone();
+        let reader = tokio::task::spawn_blocking(move || {
+            blobs.read_chunks(space, &sha, |chunk| {
+                tx.blocking_send(chunk.to_vec())
+                    .map_err(|_| BlobError::TooLarge)
+            })
+        });
+        while let Some(data) = rx.recv().await {
+            stream.send(&BlobChunk { data: data.into() }).await?;
+        }
+        match reader.await {
+            Ok(Ok(()) | Err(BlobError::TooLarge)) => Ok(()),
+            Ok(Err(e)) => Err(blob_status(e)),
+            Err(e) => Err(Status::new(Code::Internal, e.to_string())),
+        }
     }
 
     async fn purge_object(

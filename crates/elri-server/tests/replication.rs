@@ -7,6 +7,10 @@ use std::collections::HashMap;
 use std::time::Duration;
 
 use elri_core::{BuildInfo, Config as CoreConfig, Core, Endpoint};
+use elri_proto::elri::v1::attachment::attachment_service_ws::AttachmentServiceClient;
+use elri_proto::elri::v1::attachment::{
+    upload_request, DownloadRequest, GetAttachmentRequest, UploadHeader, UploadRequest,
+};
 use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
 use elri_proto::elri::v1::change::{ChangeStatus, ListChangesRequest};
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
@@ -46,6 +50,7 @@ struct Device {
     objects: ObjectServiceClient,
     remote: RemoteServiceClient,
     changes: ChangeServiceClient,
+    attachments: AttachmentServiceClient,
 }
 
 impl Device {
@@ -63,7 +68,8 @@ impl Device {
             endpoint,
             objects: ObjectServiceClient::new(conn.clone()),
             remote: RemoteServiceClient::new(conn.clone()),
-            changes: ChangeServiceClient::new(conn),
+            changes: ChangeServiceClient::new(conn.clone()),
+            attachments: AttachmentServiceClient::new(conn),
         }
     }
 
@@ -469,6 +475,82 @@ async fn changes_flow_between_devices_through_the_server() {
         })
         .await;
     }
+    // An attachment: Alice uploads, the bytes reach the server before the
+    // Change does, Bob sees the attachment and fetches the bytes on demand.
+    let payload = b"attachment bytes travelling through the server".to_vec();
+    let stream = a
+        .attachments
+        .upload(
+            ws_proto::CallOptions::new()
+                .with_header("authorization", format!("Bearer {}", a.endpoint.token)),
+        )
+        .await
+        .expect("upload");
+    stream
+        .send(&UploadRequest {
+            request: Some(upload_request::Request::Header(UploadHeader {
+                space_id: space.id.clone(),
+                name: "notes.txt".into(),
+                media_type: "text/plain".into(),
+                size: i64::try_from(payload.len()).expect("len"),
+            })),
+        })
+        .await
+        .expect("header");
+    stream
+        .send(&UploadRequest {
+            request: Some(upload_request::Request::Chunk(payload.clone().into())),
+        })
+        .await
+        .expect("chunk");
+    let uploaded = stream
+        .close_and_recv()
+        .await
+        .expect("finish")
+        .msg
+        .attachment
+        .expect("attachment");
+    eventually("bob to see the attachment", || async {
+        b.attachments
+            .get_attachment(b.authed(GetAttachmentRequest {
+                space_id: space.id.clone(),
+                id: uploaded.id.clone(),
+            }))
+            .await
+            .is_ok_and(|r| r.msg.attachment.is_some_and(|x| !x.available))
+    })
+    .await;
+    let server_blob = server.state().blobs.exists(
+        elri_core::model::ObjectId::parse(&space.id).expect("id"),
+        &uploaded.sha256,
+    );
+    assert!(server_blob, "the server holds the bytes");
+    let stream = b
+        .attachments
+        .download(b.authed(DownloadRequest {
+            space_id: space.id.clone(),
+            id: uploaded.id.clone(),
+        }))
+        .await
+        .expect("download");
+    let mut got = Vec::new();
+    while let Some(c) = stream.recv().await.expect("chunk") {
+        got.extend_from_slice(&c.data);
+    }
+    assert_eq!(got, payload);
+    let now_local = b
+        .attachments
+        .get_attachment(b.authed(GetAttachmentRequest {
+            space_id: space.id.clone(),
+            id: uploaded.id.clone(),
+        }))
+        .await
+        .expect("get")
+        .msg
+        .attachment
+        .expect("attachment");
+    assert!(now_local.available);
+
     eventually("alice's coordinated change to be accepted", || async {
         a.changes
             .list_changes(a.authed(ListChangesRequest {

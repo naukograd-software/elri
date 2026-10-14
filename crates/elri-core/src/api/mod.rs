@@ -2,6 +2,7 @@
 //! a token middleware first, then the typed service handlers. Protocol
 //! messages are the model, so handlers mostly validate and delegate.
 
+mod attachments;
 mod definitions;
 
 use std::sync::Arc;
@@ -56,9 +57,7 @@ use ws_proto::{Code, Request, Response, Server, ServerConfig, Status};
 
 use crate::device::{DeviceId, LaunchToken};
 use crate::model::SpaceId;
-use crate::model::{
-    is_definition, is_scalar, kind_accepts, now_ms, ModelError, ObjectDoc, ObjectId,
-};
+use crate::model::{is_managed, is_scalar, kind_accepts, now_ms, ModelError, ObjectDoc, ObjectId};
 use crate::remote::{Remote, RemoteError};
 use crate::store::{Edit, ObjectFilter, SpaceStore, Store, StoreError};
 use crate::BuildInfo;
@@ -97,7 +96,8 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     register_event_service_arc(&server, Arc::clone(&services));
     register_search_service_arc(&server, Arc::clone(&services));
     register_backup_service_arc(&server, Arc::clone(&services));
-    definitions::register(&server, services);
+    definitions::register(&server, Arc::clone(&services));
+    attachments::register(&server, services);
     server
 }
 
@@ -155,6 +155,8 @@ impl From<RemoteError> for Status {
             }
             RemoteError::Rpc(status) => status,
             RemoteError::Store(s) => s.into(),
+            RemoteError::Blob(b) => b.into(),
+            RemoteError::Model(m) => StoreError::from(m).into(),
             RemoteError::Secrets(_) | RemoteError::BadReply(_) => {
                 tracing::error!(error = %e, "remote failure");
                 Status::new(Code::Internal, e.to_string())
@@ -316,8 +318,10 @@ impl Services {
     async fn plan_create(&self, m: &CreateObjectRequest) -> Result<(SpaceId, ObjectDoc), Status> {
         let space_id = parse_id(&m.space_id, "space_id")?;
         let kind = kind_arg(m.kind)?;
-        if is_definition(kind) {
-            return Err(invalid("definitions are created through DefinitionService"));
+        if is_managed(kind) {
+            return Err(invalid(
+                "definitions and attachments are created through their own services",
+            ));
         }
         check_fields(&m.fields)?;
         check_participants(kind, &m.participants)?;

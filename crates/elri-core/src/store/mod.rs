@@ -28,13 +28,14 @@ use toasty_driver_turso::Turso;
 use tokio::sync::{broadcast, Mutex, Notify};
 use uuid::Uuid;
 
+use crate::blobs::Blobs;
 use crate::change::{accepted, rejected, Outcome, Reason};
 use crate::device::DeviceId;
 use crate::model::{field_def_kind, now_ms, ModelError, ObjectDoc, ObjectId, SpaceId};
 use models::{
-    ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, GraveyardRow,
-    JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow, PlacementRow, RemoteRow, SpaceLogRow,
-    SpaceRow, SyncStateRow, TypeFieldRow,
+    BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow,
+    GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow, PlacementRow, RemoteRow,
+    SpaceLogRow, SpaceRow, SyncStateRow, TypeFieldRow,
 };
 
 mod coordinator;
@@ -197,6 +198,7 @@ pub struct Store {
     /// Signalled after every coordinated write, for the coordinator's
     /// submission worker.
     dirty: Notify,
+    blobs: Blobs,
 }
 
 /// Events a watcher can miss before it is told it lagged.
@@ -219,6 +221,7 @@ impl Store {
             toasty::models!(SpaceRow, RemoteRow, JournalRow),
         )
         .await?;
+        let blobs = Blobs::new(&root);
         let store = Self {
             root,
             device_id,
@@ -227,6 +230,7 @@ impl Store {
             events: broadcast::channel(EVENT_BUFFER).0,
             gate: tokio::sync::RwLock::new(()),
             dirty: Notify::new(),
+            blobs,
         };
         store.recover().await?;
         Ok(store)
@@ -283,6 +287,10 @@ impl Store {
         files: &[crate::backup::FileEntry],
     ) -> Result<(), StoreError> {
         for f in files {
+            // Blobs are checked by hash alone; only databases are opened.
+            if f.path.starts_with("blobs/") {
+                continue;
+            }
             let path = dir.join(&f.path);
             let mut db = Db::builder()
                 .models(if f.path == "device.db" {
@@ -302,6 +310,11 @@ impl Store {
                 .await?;
         }
         Ok(())
+    }
+
+    /// Attachment bytes of this device.
+    pub fn blobs(&self) -> &Blobs {
+        &self.blobs
     }
 
     /// Subscribes to everything that happens in this store from now on.
@@ -340,8 +353,13 @@ impl Store {
         name: &str,
         authority: Authority,
     ) -> Result<Space, StoreError> {
-        let space =
-            SpaceStore::open(&self.space_path(id), self.device_id, self.events.clone()).await?;
+        let space = SpaceStore::open(
+            &self.space_path(id),
+            self.device_id,
+            self.events.clone(),
+            self.blobs.clone(),
+        )
+        .await?;
         {
             let mut db = self.device.lock().await;
             toasty::create!(SpaceRow {
@@ -387,7 +405,13 @@ impl Store {
             return Err(StoreError::SpaceNotFound(id));
         }
         let space = Arc::new(
-            SpaceStore::open(&self.space_path(id), self.device_id, self.events.clone()).await?,
+            SpaceStore::open(
+                &self.space_path(id),
+                self.device_id,
+                self.events.clone(),
+                self.blobs.clone(),
+            )
+            .await?,
         );
         self.spaces
             .lock()
@@ -492,6 +516,7 @@ pub struct SpaceStore {
     /// Signalled after every local write, so a sync worker can push.
     dirty: Notify,
     events: broadcast::Sender<Event>,
+    blobs: Blobs,
 }
 
 impl SpaceStore {
@@ -499,6 +524,7 @@ impl SpaceStore {
         path: &Path,
         device_id: DeviceId,
         events: broadcast::Sender<Event>,
+        blobs: Blobs,
     ) -> Result<Self, StoreError> {
         let stem = path
             .file_stem()
@@ -523,6 +549,7 @@ impl SpaceStore {
                 TypeFieldRow,
                 PlacementRow,
                 GraveyardRow,
+                BlobRow,
                 SpaceLogRow,
                 SyncStateRow
             ),
@@ -541,7 +568,117 @@ impl SpaceStore {
             db: Mutex::new(db),
             dirty: Notify::new(),
             events,
+            blobs,
         })
+    }
+
+    /// This Space's id.
+    pub fn id(&self) -> SpaceId {
+        self.id
+    }
+
+    /// Attachment bytes.
+    pub fn blobs(&self) -> &Blobs {
+        &self.blobs
+    }
+
+    // --- attachment bytes ------------------------------------------------
+
+    /// What this device knows about a blob: `(size, pinned, uploaded)`.
+    pub async fn blob(&self, sha256: &str) -> Result<Option<(i64, bool, bool)>, StoreError> {
+        let mut db = self.db.lock().await;
+        Ok(BlobRow::filter_by_sha256(sha256.to_owned())
+            .first()
+            .exec(&mut *db)
+            .await?
+            .map(|b| (b.size, b.pinned, b.uploaded)))
+    }
+
+    /// Records that the bytes are here; `uploaded` says whether the
+    /// authority has them too.
+    pub async fn record_blob(
+        &self,
+        sha256: &str,
+        size: i64,
+        uploaded: bool,
+    ) -> Result<(), StoreError> {
+        let mut db = self.db.lock().await;
+        let existing = BlobRow::filter_by_sha256(sha256.to_owned())
+            .first()
+            .exec(&mut *db)
+            .await?;
+        match existing {
+            Some(row) => {
+                toasty::update!(BlobRow::filter_by_sha256(sha256.to_owned()) {
+                    uploaded: row.uploaded || uploaded,
+                })
+                .exec(&mut *db)
+                .await?;
+            }
+            None => {
+                toasty::create!(BlobRow {
+                    sha256: sha256.to_owned(),
+                    size,
+                    pinned: false,
+                    uploaded,
+                    created_at: now_ms(),
+                })
+                .exec(&mut *db)
+                .await?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Marks a blob pinned or not.
+    pub async fn set_blob_pinned(&self, sha256: &str, pinned: bool) -> Result<(), StoreError> {
+        let mut db = self.db.lock().await;
+        toasty::update!(BlobRow::filter_by_sha256(sha256.to_owned()) { pinned })
+            .exec(&mut *db)
+            .await?;
+        Ok(())
+    }
+
+    /// Marks that the authority has the bytes.
+    pub async fn set_blob_uploaded(&self, sha256: &str) -> Result<(), StoreError> {
+        let mut db = self.db.lock().await;
+        toasty::update!(BlobRow::filter_by_sha256(sha256.to_owned()) { uploaded: true })
+            .exec(&mut *db)
+            .await?;
+        Ok(())
+    }
+
+    /// Digests of blobs this device holds, with sizes.
+    pub async fn blobs_held(&self) -> Result<Vec<(String, i64)>, StoreError> {
+        let mut db = self.db.lock().await;
+        Ok(BlobRow::all()
+            .exec(&mut *db)
+            .await?
+            .into_iter()
+            .map(|b| (b.sha256, b.size))
+            .collect())
+    }
+
+    /// Digests named by live attachment Objects of this Space.
+    pub async fn attachment_digests(&self) -> Result<Vec<String>, StoreError> {
+        let mut db = self.db.lock().await;
+        let rows = toasty::sql::query(
+            "SELECT DISTINCT f.v_text FROM field_values f JOIN objects o ON o.object_id = f.object_id \
+             WHERE f.field_id = ?1 AND o.kind = ?2",
+        )
+        .bind(Value::String(crate::model::reserved::SHA256.to_owned()))
+        .bind(Value::I64(i64::from(ObjectKind::Attachment as i32)))
+        .exec(&mut *db)
+        .await?;
+        let mut out = Vec::with_capacity(rows.len());
+        for row in rows {
+            if let Value::Record(rec) = row {
+                if let Value::String(s) = &rec[0] {
+                    out.push(s.clone());
+                }
+            }
+        }
+        Ok(out)
     }
 
     fn emit_object(&self, rec: &Object) {
@@ -1147,6 +1284,16 @@ impl SpaceStore {
     /// it at the next log position. Resubmitting a known id returns the
     /// recorded outcome.
     pub async fn admit(&self, env: &Envelope) -> Result<Outcome, StoreError> {
+        self.admit_with(env, &|_| Ok(())).await
+    }
+
+    /// [`Self::admit`] with an extra check of every staged Object; a
+    /// message from `check` rejects the whole Change as invalid.
+    pub async fn admit_with(
+        &self,
+        env: &Envelope,
+        check: &(dyn Fn(&Object) -> Result<(), String> + Sync),
+    ) -> Result<Outcome, StoreError> {
         let Ok(change_id) = uuid_arg(&env.id) else {
             return Ok(rejected(Reason::Invalid, "change id"));
         };
@@ -1215,6 +1362,9 @@ impl SpaceStore {
             };
             if rec.kind != part.kind {
                 return Ok(rejected(Reason::Invalid, "kind mismatch"));
+            }
+            if let Err(msg) = check(&rec) {
+                return Ok(rejected(Reason::Invalid, msg));
             }
             staged.push((doc, rec, pending));
         }
@@ -1321,6 +1471,7 @@ impl SpaceStore {
         erase(&mut tx, id.uuid(), seq).await?;
         write_log(&mut tx, seq, None, Some(id.uuid())).await?;
         tx.commit().await?;
+        self.release_blobs();
         self.emit_objects(&[(id.uuid(), row.kind, false)]);
         Ok(seq)
     }
@@ -1339,10 +1490,20 @@ impl SpaceStore {
         write_log(&mut tx, seq, None, Some(id.uuid())).await?;
         write_state_tx(&mut tx, CURSOR, seq).await?;
         tx.commit().await?;
+        self.release_blobs();
         if let Some(kind) = kind {
             self.emit_objects(&[(id.uuid(), kind, false)]);
         }
         Ok(())
+    }
+
+    /// Deletes the files of digests an erasure released.
+    fn release_blobs(&self) {
+        for sha in take_released() {
+            if let Err(e) = self.blobs.remove(self.id, &sha) {
+                tracing::warn!(error = %e, "could not remove released attachment bytes");
+            }
+        }
     }
 
     /// Whether an Object was purged.
@@ -1385,7 +1546,18 @@ async fn erase(tx: &mut toasty::Transaction<'_>, id: Uuid, seq: i64) -> Result<(
         .delete()
         .exec(&mut *tx)
         .await?;
+    let released = attachment_digest_of(tx, id).await?;
     delete_projections(tx, id).await?;
+    if let Some(sha) = released {
+        if !digest_referenced(tx, &sha).await? {
+            BlobRow::filter_by_sha256(sha.clone())
+                .delete()
+                .exec(&mut *tx)
+                .await?;
+            // The file goes after the transaction, from the caller.
+            RELEASED.with(|r| r.borrow_mut().push(sha));
+        }
+    }
     toasty::update!(ChangePartRow::filter(ChangePartRow::fields().object_id().eq(id)) {
         bytes: Vec::new(),
     })
@@ -1403,6 +1575,50 @@ async fn erase(tx: &mut toasty::Transaction<'_>, id: Uuid, seq: i64) -> Result<(
     .exec(&mut *tx)
     .await?;
     Ok(())
+}
+
+thread_local! {
+    /// Digests whose files must go once the erasing transaction commits.
+    static RELEASED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Takes the digests released by erasures since the last call.
+fn take_released() -> Vec<String> {
+    RELEASED.with(|r| std::mem::take(&mut *r.borrow_mut()))
+}
+
+/// The digest an attachment Object names, from its projection.
+async fn attachment_digest_of(
+    tx: &mut toasty::Transaction<'_>,
+    object: Uuid,
+) -> Result<Option<String>, StoreError> {
+    let row = FieldValueRow::filter(
+        FieldValueRow::fields().object_id().eq(object).and(
+            FieldValueRow::fields()
+                .field_id()
+                .eq(crate::model::reserved::SHA256.to_owned()),
+        ),
+    )
+    .first()
+    .exec(&mut *tx)
+    .await?;
+    Ok(row.and_then(|r| r.v_text))
+}
+
+/// Whether any attachment Object of the Space still names the digest.
+async fn digest_referenced(
+    tx: &mut toasty::Transaction<'_>,
+    sha256: &str,
+) -> Result<bool, StoreError> {
+    let rows = FieldValueRow::filter(
+        FieldValueRow::fields()
+            .field_id()
+            .eq(crate::model::reserved::SHA256.to_owned())
+            .and(FieldValueRow::fields().v_text().eq(Some(sha256.to_owned()))),
+    )
+    .exec(&mut *tx)
+    .await?;
+    Ok(!rows.is_empty())
 }
 
 async fn write_log(

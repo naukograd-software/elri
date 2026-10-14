@@ -16,6 +16,7 @@
 
 pub mod api;
 pub mod backup;
+pub mod blobs;
 pub mod change;
 pub mod device;
 pub mod model;

@@ -45,6 +45,14 @@ pub mod sync_service_ws {
         route: "/elri.v1.sync.SyncService/PurgeObject",
         kind: StreamKind::Unary,
     };
+    pub const UPLOAD_BLOB: MethodSpec = MethodSpec {
+        route: "/elri.v1.sync.SyncService/UploadBlob",
+        kind: StreamKind::ClientStream,
+    };
+    pub const DOWNLOAD_BLOB: MethodSpec = MethodSpec {
+        route: "/elri.v1.sync.SyncService/DownloadBlob",
+        kind: StreamKind::ServerStream,
+    };
     /// Server API for the `SyncService` service. Implement with `async fn`.
     pub trait SyncServiceHandler: Send + Sync + 'static {
         ///  Identify the caller and negotiate the protocol.
@@ -103,6 +111,20 @@ pub mod sync_service_ws {
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::PurgeObjectResponse>, Status>,
         > + Send;
+        ///  Stores attachment bytes for a Space; the header comes first, the hash
+        /// is checked at the end. Uploading bytes the server has is a no-op.
+        fn upload_blob(
+            &self,
+            stream: UploadBlobServerStream,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::UploadBlobResponse>, Status>,
+        > + Send;
+        ///  Streams attachment bytes of a Space the caller belongs to.
+        fn download_blob(
+            &self,
+            req: Request<super::DownloadBlobRequest>,
+            stream: DownloadBlobServerStream,
+        ) -> impl ::core::future::Future<Output = Result<(), Status>> + Send;
     }
     /// Typed server-side stream for `SyncService.Subscribe`.
     #[derive(Clone, Debug)]
@@ -132,6 +154,76 @@ pub mod sync_service_ws {
         }
         /// Receives the next request; `Ok(None)` once the client half-closes.
         pub async fn recv(&self) -> Result<Option<super::SubscribeRequest>, Status> {
+            self.inner.recv().await
+        }
+        /// The underlying untyped stream.
+        pub fn raw(&self) -> &Stream {
+            &self.inner
+        }
+    }
+    /// Typed server-side stream for `SyncService.UploadBlob`.
+    #[derive(Clone, Debug)]
+    pub struct UploadBlobServerStream {
+        inner: Stream,
+    }
+    impl UploadBlobServerStream {
+        /// Request headers from the OPEN frame.
+        pub fn header(&self) -> Metadata {
+            self.inner.header()
+        }
+        /// Caller deadline budget (`ws-timeout-ms`), if any.
+        pub fn timeout(&self) -> Option<::core::time::Duration> {
+            self.inner.timeout()
+        }
+        /// Sends one leading HEADER frame; must precede the first `send`.
+        pub async fn send_header(&self, md: Metadata) -> Result<(), Status> {
+            self.inner.send_header(md).await
+        }
+        /// Merges trailers flushed with the END frame.
+        pub fn set_trailer(&self, md: Metadata) {
+            self.inner.set_trailer(md)
+        }
+        /// Sends one response message (awaits flow-control credit).
+        pub async fn send(&self, msg: &super::UploadBlobResponse) -> Result<(), Status> {
+            self.inner.send(msg).await
+        }
+        /// Receives the next request; `Ok(None)` once the client half-closes.
+        pub async fn recv(&self) -> Result<Option<super::UploadBlobRequest>, Status> {
+            self.inner.recv().await
+        }
+        /// The underlying untyped stream.
+        pub fn raw(&self) -> &Stream {
+            &self.inner
+        }
+    }
+    /// Typed server-side stream for `SyncService.DownloadBlob`.
+    #[derive(Clone, Debug)]
+    pub struct DownloadBlobServerStream {
+        inner: Stream,
+    }
+    impl DownloadBlobServerStream {
+        /// Request headers from the OPEN frame.
+        pub fn header(&self) -> Metadata {
+            self.inner.header()
+        }
+        /// Caller deadline budget (`ws-timeout-ms`), if any.
+        pub fn timeout(&self) -> Option<::core::time::Duration> {
+            self.inner.timeout()
+        }
+        /// Sends one leading HEADER frame; must precede the first `send`.
+        pub async fn send_header(&self, md: Metadata) -> Result<(), Status> {
+            self.inner.send_header(md).await
+        }
+        /// Merges trailers flushed with the END frame.
+        pub fn set_trailer(&self, md: Metadata) {
+            self.inner.set_trailer(md)
+        }
+        /// Sends one response message (awaits flow-control credit).
+        pub async fn send(&self, msg: &super::BlobChunk) -> Result<(), Status> {
+            self.inner.send(msg).await
+        }
+        /// Receives the next request; `Ok(None)` once the client half-closes.
+        pub async fn recv(&self) -> Result<Option<super::DownloadBlobRequest>, Status> {
             self.inner.recv().await
         }
         /// The underlying untyped stream.
@@ -247,6 +339,56 @@ pub mod sync_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register(
+                    UPLOAD_BLOB.route,
+                    move |s: Stream| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move {
+                            let resp = h
+                                .upload_blob(UploadBlobServerStream {
+                                    inner: s.clone(),
+                                })
+                                .await?;
+                            if !resp.header.is_empty() {
+                                let _ = s.send_header(resp.header).await;
+                            }
+                            s.set_trailer(resp.trailer);
+                            s.send(&resp.msg).await
+                        }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register(
+                    DOWNLOAD_BLOB.route,
+                    move |s: Stream| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move {
+                            let msg = s
+                                .recv::<super::DownloadBlobRequest>()
+                                .await?
+                                .unwrap_or_default();
+                            let req = Request {
+                                msg,
+                                header: s.header(),
+                                timeout: s.timeout(),
+                            };
+                            h.download_blob(
+                                    req,
+                                    DownloadBlobServerStream {
+                                        inner: s,
+                                    },
+                                )
+                                .await
+                        }
+                    },
+                );
+        }
     }
     /// Typed client for the `SyncService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -327,6 +469,36 @@ pub mod sync_service_ws {
         ) -> Result<Response<super::PurgeObjectResponse>, Status> {
             self.conn.invoke_unary(PURGE_OBJECT, req.into()).await
         }
+        ///  Stores attachment bytes for a Space; the header comes first, the hash
+        /// is checked at the end. Uploading bytes the server has is a no-op.
+        pub async fn upload_blob(
+            &self,
+            opts: CallOptions,
+        ) -> Result<UploadBlobClientStream, Status> {
+            let conn = self
+                .conn
+                .open_streaming(UPLOAD_BLOB, opts.header, opts.timeout)
+                .await?;
+            Ok(UploadBlobClientStream {
+                inner: conn,
+            })
+        }
+        ///  Streams attachment bytes of a Space the caller belongs to.
+        pub async fn download_blob(
+            &self,
+            req: impl Into<Request<super::DownloadBlobRequest>>,
+        ) -> Result<DownloadBlobClientStream, Status> {
+            let req = req.into();
+            let conn = self
+                .conn
+                .open_streaming(DOWNLOAD_BLOB, req.header, req.timeout)
+                .await?;
+            send_msg(&conn, &req.msg).await?;
+            conn.close_request().await?;
+            Ok(DownloadBlobClientStream {
+                inner: conn,
+            })
+        }
     }
     /// Typed client-side stream for `SyncService.Subscribe`.
     #[derive(Clone)]
@@ -337,6 +509,88 @@ pub mod sync_service_ws {
         /// Receives the next response; `Ok(None)` on a clean END, `Err` on a
         /// non-OK status.
         pub async fn recv(&self) -> Result<Option<super::SubscribeEvent>, Status> {
+            recv_msg(&self.inner).await
+        }
+        /// Leading response metadata (HEADER frame), if the server sent one.
+        pub fn header(&self) -> Metadata {
+            self.inner.response_header()
+        }
+        /// Trailers from the END frame; empty until the stream has ended.
+        pub fn trailer(&self) -> Metadata {
+            self.inner.response_trailer()
+        }
+        /// The underlying (interceptor-wrapped) streaming connection.
+        pub fn raw(&self) -> &StreamingConn {
+            &self.inner
+        }
+    }
+    /// Typed client-side stream for `SyncService.UploadBlob`.
+    #[derive(Clone)]
+    pub struct UploadBlobClientStream {
+        inner: StreamingConn,
+    }
+    impl UploadBlobClientStream {
+        /// Sends one request message (awaits flow-control credit).
+        pub async fn send(&self, msg: &super::UploadBlobRequest) -> Result<(), Status> {
+            send_msg(&self.inner, msg).await
+        }
+        /// Signals that no more requests follow (HALF_CLOSE).
+        pub async fn close_send(&self) -> Result<(), Status> {
+            self.inner.close_request().await
+        }
+        /// Half-closes, receives the single response and drains the END so a
+        /// trailing error status is surfaced.
+        pub async fn close_and_recv(
+            &self,
+        ) -> Result<Response<super::UploadBlobResponse>, Status> {
+            self.inner.close_request().await?;
+            let msg = match recv_msg::<super::UploadBlobResponse>(&self.inner).await? {
+                Some(m) => m,
+                None => {
+                    return Err(
+                        Status::new(
+                            ::ws_proto::Code::Internal,
+                            "wsrpc: call ended without a response message",
+                        ),
+                    );
+                }
+            };
+            if self.inner.receive().await?.is_some() {
+                return Err(
+                    Status::new(
+                        ::ws_proto::Code::Internal,
+                        "wsrpc: received more than one response message",
+                    ),
+                );
+            }
+            Ok(Response {
+                msg,
+                header: self.inner.response_header(),
+                trailer: self.inner.response_trailer(),
+            })
+        }
+        /// Leading response metadata (HEADER frame), if the server sent one.
+        pub fn header(&self) -> Metadata {
+            self.inner.response_header()
+        }
+        /// Trailers from the END frame; empty until the stream has ended.
+        pub fn trailer(&self) -> Metadata {
+            self.inner.response_trailer()
+        }
+        /// The underlying (interceptor-wrapped) streaming connection.
+        pub fn raw(&self) -> &StreamingConn {
+            &self.inner
+        }
+    }
+    /// Typed client-side stream for `SyncService.DownloadBlob`.
+    #[derive(Clone)]
+    pub struct DownloadBlobClientStream {
+        inner: StreamingConn,
+    }
+    impl DownloadBlobClientStream {
+        /// Receives the next response; `Ok(None)` on a clean END, `Err` on a
+        /// non-OK status.
+        pub async fn recv(&self) -> Result<Option<super::BlobChunk>, Status> {
             recv_msg(&self.inner).await
         }
         /// Leading response metadata (HEADER frame), if the server sent one.

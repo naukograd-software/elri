@@ -126,6 +126,8 @@ pub enum ObjectKind {
     TypeDef = 5,
     /// A participant-role definition. 
     RoleDef = 6,
+    /// Immutable bytes with display metadata; see elri.v1.attachment. 
+    Attachment = 7,
 }
 impl ObjectKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -141,6 +143,7 @@ impl ObjectKind {
             Self::FieldDef => "OBJECT_KIND_FIELD_DEF",
             Self::TypeDef => "OBJECT_KIND_TYPE_DEF",
             Self::RoleDef => "OBJECT_KIND_ROLE_DEF",
+            Self::Attachment => "OBJECT_KIND_ATTACHMENT",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -153,6 +156,7 @@ impl ObjectKind {
             "OBJECT_KIND_FIELD_DEF" => Some(Self::FieldDef),
             "OBJECT_KIND_TYPE_DEF" => Some(Self::TypeDef),
             "OBJECT_KIND_ROLE_DEF" => Some(Self::RoleDef),
+            "OBJECT_KIND_ATTACHMENT" => Some(Self::Attachment),
             _ => None,
         }
     }

@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package elri.v1.attachment;
+
+/*
+An attachment: an Object that names immutable bytes by their SHA-256. The
+bytes live beside the Space, scoped to it; the hash alone grants nothing.
+*/
+message Attachment {
+    string id = 1;
+    string space_id = 2;
+    /* Display name chosen at upload. */
+    string name = 3;
+    /* IANA media type, as given at upload. */
+    string media_type = 4;
+    int64 size = 5;
+    /* Hex SHA-256 of the bytes. */
+    string sha256 = 6;
+    /* The bytes are on this device. */
+    bool available = 7;
+    /* Kept on this device regardless of cache limits. */
+    bool pinned = 8;
+    int64 created_at_ms = 9;
+    optional int64 deleted_at_ms = 10;
+}

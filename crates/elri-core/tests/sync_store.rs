@@ -728,7 +728,7 @@ async fn a_change_across_spaces_lands_whole_and_is_submitted_by_the_coordinator(
     // The authority admits it whole: a sequence in each Space; the replica
     // records acceptance everywhere.
     let seqs = server
-        .admit_coordinated(&pending[0])
+        .admit_coordinated(&pending[0], &|_| Ok(()))
         .await
         .expect("admit")
         .expect("accepted");
@@ -741,7 +741,7 @@ async fn a_change_across_spaces_lands_whole_and_is_submitted_by_the_coordinator(
         .await
         .expect("on server");
     let replay = server
-        .admit_coordinated(&pending[0])
+        .admit_coordinated(&pending[0], &|_| Ok(()))
         .await
         .expect("admit")
         .expect_err("replay returns the recorded outcome");
@@ -827,7 +827,7 @@ async fn a_coordinated_change_with_a_bad_part_leaves_every_space_untouched() {
     .expect("commit");
     let env = a.coordinator_outbox().await.expect("outbox").remove(0);
     let outcome = server
-        .admit_coordinated(&env)
+        .admit_coordinated(&env, &|_| Ok(()))
         .await
         .expect("admit")
         .expect_err("rejected whole");

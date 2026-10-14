@@ -27,6 +27,39 @@ service SyncService {
     rpc Subscribe(SubscribeRequest) returns (stream SubscribeEvent);
     /* Owner/Admin: erases a deleted Object for good; see ObjectService.PurgeObject. */
     rpc PurgeObject(PurgeObjectRequest) returns (PurgeObjectResponse);
+    /* Stores attachment bytes for a Space; the header comes first, the hash
+       is checked at the end. Uploading bytes the server has is a no-op. */
+    rpc UploadBlob(stream UploadBlobRequest) returns (UploadBlobResponse);
+    /* Streams attachment bytes of a Space the caller belongs to. */
+    rpc DownloadBlob(DownloadBlobRequest) returns (stream BlobChunk);
+}
+
+message BlobHeader {
+    string space_id = 1;
+    /* Hex SHA-256 of the bytes. */
+    string sha256 = 2;
+    int64 size = 3;
+}
+
+message UploadBlobRequest {
+    oneof chunk {
+        BlobHeader header = 1;
+        bytes data = 2;
+    }
+}
+
+message BlobChunk {
+    bytes data = 1;
+}
+
+message UploadBlobResponse {
+    /* The server already had the bytes. */
+    bool existed = 1;
+}
+
+message DownloadBlobRequest {
+    string space_id = 1;
+    string sha256 = 2;
 }
 
 message PurgeObjectRequest {

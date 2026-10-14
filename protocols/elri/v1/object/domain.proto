@@ -16,6 +16,8 @@ enum ObjectKind {
     OBJECT_KIND_TYPE_DEF = 5;
     /* A participant-role definition. */
     OBJECT_KIND_ROLE_DEF = 6;
+    /* Immutable bytes with display metadata; see elri.v1.attachment. */
+    OBJECT_KIND_ATTACHMENT = 7;
 }
 
 /* Items of a list value; scalars only. */

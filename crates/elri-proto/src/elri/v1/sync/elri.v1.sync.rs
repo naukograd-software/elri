@@ -51,6 +51,49 @@ pub struct Entry {
     pub purged_object_id: ::prost::alloc::string::String,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct BlobHeader {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    /// Hex SHA-256 of the bytes. 
+    #[prost(string, tag = "2")]
+    pub sha256: ::prost::alloc::string::String,
+    #[prost(int64, tag = "3")]
+    pub size: i64,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UploadBlobRequest {
+    #[prost(oneof = "upload_blob_request::Chunk", tags = "1, 2")]
+    pub chunk: ::core::option::Option<upload_blob_request::Chunk>,
+}
+/// Nested message and enum types in `UploadBlobRequest`.
+pub mod upload_blob_request {
+    #[derive(Clone, PartialEq, Eq, Hash, ::prost::Oneof)]
+    pub enum Chunk {
+        #[prost(message, tag = "1")]
+        Header(super::BlobHeader),
+        #[prost(bytes, tag = "2")]
+        Data(::prost::bytes::Bytes),
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct BlobChunk {
+    #[prost(bytes = "bytes", tag = "1")]
+    pub data: ::prost::bytes::Bytes,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct UploadBlobResponse {
+    /// The server already had the bytes. 
+    #[prost(bool, tag = "1")]
+    pub existed: bool,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct DownloadBlobRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub sha256: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PurgeObjectRequest {
     #[prost(string, tag = "1")]
     pub space_id: ::prost::alloc::string::String,

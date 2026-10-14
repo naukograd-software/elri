@@ -7,6 +7,12 @@ pub mod elri {
             include!("elri/v1/account/elri.v1.account.rs");
             // @@protoc_insertion_point(elri.v1.account)
         }
+        #[cfg(feature = "elri-v1-attachment")]
+        // @@protoc_insertion_point(attribute:elri.v1.attachment)
+        pub mod attachment {
+            include!("elri/v1/attachment/elri.v1.attachment.rs");
+            // @@protoc_insertion_point(elri.v1.attachment)
+        }
         #[cfg(feature = "elri-v1-backup")]
         // @@protoc_insertion_point(attribute:elri.v1.backup)
         pub mod backup {

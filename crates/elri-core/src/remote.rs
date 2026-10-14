@@ -6,15 +6,17 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
+use elri_proto::elri::v1::object::ObjectKind;
 use elri_proto::elri::v1::space::{Authority, Space as PbSpace};
 use elri_proto::elri::v1::sync::sync_service_ws::SyncServiceClient;
 use elri_proto::elri::v1::sync::{
-    AddMemberRequest, CreateSpaceRequest, HelloRequest, ListSpacesRequest, PullRequest,
-    PurgeObjectRequest, SubmitRequest, SubscribeRequest,
+    upload_blob_request, AddMemberRequest, BlobHeader, CreateSpaceRequest, DownloadBlobRequest,
+    HelloRequest, ListSpacesRequest, PullRequest, PurgeObjectRequest, SubmitRequest,
+    SubscribeRequest, UploadBlobRequest,
 };
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
-use ws_proto::{Client, ClientConfig, Code, Reconnect, Request, Status};
+use ws_proto::{CallOptions, Client, ClientConfig, Code, Reconnect, Request, Status};
 
 use crate::change::{Outcome, Reason};
 use crate::model::{ObjectId, SpaceId};
@@ -48,6 +50,12 @@ pub enum RemoteError {
     /// The server's answer could not be understood.
     #[error("bad reply from server: {0}")]
     BadReply(&'static str),
+    /// Attachment bytes failed on the way.
+    #[error(transparent)]
+    Blob(#[from] crate::blobs::BlobError),
+    /// A record could not be understood.
+    #[error(transparent)]
+    Model(#[from] crate::model::ModelError),
 }
 
 struct Session {
@@ -406,6 +414,21 @@ impl Remote {
         Ok(res.msg.seq)
     }
 
+    /// Fetches attachment bytes of a server Space into the local blob
+    /// store, checking the digest and size on the way.
+    pub async fn fetch_blob(
+        &self,
+        space_id: SpaceId,
+        sha256: &str,
+        size: i64,
+    ) -> Result<(), RemoteError> {
+        let (client, token) = self
+            .with_session(|s| (s.client.clone(), s.token.clone()))
+            .await?;
+        let store = self.store.space(space_id).await?;
+        fetch_blob(&client, &token, &store, sha256, size).await
+    }
+
     /// Runs one replication round for `space_id` right now and waits for it
     /// to finish; for tests and explicit "sync now".
     pub async fn sync_now(&self, space_id: SpaceId) -> Result<(), RemoteError> {
@@ -462,6 +485,16 @@ async fn submit_coordinated(
 ) -> Result<(), RemoteError> {
     let sync = SyncServiceClient::new(client.clone());
     for env in store.coordinator_outbox().await? {
+        for space_id in crate::sync::envelope_spaces(&env)? {
+            let space = store.space(space_id).await?;
+            upload_attachments(
+                client,
+                token,
+                &space,
+                &crate::sync::envelope_for(&env, space_id),
+            )
+            .await?;
+        }
         let res = sync
             .submit(authed(
                 token,
@@ -526,6 +559,96 @@ fn spawn_worker(
     })
 }
 
+async fn fetch_blob(
+    client: &Client,
+    token: &str,
+    store: &SpaceStore,
+    sha256: &str,
+    size: i64,
+) -> Result<(), RemoteError> {
+    let stream = SyncServiceClient::new(client.clone())
+        .download_blob(authed(
+            token,
+            DownloadBlobRequest {
+                space_id: store.id().to_string(),
+                sha256: sha256.to_owned(),
+            },
+        ))
+        .await?;
+    let mut writer = store.blobs().begin(store.id())?;
+    while let Some(chunk) = stream.recv().await? {
+        writer.write(&chunk.data)?;
+    }
+    writer.finish(Some(sha256), u64::try_from(size).ok())?;
+    store.record_blob(sha256, size, true).await?;
+    Ok(())
+}
+
+/// Sends attachment bytes the authority lacks before the Change naming
+/// them goes out.
+async fn upload_blob(
+    client: &Client,
+    token: &str,
+    store: &SpaceStore,
+    sha256: &str,
+    size: i64,
+) -> Result<(), RemoteError> {
+    let sync = SyncServiceClient::new(client.clone());
+    let stream = sync
+        .upload_blob(CallOptions::new().with_header("authorization", format!("Bearer {token}")))
+        .await?;
+    stream
+        .send(&UploadBlobRequest {
+            chunk: Some(upload_blob_request::Chunk::Header(BlobHeader {
+                space_id: store.id().to_string(),
+                sha256: sha256.to_owned(),
+                size,
+            })),
+        })
+        .await?;
+    let mut chunks: Vec<Vec<u8>> = Vec::new();
+    store.blobs().read_chunks(store.id(), sha256, |c| {
+        chunks.push(c.to_vec());
+        Ok(())
+    })?;
+    for data in chunks {
+        stream
+            .send(&UploadBlobRequest {
+                chunk: Some(upload_blob_request::Chunk::Data(data.into())),
+            })
+            .await?;
+    }
+    stream.close_and_recv().await?;
+    store.set_blob_uploaded(sha256).await?;
+    Ok(())
+}
+
+/// Uploads the bytes of every attachment an envelope creates, unless the
+/// authority already has them.
+async fn upload_attachments(
+    client: &Client,
+    token: &str,
+    space: &SpaceStore,
+    env: &elri_proto::elri::v1::sync::Envelope,
+) -> Result<(), RemoteError> {
+    for part in &env.parts {
+        if part.kind != ObjectKind::Attachment as i32 {
+            continue;
+        }
+        let object = space.get(ObjectId::parse(&part.object_id)?).await?;
+        let Some(sha) = crate::model::attachment_sha256(&object) else {
+            continue;
+        };
+        let Some((size, _, uploaded)) = space.blob(sha).await? else {
+            continue;
+        };
+        if !uploaded {
+            upload_blob(client, token, space, sha, size).await?;
+        }
+    }
+    Ok(())
+}
+
 /// Pushes the outbox, then pulls everything after the cursor.
 async fn replicate_once(
     space_id: SpaceId,
@@ -536,6 +659,7 @@ async fn replicate_once(
     let sync = SyncServiceClient::new(client.clone());
 
     for env in space.outbox(0).await? {
+        upload_attachments(client, token, space, &env).await?;
         let res = sync
             .submit(authed(
                 token,

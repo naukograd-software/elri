@@ -59,6 +59,8 @@ pub struct State {
     pub spaces: Store,
     /// Announces `(space_id, seq)` after every acceptance.
     pub events: broadcast::Sender<(uuid::Uuid, i64)>,
+    /// Attachment bytes, per Space.
+    pub blobs: elri_core::blobs::Blobs,
 }
 
 /// A running server.
@@ -75,10 +77,12 @@ impl Server {
         let identity = DeviceId::load_or_create(&config.data_dir)?;
         let spaces = Store::open(&config.data_dir, identity).await?;
         let (events, _) = broadcast::channel(1024);
+        let blobs = elri_core::blobs::Blobs::new(&config.data_dir);
         let state = Arc::new(State {
             registry,
             spaces,
             events,
+            blobs,
         });
 
         let listener =
