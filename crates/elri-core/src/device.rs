@@ -43,6 +43,10 @@ pub struct DeviceId(Uuid);
 impl DeviceId {
     /// Loads the identity from `data_dir/device.json`, creating it on first run.
     pub fn load_or_create(data_dir: &Path) -> Result<Self, DeviceError> {
+        create_private_dir(data_dir).map_err(|source| DeviceError::Io {
+            path: data_dir.to_path_buf(),
+            source,
+        })?;
         let path = data_dir.join("device.json");
         match std::fs::read(&path) {
             Ok(bytes) => {
@@ -55,10 +59,6 @@ impl DeviceId {
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 let id = Uuid::now_v7();
-                create_private_dir(data_dir).map_err(|source| DeviceError::Io {
-                    path: data_dir.to_path_buf(),
-                    source,
-                })?;
                 let bytes =
                     serde_json::to_vec_pretty(&DeviceFile { device_id: id }).map_err(|source| {
                         DeviceError::Corrupt {
@@ -82,8 +82,10 @@ impl DeviceId {
     }
 }
 
-/// Creates the data directory readable by its owner only; databases and the
-/// endpoint token live there.
+/// Makes sure the data directory exists and is readable by its owner only;
+/// databases and the endpoint token live there. The shell may have created
+/// the directory earlier with wider permissions, so they are tightened here
+/// on every start.
 fn create_private_dir(dir: &Path) -> std::io::Result<()> {
     let mut builder = std::fs::DirBuilder::new();
     builder.recursive(true);
@@ -92,7 +94,13 @@ fn create_private_dir(dir: &Path) -> std::io::Result<()> {
         use std::os::unix::fs::DirBuilderExt as _;
         builder.mode(0o700);
     }
-    builder.create(dir)
+    builder.create(dir)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        std::fs::set_permissions(dir, std::fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(())
 }
 
 /// Per-launch secret that every loopback client must present.

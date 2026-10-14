@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/space/space.proto.
  */
 export const file_elri_v1_space_space: GenFile = /*@__PURE__*/
-  fileDesc("ChllbHJpL3YxL3NwYWNlL3NwYWNlLnByb3RvEg1lbHJpLnYxLnNwYWNlIhMKEUxpc3RTcGFjZXNSZXF1ZXN0IjoKEkxpc3RTcGFjZXNSZXNwb25zZRIkCgZzcGFjZXMYASADKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlMmEKDFNwYWNlU2VydmljZRJRCgpMaXN0U3BhY2VzEiAuZWxyaS52MS5zcGFjZS5MaXN0U3BhY2VzUmVxdWVzdBohLmVscmkudjEuc3BhY2UuTGlzdFNwYWNlc1Jlc3BvbnNlYgZwcm90bzM", [file_elri_v1_space_domain]);
+  fileDesc("ChllbHJpL3YxL3NwYWNlL3NwYWNlLnByb3RvEg1lbHJpLnYxLnNwYWNlIhMKEUxpc3RTcGFjZXNSZXF1ZXN0IjoKEkxpc3RTcGFjZXNSZXNwb25zZRIkCgZzcGFjZXMYASADKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIiIKEkNyZWF0ZVNwYWNlUmVxdWVzdBIMCgRuYW1lGAEgASgJIjoKE0NyZWF0ZVNwYWNlUmVzcG9uc2USIwoFc3BhY2UYASABKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlMrcBCgxTcGFjZVNlcnZpY2USUQoKTGlzdFNwYWNlcxIgLmVscmkudjEuc3BhY2UuTGlzdFNwYWNlc1JlcXVlc3QaIS5lbHJpLnYxLnNwYWNlLkxpc3RTcGFjZXNSZXNwb25zZRJUCgtDcmVhdGVTcGFjZRIhLmVscmkudjEuc3BhY2UuQ3JlYXRlU3BhY2VSZXF1ZXN0GiIuZWxyaS52MS5zcGFjZS5DcmVhdGVTcGFjZVJlc3BvbnNlYgZwcm90bzM", [file_elri_v1_space_domain]);
 
 /**
  * @generated from message elri.v1.space.ListSpacesRequest
@@ -61,6 +61,60 @@ export const ListSpacesResponseSchema: GenMessage<ListSpacesResponse, {jsonType:
   messageDesc(file_elri_v1_space_space, 1);
 
 /**
+ * @generated from message elri.v1.space.CreateSpaceRequest
+ */
+export type CreateSpaceRequest = Message<"elri.v1.space.CreateSpaceRequest"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+};
+
+/**
+ * @generated from message elri.v1.space.CreateSpaceRequest
+ */
+export type CreateSpaceRequestJson = {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name?: string;
+};
+
+/**
+ * Describes the message elri.v1.space.CreateSpaceRequest.
+ * Use `create(CreateSpaceRequestSchema)` to create a new message.
+ */
+export const CreateSpaceRequestSchema: GenMessage<CreateSpaceRequest, {jsonType: CreateSpaceRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_space_space, 2);
+
+/**
+ * @generated from message elri.v1.space.CreateSpaceResponse
+ */
+export type CreateSpaceResponse = Message<"elri.v1.space.CreateSpaceResponse"> & {
+  /**
+   * @generated from field: elri.v1.space.Space space = 1;
+   */
+  space?: Space | undefined;
+};
+
+/**
+ * @generated from message elri.v1.space.CreateSpaceResponse
+ */
+export type CreateSpaceResponseJson = {
+  /**
+   * @generated from field: elri.v1.space.Space space = 1;
+   */
+  space?: SpaceJson;
+};
+
+/**
+ * Describes the message elri.v1.space.CreateSpaceResponse.
+ * Use `create(CreateSpaceResponseSchema)` to create a new message.
+ */
+export const CreateSpaceResponseSchema: GenMessage<CreateSpaceResponse, {jsonType: CreateSpaceResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_space_space, 3);
+
+/**
  *
  * Spaces known to this core: local-only Spaces and server Spaces selected for
  * synchronization. Membership and roles are server-authoritative.
@@ -75,6 +129,16 @@ export const SpaceService: GenService<{
     methodKind: "unary";
     input: typeof ListSpacesRequestSchema;
     output: typeof ListSpacesResponseSchema;
+  },
+  /**
+   * Creates a local-only Space on this device. 
+   *
+   * @generated from rpc elri.v1.space.SpaceService.CreateSpace
+   */
+  createSpace: {
+    methodKind: "unary";
+    input: typeof CreateSpaceRequestSchema;
+    output: typeof CreateSpaceResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_space_space, 0);

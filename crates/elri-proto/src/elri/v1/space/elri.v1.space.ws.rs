@@ -17,6 +17,10 @@ pub mod space_service_ws {
         route: "/elri.v1.space.SpaceService/ListSpaces",
         kind: StreamKind::Unary,
     };
+    pub const CREATE_SPACE: MethodSpec = MethodSpec {
+        route: "/elri.v1.space.SpaceService/CreateSpace",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `SpaceService` service. Implement with `async fn`.
     pub trait SpaceServiceHandler: Send + Sync + 'static {
         fn list_spaces(
@@ -24,6 +28,13 @@ pub mod space_service_ws {
             req: Request<super::ListSpacesRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::ListSpacesResponse>, Status>,
+        > + Send;
+        ///  Creates a local-only Space on this device.
+        fn create_space(
+            &self,
+            req: Request<super::CreateSpaceRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::CreateSpaceResponse>, Status>,
         > + Send;
     }
     /// Registers `handler` on `server` for every `SpaceService` method.
@@ -46,6 +57,17 @@ pub mod space_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    CREATE_SPACE.route,
+                    move |req: Request<super::CreateSpaceRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.create_space(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `SpaceService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -65,6 +87,13 @@ pub mod space_service_ws {
             req: impl Into<Request<super::ListSpacesRequest>>,
         ) -> Result<Response<super::ListSpacesResponse>, Status> {
             self.conn.invoke_unary(LIST_SPACES, req.into()).await
+        }
+        ///  Creates a local-only Space on this device.
+        pub async fn create_space(
+            &self,
+            req: impl Into<Request<super::CreateSpaceRequest>>,
+        ) -> Result<Response<super::CreateSpaceResponse>, Status> {
+            self.conn.invoke_unary(CREATE_SPACE, req.into()).await
         }
     }
 }

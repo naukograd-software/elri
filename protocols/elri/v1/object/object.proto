@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package elri.v1.object;
+
+import "elri/v1/object/domain.proto";
+
+/* Create, read, and change Objects of a Space. */
+service ObjectService {
+    rpc CreateObject(CreateObjectRequest) returns (CreateObjectResponse);
+    rpc GetObject(GetObjectRequest) returns (GetObjectResponse);
+    /* Sets and removes fields and types in one write. */
+    rpc UpdateObject(UpdateObjectRequest) returns (UpdateObjectResponse);
+    /* Marks the Object deleted; it stays recoverable until purge. */
+    rpc DeleteObject(DeleteObjectRequest) returns (DeleteObjectResponse);
+    rpc ListObjects(ListObjectsRequest) returns (ListObjectsResponse);
+}
+
+message CreateObjectRequest {
+    string space_id = 1;
+    ObjectKind kind = 2;
+    repeated string types = 3;
+    map<string, Value> fields = 4;
+}
+
+message CreateObjectResponse {
+    Object object = 1;
+}
+
+message GetObjectRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message GetObjectResponse {
+    Object object = 1;
+}
+
+message UpdateObjectRequest {
+    string space_id = 1;
+    string id = 2;
+    map<string, Value> set_fields = 3;
+    repeated string remove_fields = 4;
+    repeated string add_types = 5;
+    repeated string remove_types = 6;
+}
+
+message UpdateObjectResponse {
+    Object object = 1;
+}
+
+message DeleteObjectRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message DeleteObjectResponse {}
+
+message ListObjectsRequest {
+    string space_id = 1;
+    /* Unspecified lists every kind. */
+    ObjectKind kind = 2;
+    /* Only Objects carrying this type definition, if set. */
+    string type_id = 3;
+    /* Deleted Objects are hidden unless requested. */
+    bool include_deleted = 4;
+    /* 0 = server default. */
+    int32 limit = 5;
+}
+
+message ListObjectsResponse {
+    repeated Object objects = 1;
+}

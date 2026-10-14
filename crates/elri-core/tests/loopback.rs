@@ -6,8 +6,6 @@
 use elri_core::{BuildInfo, Config, Core, Endpoint};
 use elri_proto::elri::v1::core::core_service_ws::CoreServiceClient;
 use elri_proto::elri::v1::core::{EndpointKind, GetInfoRequest};
-use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
-use elri_proto::elri::v1::space::ListSpacesRequest;
 use ws_proto::{Client, ClientConfig, Code, Request};
 
 fn build() -> BuildInfo {
@@ -105,19 +103,4 @@ async fn device_id_is_stable_across_restarts() {
         .await
         .expect("restart");
     assert_eq!(second.device_id(), id);
-}
-
-#[tokio::test]
-async fn spaces_are_unimplemented_for_now() {
-    let dir = tmp_dir("spaces");
-    let _core = Core::start(Config::new(&dir, build()))
-        .await
-        .expect("start");
-    let endpoint = Endpoint::read(&dir).expect("endpoint file");
-    let client = SpaceServiceClient::new(dial(&endpoint).await);
-    let err = client
-        .list_spaces(authed(&endpoint, ListSpacesRequest {}))
-        .await
-        .expect_err("unimplemented");
-    assert_eq!(err.code, Code::Unimplemented);
 }

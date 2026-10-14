@@ -10,10 +10,20 @@ synchronization. Membership and roles are server-authoritative.
 */
 service SpaceService {
     rpc ListSpaces(ListSpacesRequest) returns (ListSpacesResponse);
+    /* Creates a local-only Space on this device. */
+    rpc CreateSpace(CreateSpaceRequest) returns (CreateSpaceResponse);
 }
 
 message ListSpacesRequest {}
 
 message ListSpacesResponse {
     repeated Space spaces = 1;
+}
+
+message CreateSpaceRequest {
+    string name = 1;
+}
+
+message CreateSpaceResponse {
+    Space space = 1;
 }

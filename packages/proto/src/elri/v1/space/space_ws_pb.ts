@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { ListSpacesRequest, ListSpacesResponse } from "./space_pb.ts";
-import { ListSpacesRequestSchema, ListSpacesResponseSchema } from "./space_pb.ts";
+import type { CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse } from "./space_pb.ts";
+import { CreateSpaceRequestSchema, CreateSpaceResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema } from "./space_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -27,6 +27,14 @@ const SpaceService_ListSpaces: MethodInfo<ListSpacesRequest, ListSpacesResponse>
   output: ListSpacesResponseSchema,
 };
 
+const SpaceService_CreateSpace: MethodInfo<CreateSpaceRequest, CreateSpaceResponse> = {
+  typeName: "elri.v1.space.SpaceService",
+  name: "CreateSpace",
+  kind: "unary",
+  input: CreateSpaceRequestSchema,
+  output: CreateSpaceResponseSchema,
+};
+
 /**
  *
  * Spaces known to this core: local-only Spaces and server Spaces selected for
@@ -42,6 +50,16 @@ export class SpaceServiceClient {
    */
   async listSpaces(req: ListSpacesRequest, options?: CallOptions): Promise<ListSpacesResponse> {
     const res = await this.transport.unary(SpaceService_ListSpaces, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Creates a local-only Space on this device. 
+   *
+   * @generated from rpc elri.v1.space.SpaceService.CreateSpace
+   */
+  async createSpace(req: CreateSpaceRequest, options?: CallOptions): Promise<CreateSpaceResponse> {
+    const res = await this.transport.unary(SpaceService_CreateSpace, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

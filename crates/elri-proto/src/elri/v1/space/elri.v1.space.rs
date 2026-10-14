@@ -88,5 +88,15 @@ pub struct ListSpacesResponse {
     #[prost(message, repeated, tag = "1")]
     pub spaces: ::prost::alloc::vec::Vec<Space>,
 }
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CreateSpaceRequest {
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct CreateSpaceResponse {
+    #[prost(message, optional, tag = "1")]
+    pub space: ::core::option::Option<Space>,
+}
 include!("elri.v1.space.ws.rs");
 // @@protoc_insertion_point(module)

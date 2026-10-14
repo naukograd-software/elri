@@ -7,6 +7,12 @@ pub mod elri {
             include!("elri/v1/core/elri.v1.core.rs");
             // @@protoc_insertion_point(elri.v1.core)
         }
+        #[cfg(feature = "elri-v1-object")]
+        // @@protoc_insertion_point(attribute:elri.v1.object)
+        pub mod object {
+            include!("elri/v1/object/elri.v1.object.rs");
+            // @@protoc_insertion_point(elri.v1.object)
+        }
         #[cfg(feature = "elri-v1-space")]
         // @@protoc_insertion_point(attribute:elri.v1.space)
         pub mod space {

@@ -5,6 +5,12 @@ all-features = true
 ignore = [
     # proc-macro-error via gtk/libappindicator/tray-icon inside tauri; no fix upstream yet
     "RUSTSEC-2024-0370",
+    # im / bitmaps / sized-chunks: loro-internal depends on `im`; tracked upstream
+    "RUSTSEC-2026-0247",
+    "RUSTSEC-2026-0248",
+    "RUSTSEC-2026-0251",
+    # atomic-polyfill: transitive, no_std shim; no replacement in the pinned graph
+    "RUSTSEC-2023-0089",
 ]
 
 [licenses]
@@ -20,6 +26,8 @@ allow = [
     "MPL-2.0",
     "CC0-1.0",
     "AGPL-3.0-only",
+    # Boost Software License (xxhash-rust)
+    "BSL-1.0",
 ]
 
 [bans]

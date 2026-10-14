@@ -11,6 +11,7 @@ use tokio::task::JoinHandle;
 
 use crate::api;
 use crate::device::{DeviceError, DeviceId, LaunchToken};
+use crate::store::{Store, StoreError};
 
 /// Version information baked into the binary that embeds the core.
 #[derive(Debug, Clone)]
@@ -95,6 +96,9 @@ pub enum CoreError {
     /// Device identity failure.
     #[error(transparent)]
     Device(#[from] DeviceError),
+    /// Storage could not be opened.
+    #[error(transparent)]
+    Store(#[from] StoreError),
     /// File system failure.
     #[error("{path}: {source}")]
     Io {
@@ -141,6 +145,7 @@ struct Inner {
     device_id: DeviceId,
     token: LaunchToken,
     endpoint: Endpoint,
+    store: Arc<Store>,
 }
 
 impl Core {
@@ -149,6 +154,7 @@ impl Core {
     pub async fn start(config: Config) -> Result<Self, CoreError> {
         let device_id = DeviceId::load_or_create(&config.data_dir)?;
         let token = LaunchToken::generate();
+        let store = Arc::new(Store::open(&config.data_dir).await?);
 
         let listener = TcpListener::bind(config.bind)
             .await
@@ -172,6 +178,7 @@ impl Core {
             build: config.build.clone(),
             device_id,
             token: token.clone(),
+            store: Arc::clone(&store),
         });
         let listener_task = tokio::spawn(async move {
             if let Err(e) = server.serve_listener(listener).await {
@@ -186,6 +193,7 @@ impl Core {
                 device_id,
                 token,
                 endpoint,
+                store,
             }),
             listener_task,
         })
@@ -204,6 +212,11 @@ impl Core {
     /// The per-launch token.
     pub fn token(&self) -> &LaunchToken {
         &self.inner.token
+    }
+
+    /// Storage of this device.
+    pub fn store(&self) -> &Arc<Store> {
+        &self.inner.store
     }
 
     /// Stops the listener and removes the endpoint file.

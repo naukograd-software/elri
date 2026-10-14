@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package elri.v1.object;
+
+/* What an Object is. Every kind shares the same document shape. */
+enum ObjectKind {
+    OBJECT_KIND_UNSPECIFIED = 0;
+    OBJECT_KIND_ENTITY = 1;
+    OBJECT_KIND_RELATION = 2;
+    OBJECT_KIND_LAYER = 3;
+}
+
+/*
+A field value. Fields are keyed by field-definition id; the definition fixes
+which variant is valid. Text containers and collections are not represented
+here yet.
+*/
+message Value {
+    oneof value {
+        bool bool = 1;
+        int64 int = 2;
+        double double = 3;
+        string string = 4;
+        /* Milliseconds since the Unix epoch, UTC. */
+        int64 time_ms = 5;
+        /* Reference to another Object by id. */
+        string ref = 6;
+    }
+}
+
+message Object {
+    /* UUIDv7, canonical string form. */
+    string id = 1;
+    string space_id = 2;
+    ObjectKind kind = 3;
+    /* Ids of type definitions applied to this Object. */
+    repeated string types = 4;
+    /* Field-definition id → value. */
+    map<string, Value> fields = 5;
+    int64 created_at_ms = 6;
+    int64 updated_at_ms = 7;
+    /* Set when the Object is deleted and awaiting purge. */
+    optional int64 deleted_at_ms = 8;
+}

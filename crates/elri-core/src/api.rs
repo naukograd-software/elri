@@ -1,22 +1,34 @@
 //! ws-proto surface of the core. Every client goes through the same server:
 //! a token middleware first, then the typed service handlers.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use elri_proto::elri::v1::core::core_service_ws::{register_core_service_arc, CoreServiceHandler};
 use elri_proto::elri::v1::core::{EndpointKind, GetInfoRequest, GetInfoResponse};
+use elri_proto::elri::v1::object::object_service_ws::{
+    register_object_service_arc, ObjectServiceHandler,
+};
+use elri_proto::elri::v1::object::{
+    self as pb, CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest,
+    DeleteObjectResponse, GetObjectRequest, GetObjectResponse, ListObjectsRequest,
+    ListObjectsResponse, UpdateObjectRequest, UpdateObjectResponse,
+};
 use elri_proto::elri::v1::space::space_service_ws::{
     register_space_service_arc, SpaceServiceHandler,
 };
-use elri_proto::elri::v1::space::{ListSpacesRequest, ListSpacesResponse};
+use elri_proto::elri::v1::space::{
+    self as spb, CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse,
+};
 use ws_proto::server::{Handler, OriginPolicy};
 use ws_proto::{Code, Request, Response, Server, ServerConfig, Status};
 
 use crate::device::{DeviceId, LaunchToken};
+use crate::model::{now_ms, FieldValue, ModelError, ObjectDoc, ObjectId, ObjectKind, ObjectRecord};
+use crate::store::{Authority, ObjectFilter, SpaceInfo, Store, StoreError};
 use crate::BuildInfo;
 
 /// Everything the handlers need.
-#[derive(Clone)]
 pub struct Services {
     /// Version of the embedding binary.
     pub build: BuildInfo,
@@ -24,6 +36,8 @@ pub struct Services {
     pub device_id: DeviceId,
     /// Token every request must carry.
     pub token: LaunchToken,
+    /// Storage.
+    pub store: Arc<Store>,
 }
 
 /// Builds the loopback server: same-origin policy, bearer-token middleware,
@@ -38,7 +52,8 @@ pub fn build_server(services: Services) -> Server {
 
     let services = Arc::new(services);
     register_core_service_arc(&server, Arc::clone(&services));
-    register_space_service_arc(&server, services);
+    register_space_service_arc(&server, Arc::clone(&services));
+    register_object_service_arc(&server, services);
     server
 }
 
@@ -62,6 +77,125 @@ fn require_token(token: LaunchToken, next: Handler) -> Handler {
     })
 }
 
+// --- error mapping -----------------------------------------------------------
+
+impl From<StoreError> for Status {
+    fn from(e: StoreError) -> Self {
+        match e {
+            StoreError::SpaceNotFound(_) | StoreError::ObjectNotFound(_) => {
+                Status::new(Code::NotFound, e.to_string())
+            }
+            StoreError::Model(ModelError::InvalidId(_)) => {
+                Status::new(Code::InvalidArgument, e.to_string())
+            }
+            other => {
+                tracing::error!(error = %other, "storage failure");
+                Status::new(Code::Internal, "storage failure")
+            }
+        }
+    }
+}
+
+fn invalid(msg: impl Into<String>) -> Status {
+    Status::new(Code::InvalidArgument, msg)
+}
+
+fn parse_id(s: &str, what: &str) -> Result<ObjectId, Status> {
+    ObjectId::parse(s).map_err(|_| invalid(format!("{what}: not a valid id")))
+}
+
+// --- proto conversions -------------------------------------------------------
+
+fn space_to_pb(s: &SpaceInfo) -> spb::Space {
+    spb::Space {
+        id: s.id.to_string(),
+        name: s.name.clone(),
+        role: spb::Role::Owner.into(),
+        authority: match s.authority {
+            Authority::Local => spb::Authority::Local,
+            Authority::Server => spb::Authority::Server,
+        }
+        .into(),
+    }
+}
+
+fn kind_from_pb(kind: i32) -> Result<ObjectKind, Status> {
+    match pb::ObjectKind::try_from(kind) {
+        Ok(pb::ObjectKind::Entity) => Ok(ObjectKind::Entity),
+        Ok(pb::ObjectKind::Relation) => Ok(ObjectKind::Relation),
+        Ok(pb::ObjectKind::Layer) => Ok(ObjectKind::Layer),
+        _ => Err(invalid("kind is required")),
+    }
+}
+
+fn kind_to_pb(kind: ObjectKind) -> pb::ObjectKind {
+    match kind {
+        ObjectKind::Entity => pb::ObjectKind::Entity,
+        ObjectKind::Relation => pb::ObjectKind::Relation,
+        ObjectKind::Layer => pb::ObjectKind::Layer,
+    }
+}
+
+fn value_from_pb(field: &str, v: &pb::Value) -> Result<FieldValue, Status> {
+    use pb::value::Value as V;
+    match &v.value {
+        Some(V::Bool(b)) => Ok(FieldValue::Bool(*b)),
+        Some(V::Int(i)) => Ok(FieldValue::Int(*i)),
+        Some(V::Double(d)) => Ok(FieldValue::Double(*d)),
+        Some(V::String(s)) => Ok(FieldValue::String(s.clone())),
+        Some(V::TimeMs(t)) => Ok(FieldValue::TimeMs(*t)),
+        Some(V::Ref(r)) => Ok(FieldValue::Ref(parse_id(r, &format!("field {field}"))?)),
+        None => Err(invalid(format!("field {field}: value is empty"))),
+    }
+}
+
+fn value_to_pb(v: &FieldValue) -> pb::Value {
+    use pb::value::Value as V;
+    pb::Value {
+        value: Some(match v {
+            FieldValue::Bool(b) => V::Bool(*b),
+            FieldValue::Int(i) => V::Int(*i),
+            FieldValue::Double(d) => V::Double(*d),
+            FieldValue::String(s) => V::String(s.clone()),
+            FieldValue::TimeMs(t) => V::TimeMs(*t),
+            FieldValue::Ref(r) => V::Ref(r.to_string()),
+        }),
+    }
+}
+
+fn object_to_pb(o: &ObjectRecord) -> pb::Object {
+    pb::Object {
+        id: o.id.to_string(),
+        space_id: o.space.to_string(),
+        kind: kind_to_pb(o.kind).into(),
+        types: o.types.clone(),
+        fields: o
+            .fields
+            .iter()
+            .map(|(k, v)| (k.clone(), value_to_pb(v)))
+            .collect(),
+        created_at_ms: o.created_at_ms,
+        updated_at_ms: o.updated_at_ms,
+        deleted_at_ms: o.deleted_at_ms,
+    }
+}
+
+fn fields_from_pb(
+    fields: &HashMap<String, pb::Value>,
+) -> Result<Vec<(String, FieldValue)>, Status> {
+    let mut out = Vec::with_capacity(fields.len());
+    for (k, v) in fields {
+        if k.is_empty() {
+            return Err(invalid("field id must not be empty"));
+        }
+        out.push((k.clone(), value_from_pb(k, v)?));
+    }
+    out.sort_by(|a, b| a.0.cmp(&b.0));
+    Ok(out)
+}
+
+// --- handlers ----------------------------------------------------------------
+
 impl CoreServiceHandler for Services {
     async fn get_info(
         &self,
@@ -81,9 +215,126 @@ impl SpaceServiceHandler for Services {
         &self,
         _req: Request<ListSpacesRequest>,
     ) -> Result<Response<ListSpacesResponse>, Status> {
-        Err(Status::new(
-            Code::Unimplemented,
-            "spaces are not implemented yet",
-        ))
+        let spaces = self.store.list_spaces().await?;
+        Ok(Response::new(ListSpacesResponse {
+            spaces: spaces.iter().map(space_to_pb).collect(),
+        }))
+    }
+
+    async fn create_space(
+        &self,
+        req: Request<CreateSpaceRequest>,
+    ) -> Result<Response<CreateSpaceResponse>, Status> {
+        let name = req.msg.name.trim();
+        if name.is_empty() {
+            return Err(invalid("name is required"));
+        }
+        let space = self.store.create_space(name).await?;
+        Ok(Response::new(CreateSpaceResponse {
+            space: Some(space_to_pb(&space)),
+        }))
+    }
+}
+
+impl ObjectServiceHandler for Services {
+    async fn create_object(
+        &self,
+        req: Request<CreateObjectRequest>,
+    ) -> Result<Response<CreateObjectResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        let kind = kind_from_pb(m.kind)?;
+        let fields = fields_from_pb(&m.fields)?;
+        let space = self.store.space(space_id).await?;
+
+        let doc = ObjectDoc::create(ObjectId::new(), space_id, kind, now_ms())
+            .map_err(StoreError::from)?;
+        for t in &m.types {
+            doc.add_type(t).map_err(StoreError::from)?;
+        }
+        for (k, v) in &fields {
+            doc.set_field(k, v).map_err(StoreError::from)?;
+        }
+        doc.touch(now_ms()).map_err(StoreError::from)?;
+        let rec = space.insert(&doc).await?;
+        Ok(Response::new(CreateObjectResponse {
+            object: Some(object_to_pb(&rec)),
+        }))
+    }
+
+    async fn get_object(
+        &self,
+        req: Request<GetObjectRequest>,
+    ) -> Result<Response<GetObjectResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let id = parse_id(&req.msg.id, "id")?;
+        let rec = self.store.space(space_id).await?.get(id).await?;
+        Ok(Response::new(GetObjectResponse {
+            object: Some(object_to_pb(&rec)),
+        }))
+    }
+
+    async fn update_object(
+        &self,
+        req: Request<UpdateObjectRequest>,
+    ) -> Result<Response<UpdateObjectResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        let id = parse_id(&m.id, "id")?;
+        let set = fields_from_pb(&m.set_fields)?;
+        let space = self.store.space(space_id).await?;
+        let rec = space
+            .update(id, |doc| {
+                for (k, v) in &set {
+                    doc.set_field(k, v)?;
+                }
+                for k in &m.remove_fields {
+                    doc.remove_field(k)?;
+                }
+                for t in &m.add_types {
+                    doc.add_type(t)?;
+                }
+                for t in &m.remove_types {
+                    doc.remove_type(t)?;
+                }
+                Ok(())
+            })
+            .await?;
+        Ok(Response::new(UpdateObjectResponse {
+            object: Some(object_to_pb(&rec)),
+        }))
+    }
+
+    async fn delete_object(
+        &self,
+        req: Request<DeleteObjectRequest>,
+    ) -> Result<Response<DeleteObjectResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let id = parse_id(&req.msg.id, "id")?;
+        let space = self.store.space(space_id).await?;
+        space.update(id, |doc| doc.mark_deleted(now_ms())).await?;
+        Ok(Response::new(DeleteObjectResponse {}))
+    }
+
+    async fn list_objects(
+        &self,
+        req: Request<ListObjectsRequest>,
+    ) -> Result<Response<ListObjectsResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        let kind = match pb::ObjectKind::try_from(m.kind) {
+            Ok(pb::ObjectKind::Unspecified) | Err(_) => None,
+            Ok(_) => Some(kind_from_pb(m.kind)?),
+        };
+        let filter = ObjectFilter {
+            kind,
+            type_id: (!m.type_id.is_empty()).then(|| m.type_id.clone()),
+            include_deleted: m.include_deleted,
+            limit: usize::try_from(m.limit).unwrap_or(0),
+        };
+        let objects = self.store.space(space_id).await?.list(&filter).await?;
+        Ok(Response::new(ListObjectsResponse {
+            objects: objects.iter().map(object_to_pb).collect(),
+        }))
     }
 }
