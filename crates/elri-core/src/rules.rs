@@ -34,6 +34,8 @@ pub const ON_EVENTS: &str = "$on_events";
 pub const MISSED: &str = "$missed";
 /// Most slots a catch-up runs for.
 const CATCH_UP_LIMIT: i64 = 10;
+/// Longest schedule period honoured: a year.
+const MAX_EVERY_SECONDS: i64 = 366 * 24 * 60 * 60;
 /// How often the scheduler looks for due rules.
 const SCHEDULER_TICK: std::time::Duration = std::time::Duration::from_secs(15);
 /// Device setting: benign scripts are granted without asking.
@@ -241,17 +243,28 @@ async fn run_due(
             let Ok(rule_id) = ObjectId::parse(&r.id) else {
                 continue;
             };
-            let period = every * 1000;
+            // A period is at least a second and at most a year, whatever
+            // the rule says, so the arithmetic below cannot overflow.
+            let period = every.clamp(1, MAX_EVERY_SECONDS).saturating_mul(1000);
             let last = store.rule_last_scheduled(rule_id).await?;
-            if last > 0 && now - last < period {
+            if last > 0 && now.saturating_sub(last) < period {
                 continue;
             }
             // Slots since the last run; the first is due, the rest were
             // missed while the device was away.
-            let slots = if last > 0 { (now - last) / period } else { 1 };
+            let slots = if last > 0 {
+                (now.saturating_sub(last) / period).max(1)
+            } else {
+                1
+            };
             let missed = slots - 1;
             store.set_rule_last_scheduled(rule_id, now).await?;
-            let at = |slot: i64| serde_json::json!({ "schedule": { "at": last + slot * period }, "rule": r.id });
+            let at = |slot: i64| {
+                serde_json::json!({
+                    "schedule": { "at": last.saturating_add(slot.saturating_mul(period)) },
+                    "rule": r.id,
+                })
+            };
             match trigger.missed() {
                 MissedRuns::Skip if missed > 0 => {
                     tracing::info!(rule = %r.id, missed, "skipped missed scheduled runs");
