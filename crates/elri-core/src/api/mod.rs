@@ -6,6 +6,10 @@ mod definitions;
 
 use std::sync::Arc;
 
+use elri_proto::elri::v1::backup::backup_service_ws::{
+    register_backup_service_arc, BackupServiceHandler,
+};
+use elri_proto::elri::v1::backup::{BackupSpace, CreateBackupRequest, CreateBackupResponse};
 use elri_proto::elri::v1::change::change_service_ws::{
     register_change_service_arc, ChangeServiceHandler,
 };
@@ -91,6 +95,7 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     register_remote_service_arc(&server, Arc::clone(&services));
     register_event_service_arc(&server, Arc::clone(&services));
     register_search_service_arc(&server, Arc::clone(&services));
+    register_backup_service_arc(&server, Arc::clone(&services));
     definitions::register(&server, services);
     server
 }
@@ -494,6 +499,54 @@ impl ObjectServiceHandler for Services {
         };
         Ok(Response::new(ListObjectsResponse {
             objects: self.store.space(space_id).await?.list(&filter).await?,
+        }))
+    }
+}
+
+impl From<crate::backup::BackupError> for Status {
+    fn from(e: crate::backup::BackupError) -> Self {
+        use crate::backup::BackupError as E;
+        match e {
+            E::Store(s) => s.into(),
+            E::Occupied(_) | E::InUse(_) => Status::new(Code::FailedPrecondition, e.to_string()),
+            E::Format(_) | E::Checksum { .. } => Status::new(Code::InvalidArgument, e.to_string()),
+            other => {
+                tracing::error!(error = %other, "backup failure");
+                Status::new(Code::Internal, other.to_string())
+            }
+        }
+    }
+}
+
+impl BackupServiceHandler for Services {
+    async fn create_backup(
+        &self,
+        req: Request<CreateBackupRequest>,
+    ) -> Result<Response<CreateBackupResponse>, Status> {
+        let dest = req.msg.dest_dir.trim();
+        if dest.is_empty() {
+            return Err(invalid("dest_dir is required"));
+        }
+        let (manifest, dir) =
+            crate::backup::create(&self.store, std::path::Path::new(dest)).await?;
+        Ok(Response::new(CreateBackupResponse {
+            dir: dir.to_string_lossy().into_owned(),
+            created_at_ms: manifest.created_at_ms,
+            verified: manifest.verified,
+            bytes: i64::try_from(manifest.files.iter().map(|f| f.bytes).sum::<u64>())
+                .unwrap_or(i64::MAX),
+            spaces: manifest
+                .spaces
+                .iter()
+                .map(|s| BackupSpace {
+                    id: s.id.clone(),
+                    name: s.name.clone(),
+                    cursor: s.cursor,
+                    pending: i32::try_from(s.pending).unwrap_or(i32::MAX),
+                    rejected: i32::try_from(s.rejected).unwrap_or(i32::MAX),
+                })
+                .collect(),
+            omissions: manifest.omissions,
         }))
     }
 }

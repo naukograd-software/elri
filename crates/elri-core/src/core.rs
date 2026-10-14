@@ -299,6 +299,15 @@ impl Drop for Core {
 /// The endpoint file contains the launch token, so it is owner-only and
 /// written atomically: a temporary file with restricted permissions, then a
 /// rename over the final name.
+/// Whether a core is running on `data_dir`: its endpoint file names a
+/// socket that still answers.
+pub async fn in_use(data_dir: &std::path::Path) -> bool {
+    match Endpoint::read(data_dir) {
+        Ok(existing) => endpoint_answers(&existing).await,
+        Err(_) => false,
+    }
+}
+
 async fn endpoint_answers(endpoint: &Endpoint) -> bool {
     let Some(addr) = endpoint
         .url

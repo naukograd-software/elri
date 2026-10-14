@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package elri.v1.backup;
+
+/* Local backups of this device's data. Restore is an offline operation of
+   the command line, with the core stopped. */
+service BackupService {
+    /*
+    Copies every database at one consistent moment into a new directory
+    under `dest_dir`, checks the copies, and writes a manifest. Secrets
+    are never included; the manifest names every omission.
+    */
+    rpc CreateBackup(CreateBackupRequest) returns (CreateBackupResponse);
+}
+
+message CreateBackupRequest {
+    string dest_dir = 1;
+}
+
+message BackupSpace {
+    string id = 1;
+    string name = 2;
+    /* Highest server sequence installed; 0 for local Spaces. */
+    int64 cursor = 3;
+    /* Changes not yet accepted by the server. */
+    int32 pending = 4;
+    /* Changes rejected or paused, awaiting the user. */
+    int32 rejected = 5;
+}
+
+message CreateBackupResponse {
+    /* The directory the backup was written to. */
+    string dir = 1;
+    int64 created_at_ms = 2;
+    /* Every copy was reopened and read back. */
+    bool verified = 3;
+    int64 bytes = 4;
+    repeated BackupSpace spaces = 5;
+    /* What the backup does not contain. */
+    repeated string omissions = 6;
+}

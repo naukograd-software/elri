@@ -1,11 +1,13 @@
 //! `elri`: talks to the core running on this device through the endpoint file.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use elri_core::Endpoint;
+use elri_proto::elri::v1::backup::backup_service_ws::BackupServiceClient;
+use elri_proto::elri::v1::backup::CreateBackupRequest;
 use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
 use elri_proto::elri::v1::change::{
     Change, DiscardChangeRequest, ListChangesRequest, RetryChangeRequest,
@@ -74,6 +76,11 @@ enum Cmd {
         #[arg(long, default_value_t = 20)]
         limit: i32,
     },
+    /// Local backups.
+    Backup {
+        #[command(subcommand)]
+        cmd: BackupCmd,
+    },
     /// Changes recorded in a Space, newest first.
     Change {
         #[command(subcommand)]
@@ -113,6 +120,33 @@ enum RemoteCmd {
         /// Role: admin, editor, or viewer.
         #[arg(long, default_value = "editor", value_parser = parse_role)]
         role: Role,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum BackupCmd {
+    /// Write a verified backup of every database into a new directory
+    /// under DEST. Secrets are not included.
+    Create {
+        /// Directory to create the backup in.
+        dest: String,
+    },
+    /// Check a backup's manifest and checksums.
+    Check {
+        /// Backup directory.
+        dir: String,
+    },
+    /// Restore a backup into the data directory. The core must be stopped.
+    /// The restored device gets a fresh identity and no server token.
+    Restore {
+        /// Backup directory.
+        dir: String,
+        /// Move an existing data directory aside instead of refusing.
+        #[arg(long)]
+        replace: bool,
+        /// Keep the device identity recorded in the backup.
+        #[arg(long)]
+        keep_identity: bool,
     },
 }
 
@@ -397,6 +431,45 @@ fn object_json(o: &Object) -> serde_json::Value {
     })
 }
 
+async fn run_backup_offline(data_dir: &Path, cmd: &BackupCmd) -> Result<()> {
+    match cmd {
+        BackupCmd::Check { dir } => {
+            let manifest = elri_core::backup::check(Path::new(dir))?;
+            print(&json!({
+                "verified": manifest.verified,
+                "created_at_ms": manifest.created_at_ms,
+                "device_id": manifest.device_id,
+                "spaces": manifest.spaces.iter().map(|s| json!({
+                    "id": s.id, "name": s.name, "cursor": s.cursor,
+                    "pending": s.pending, "rejected": s.rejected,
+                })).collect::<Vec<_>>(),
+                "files": manifest.files.len(),
+                "omissions": manifest.omissions,
+            }))
+        }
+        BackupCmd::Restore {
+            dir,
+            replace,
+            keep_identity,
+        } => {
+            let occupied = if *replace {
+                elri_core::backup::Occupied::MoveAside
+            } else {
+                elri_core::backup::Occupied::Refuse
+            };
+            let manifest =
+                elri_core::backup::restore(Path::new(dir), data_dir, occupied, *keep_identity)
+                    .await?;
+            print(&json!({
+                "restored_into": data_dir.display().to_string(),
+                "spaces": manifest.spaces.len(),
+                "omissions": manifest.omissions,
+            }))
+        }
+        BackupCmd::Create { .. } => bail!("backup create needs a running core"),
+    }
+}
+
 fn print(v: &serde_json::Value) -> Result<()> {
     println!("{}", serde_json::to_string_pretty(v)?);
     Ok(())
@@ -409,6 +482,12 @@ async fn main() -> Result<()> {
         Some(d) => d,
         None => default_data_dir()?,
     };
+    // Restore and check work on files, with no core involved.
+    if let Cmd::Backup { cmd } = &args.cmd {
+        if !matches!(cmd, BackupCmd::Create { .. }) {
+            return run_backup_offline(&data_dir, cmd).await;
+        }
+    }
     let endpoint = Endpoint::read(&data_dir)
         .with_context(|| format!("no running core found in {}", data_dir.display()))?;
     let conn = Client::dial(&endpoint.url, ClientConfig::default())
@@ -452,6 +531,26 @@ async fn main() -> Result<()> {
             json!(hits)
         }
         Cmd::Change { cmd } => run_change(&endpoint, conn, cmd).await?,
+        Cmd::Backup {
+            cmd: BackupCmd::Create { dest },
+        } => {
+            let res = BackupServiceClient::new(conn)
+                .create_backup(authed(&endpoint, CreateBackupRequest { dest_dir: dest }))
+                .await?
+                .msg;
+            json!({
+                "dir": res.dir,
+                "created_at_ms": res.created_at_ms,
+                "verified": res.verified,
+                "bytes": res.bytes,
+                "spaces": res.spaces.iter().map(|s| json!({
+                    "id": s.id, "name": s.name, "cursor": s.cursor,
+                    "pending": s.pending, "rejected": s.rejected,
+                })).collect::<Vec<_>>(),
+                "omissions": res.omissions,
+            })
+        }
+        Cmd::Backup { .. } => unreachable!("handled before dialing"),
         Cmd::Remote { cmd } => run_remote(&endpoint, conn, cmd).await?,
     };
     print(&out)

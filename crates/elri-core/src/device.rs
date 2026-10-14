@@ -80,6 +80,27 @@ impl DeviceId {
     pub fn as_string(&self) -> String {
         self.0.to_string()
     }
+
+    /// Writes `id` as the identity of `data_dir`, replacing any; for restore
+    /// with a kept identity.
+    pub fn write(data_dir: &Path, id: &str) -> Result<Self, DeviceError> {
+        let path = data_dir.join("device.json");
+        let device_id = Uuid::parse_str(id).map_err(|_| DeviceError::Io {
+            path: path.clone(),
+            source: std::io::Error::new(std::io::ErrorKind::InvalidData, "device id"),
+        })?;
+        let bytes = serde_json::to_vec_pretty(&DeviceFile { device_id }).map_err(|source| {
+            DeviceError::Corrupt {
+                path: path.clone(),
+                source,
+            }
+        })?;
+        std::fs::write(&path, bytes).map_err(|source| DeviceError::Io {
+            path: path.clone(),
+            source,
+        })?;
+        Ok(Self(device_id))
+    }
 }
 
 /// Makes sure the data directory exists and is readable by its owner only;

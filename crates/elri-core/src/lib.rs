@@ -15,6 +15,7 @@
 //! | `script` | Luau runtime, WASM host, native extensions |
 
 pub mod api;
+pub mod backup;
 pub mod change;
 pub mod device;
 pub mod model;

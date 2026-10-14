@@ -23,6 +23,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 rand.workspace = true
+sha2.workspace = true
 keyring = { workspace = true, optional = true }
 
 [features]

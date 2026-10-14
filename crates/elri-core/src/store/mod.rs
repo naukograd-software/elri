@@ -218,6 +218,72 @@ impl Store {
         })
     }
 
+    /// Writes a compacted copy of every database into `dir` (`device.db`
+    /// and `spaces/<id>.db`) at one consistent moment: every lock is held
+    /// while the engine copies, so no write lands between files. Returns
+    /// the device id and a summary of each Space.
+    pub async fn backup_into(
+        &self,
+        dir: &Path,
+    ) -> Result<(DeviceId, Vec<crate::backup::SpaceSummary>), StoreError> {
+        let listed = self.list_spaces().await?;
+        let mut spaces = Vec::with_capacity(listed.len());
+        for s in &listed {
+            spaces.push(self.space(ObjectId::parse(&s.id)?).await?);
+        }
+        // The barrier: device db first, then every Space, all held until
+        // the last copy is written.
+        let mut device = self.device.lock().await;
+        let mut guards = Vec::with_capacity(spaces.len());
+        for s in &spaces {
+            guards.push(s.db.lock().await);
+        }
+        vacuum_into(&mut device, &dir.join("device.db")).await?;
+        let mut summaries = Vec::with_capacity(spaces.len());
+        for (guard, info) in guards.iter_mut().zip(&listed) {
+            vacuum_into(guard, &dir.join("spaces").join(format!("{}.db", info.id))).await?;
+            let cursor = read_cursor(guard).await?;
+            let (pending, rejected) = pending_counts(guard).await?;
+            summaries.push(crate::backup::SpaceSummary {
+                id: info.id.clone(),
+                name: info.name.clone(),
+                authority: info.authority,
+                cursor,
+                pending,
+                rejected,
+            });
+        }
+        Ok((self.device_id, summaries))
+    }
+
+    /// Opens every copied database in `dir` and reads from it, the way a
+    /// restore would.
+    pub async fn verify_copies(
+        dir: &Path,
+        files: &[crate::backup::FileEntry],
+    ) -> Result<(), StoreError> {
+        for f in files {
+            let path = dir.join(&f.path);
+            let mut db = Db::builder()
+                .models(if f.path == "device.db" {
+                    toasty::models!(SpaceRow, RemoteRow)
+                } else {
+                    toasty::models!(DocRow, ChangeRow, SpaceLogRow)
+                })
+                .build(Turso::file(&path).experimental_index_method(true))
+                .await?;
+            let table = if f.path == "device.db" {
+                "spaces"
+            } else {
+                "objects"
+            };
+            toasty::sql::query(format!("SELECT count(*) FROM {table}"))
+                .exec(&mut db)
+                .await?;
+        }
+        Ok(())
+    }
+
     /// Subscribes to everything that happens in this store from now on.
     pub fn watch(&self) -> broadcast::Receiver<Event> {
         self.events.subscribe()
@@ -938,22 +1004,7 @@ impl SpaceStore {
     /// paused).
     pub async fn pending_counts(&self) -> Result<(usize, usize), StoreError> {
         let mut db = self.db.lock().await;
-        let pending = ChangeRow::filter(ChangeRow::fields().status().in_list([
-            status_code(ChangeStatus::Local),
-            status_code(ChangeStatus::Queued),
-            status_code(ChangeStatus::Waiting),
-        ]))
-        .exec(&mut *db)
-        .await?
-        .len();
-        let rejected = ChangeRow::filter(ChangeRow::fields().status().in_list([
-            status_code(ChangeStatus::Rejected),
-            status_code(ChangeStatus::Paused),
-        ]))
-        .exec(&mut *db)
-        .await?
-        .len();
-        Ok((pending, rejected))
+        pending_counts(&mut db).await
     }
 
     /// Records the authority's answer for a submitted Change.
@@ -1694,6 +1745,35 @@ async fn write_state(db: &mut Db, key: &str, value: i64) -> Result<(), StoreErro
 
 async fn read_cursor(db: &mut Db) -> Result<i64, StoreError> {
     read_state(db, CURSOR).await
+}
+
+async fn pending_counts(db: &mut Db) -> Result<(usize, usize), StoreError> {
+    let pending = ChangeRow::filter(ChangeRow::fields().status().in_list([
+        status_code(ChangeStatus::Local),
+        status_code(ChangeStatus::Queued),
+        status_code(ChangeStatus::Waiting),
+    ]))
+    .exec(&mut *db)
+    .await?
+    .len();
+    let rejected = ChangeRow::filter(ChangeRow::fields().status().in_list([
+        status_code(ChangeStatus::Rejected),
+        status_code(ChangeStatus::Paused),
+    ]))
+    .exec(&mut *db)
+    .await?
+    .len();
+    Ok((pending, rejected))
+}
+
+/// Has the engine write a compacted, consistent copy of the open database.
+async fn vacuum_into(db: &mut Db, path: &Path) -> Result<(), StoreError> {
+    let quoted = path.to_string_lossy().replace('\'', "''");
+    toasty::sql::query(format!("VACUUM INTO '{quoted}'"))
+        .exec(&mut *db)
+        .await?;
+    restrict_to_owner(path);
+    Ok(())
 }
 
 async fn last_seq(db: &mut Db) -> Result<i64, StoreError> {
