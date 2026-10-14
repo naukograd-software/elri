@@ -45,6 +45,7 @@ impl From<ScriptError> for Status {
             }
             ScriptError::Denied(_) => Status::new(Code::PermissionDenied, e.to_string()),
             ScriptError::Limit(_) => Status::new(Code::ResourceExhausted, e.to_string()),
+            ScriptError::Workflow(_) => Status::new(Code::FailedPrecondition, e.to_string()),
         }
     }
 }

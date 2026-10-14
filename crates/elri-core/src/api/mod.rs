@@ -9,6 +9,7 @@ mod extensions;
 mod scripts;
 mod transfer;
 mod ui;
+mod workflows;
 
 use std::sync::Arc;
 
@@ -112,7 +113,8 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     ui::register(&server, Arc::clone(&services));
     transfer::register(&server, Arc::clone(&services));
     extensions::register(&server, Arc::clone(&services));
-    contexts::register(&server, services);
+    contexts::register(&server, Arc::clone(&services));
+    workflows::register(&server, services);
     server
 }
 

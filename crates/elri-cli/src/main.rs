@@ -62,6 +62,13 @@ use elri_proto::elri::v1::transfer::{
     ExportObjectsRequest, ImportObjectsRequest, MoveObjectsRequest,
 };
 use elri_proto::elri::v1::ui::interface_service_ws::InterfaceServiceClient;
+use elri_proto::elri::v1::workflow::workflow_service_ws::WorkflowServiceClient;
+use elri_proto::elri::v1::workflow::{
+    resolve_workflow_step_request, CancelWorkflowRunRequest, GetWorkflowRunRequest,
+    ListWorkflowRunsRequest, ResolveWorkflowStepRequest, ResumePolicy, ResumeWorkflowRunRequest,
+    StartWorkflowRequest, WorkflowRun,
+};
+
 use elri_proto::elri::v1::ui::{
     CreateInterfaceRequest, EvaluateRequest, Interface, ListInterfacesRequest, Node,
     PublishInterfaceRequest, SelectVersionRequest, UpdateInterfaceRequest,
@@ -140,6 +147,11 @@ enum Cmd {
     Transfer {
         #[command(subcommand)]
         cmd: TransferCmd,
+    },
+    /// Durable workflows: script runs whose steps survive an interruption.
+    Workflow {
+        #[command(subcommand)]
+        cmd: WorkflowCmd,
     },
     /// Interfaces: trees of catalog nodes the renderer draws.
     Ui {
@@ -232,6 +244,50 @@ enum ScriptCmd {
         #[arg(default_value = "null")]
         args: String,
     },
+}
+
+#[derive(Subcommand, Debug)]
+enum WorkflowCmd {
+    /// Start a script as a workflow run on this device.
+    Start {
+        #[arg(long)]
+        space: String,
+        /// The script to run.
+        script: String,
+        /// JSON passed as `elri.args`.
+        #[arg(long, default_value = "")]
+        args: String,
+        /// Continue by itself after an interruption, unless a step's
+        /// outcome is unknown.
+        #[arg(long)]
+        auto_resume: bool,
+    },
+    /// Runs of a Space, newest first.
+    List {
+        #[arg(long)]
+        space: String,
+        /// Only runs of this script.
+        #[arg(long)]
+        script: Option<String>,
+    },
+    /// A run with its steps.
+    Get { id: String },
+    /// Continue a paused or failed run from its first unfinished step.
+    Resume { id: String },
+    /// Say what happened to a step of unknown outcome: its result, or that
+    /// it may run again.
+    Resolve {
+        id: String,
+        step: String,
+        /// The step did happen; this JSON is its result.
+        #[arg(long, conflicts_with = "retry")]
+        result: Option<String>,
+        /// The step did not happen, or may safely happen again.
+        #[arg(long)]
+        retry: bool,
+    },
+    /// Abandon a paused or failed run.
+    Cancel { id: String },
 }
 
 #[derive(Subcommand, Debug)]
@@ -1019,6 +1075,129 @@ async fn run_script(
             }))
         }
     }
+}
+
+fn workflow_json(r: &WorkflowRun) -> serde_json::Value {
+    json!({
+        "id": r.id,
+        "space_id": r.space_id,
+        "script_id": r.script_id,
+        "version": r.version,
+        "status": r.status().as_str_name().trim_start_matches("RUN_STATUS_").to_lowercase(),
+        "reason": r.reason,
+        "output_json": r.output_json,
+        "resume": r.resume().as_str_name().trim_start_matches("RESUME_POLICY_").to_lowercase(),
+        "created_at_ms": r.created_at_ms,
+        "updated_at_ms": r.updated_at_ms,
+        "steps": r.steps.iter().map(|s| json!({
+            "name": s.name,
+            "status": s.status().as_str_name().trim_start_matches("STEP_STATUS_").to_lowercase(),
+            "result_json": s.result_json,
+            "error": s.error,
+            "at_ms": s.at_ms,
+        })).collect::<Vec<_>>(),
+    })
+}
+
+async fn run_workflow(
+    endpoint: &Endpoint,
+    conn: Client,
+    cmd: WorkflowCmd,
+) -> Result<serde_json::Value> {
+    let client = WorkflowServiceClient::new(conn);
+    let run = match cmd {
+        WorkflowCmd::Start {
+            space,
+            script,
+            args,
+            auto_resume,
+        } => {
+            client
+                .start_workflow(authed(
+                    endpoint,
+                    StartWorkflowRequest {
+                        space_id: space,
+                        script_id: script,
+                        args_json: args,
+                        resume: if auto_resume {
+                            ResumePolicy::Auto.into()
+                        } else {
+                            ResumePolicy::Ask.into()
+                        },
+                    },
+                ))
+                .await?
+                .msg
+                .run
+        }
+        WorkflowCmd::List { space, script } => {
+            let res = client
+                .list_workflow_runs(authed(
+                    endpoint,
+                    ListWorkflowRunsRequest {
+                        space_id: space,
+                        script_id: script.unwrap_or_default(),
+                        limit: 0,
+                    },
+                ))
+                .await?;
+            return Ok(json!(res
+                .msg
+                .runs
+                .iter()
+                .map(workflow_json)
+                .collect::<Vec<_>>()));
+        }
+        WorkflowCmd::Get { id } => {
+            client
+                .get_workflow_run(authed(endpoint, GetWorkflowRunRequest { id }))
+                .await?
+                .msg
+                .run
+        }
+        WorkflowCmd::Resume { id } => {
+            client
+                .resume_workflow_run(authed(endpoint, ResumeWorkflowRunRequest { id }))
+                .await?
+                .msg
+                .run
+        }
+        WorkflowCmd::Resolve {
+            id,
+            step,
+            result,
+            retry,
+        } => {
+            let outcome = match (result, retry) {
+                (Some(r), _) => resolve_workflow_step_request::Outcome::ResultJson(r),
+                (None, true) => resolve_workflow_step_request::Outcome::Retry(true),
+                (None, false) => bail!("give --result JSON or --retry"),
+            };
+            client
+                .resolve_workflow_step(authed(
+                    endpoint,
+                    ResolveWorkflowStepRequest {
+                        id,
+                        step,
+                        outcome: Some(outcome),
+                    },
+                ))
+                .await?
+                .msg
+                .run
+        }
+        WorkflowCmd::Cancel { id } => {
+            client
+                .cancel_workflow_run(authed(endpoint, CancelWorkflowRunRequest { id }))
+                .await?
+                .msg
+                .run
+        }
+    };
+    let Some(r) = run else {
+        bail!("core returned no run");
+    };
+    Ok(workflow_json(&r))
 }
 
 fn constraint_json(c: &Constraint) -> serde_json::Value {
@@ -1942,6 +2121,7 @@ async fn main() -> Result<()> {
         Cmd::Script { cmd } => run_script(&endpoint, conn, cmd).await?,
         Cmd::Grant { cmd } => run_grant(&endpoint, conn, cmd).await?,
         Cmd::Constraint { cmd } => run_constraint(&endpoint, conn, cmd).await?,
+        Cmd::Workflow { cmd } => run_workflow(&endpoint, conn, cmd).await?,
         Cmd::Rule { cmd } => run_rule(&endpoint, conn, cmd).await?,
         Cmd::Ui { cmd } => run_ui(&endpoint, conn, cmd).await?,
         Cmd::Transfer { cmd } => run_transfer(&endpoint, conn, cmd).await?,

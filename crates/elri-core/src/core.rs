@@ -228,6 +228,9 @@ impl Core {
             crate::script::Host::new(Arc::clone(&store), device_id.as_string(), modules.clone());
         let rules_task =
             crate::rules::spawn_runner(Arc::clone(&store), scripts.clone(), device_id.as_string());
+        if let Err(e) = crate::workflows::recover(&store, &scripts).await {
+            tracing::warn!(error = %e, "workflow recovery failed");
+        }
         let server = api::build_server(
             api::Services {
                 build: config.build.clone(),

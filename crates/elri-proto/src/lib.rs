@@ -103,5 +103,11 @@ pub mod elri {
             include!("elri/v1/ui/elri.v1.ui.rs");
             // @@protoc_insertion_point(elri.v1.ui)
         }
+        #[cfg(feature = "elri-v1-workflow")]
+        // @@protoc_insertion_point(attribute:elri.v1.workflow)
+        pub mod workflow {
+            include!("elri/v1/workflow/elri.v1.workflow.rs");
+            // @@protoc_insertion_point(elri.v1.workflow)
+        }
     }
 }

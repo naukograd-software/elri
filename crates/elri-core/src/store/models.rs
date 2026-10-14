@@ -429,3 +429,57 @@ pub struct RemoteRow {
     /// User name on the server.
     pub user_name: String,
 }
+
+/// A durable workflow run on this device: a script run whose steps are
+/// recorded so it can continue after an interruption.
+#[derive(Debug, toasty::Model)]
+#[table = "workflow_runs"]
+#[index(space_id, created_at)]
+pub struct WorkflowRunRow {
+    /// Run id.
+    #[key]
+    pub id: Uuid,
+    /// The Space of the script.
+    pub space_id: Uuid,
+    /// The script.
+    pub script_id: Uuid,
+    /// The script version the run is pinned to.
+    pub version: String,
+    /// `elri.args` as JSON.
+    pub args_json: String,
+    /// `running`, `paused`, `done`, `failed`, or `cancelled`.
+    pub status: String,
+    /// Why it paused or failed.
+    pub reason: String,
+    /// Return value as JSON, when done.
+    pub output_json: String,
+    /// `ResumePolicy` code.
+    pub resume: i64,
+    /// Start instant.
+    pub created_at: i64,
+    /// Last status change.
+    pub updated_at: i64,
+}
+
+/// One step of a workflow run: intent recorded before the step, result
+/// after.
+#[derive(Debug, toasty::Model)]
+#[table = "workflow_steps"]
+#[index(run_id)]
+pub struct WorkflowStepRow {
+    /// Row id.
+    #[key]
+    pub id: Uuid,
+    /// The run.
+    pub run_id: Uuid,
+    /// Step name, stable across runs of the script.
+    pub name: String,
+    /// `intent`, `done`, `failed`, or `unknown`.
+    pub status: String,
+    /// The step's value as JSON, when done.
+    pub result_json: String,
+    /// Error text, when failed.
+    pub error: String,
+    /// Instant of the last change.
+    pub at: i64,
+}

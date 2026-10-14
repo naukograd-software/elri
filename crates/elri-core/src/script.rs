@@ -21,6 +21,7 @@ use sha2::{Digest as _, Sha256};
 use crate::model::{
     int_field, now_ms, reserved, string_field, text_value, ObjectDoc, ObjectId, SpaceId,
 };
+use crate::store::workflows::step as st;
 use crate::store::{ObjectFilter, Store, StoreError};
 
 /// Reserved field: the Luau source.
@@ -35,7 +36,10 @@ const TIME_LIMIT: Duration = Duration::from_secs(5);
 /// Host calls a run may make.
 const HOST_CALL_LIMIT: u32 = 10_000;
 /// Longest output kept, in bytes.
-const OUTPUT_LIMIT: usize = 1 << 20;
+/// Longest output, log, or step result in bytes.
+pub const OUTPUT_LIMIT: usize = 1 << 20;
+/// Longest step name.
+const STEP_NAME_LIMIT: usize = 200;
 
 /// Run failures that are not storage failures.
 #[derive(Debug, thiserror::Error)]
@@ -55,6 +59,9 @@ pub enum ScriptError {
     /// The run exceeded a limit.
     #[error("limit exceeded: {0}")]
     Limit(&'static str),
+    /// A workflow run is not in a state that allows the request.
+    #[error("workflow: {0}")]
+    Workflow(String),
 }
 
 /// Hex SHA-256 over source and manifest: what a grant is bound to.
@@ -198,6 +205,8 @@ struct Access {
     logs: Vec<String>,
     calls: u32,
     bytes_out: usize,
+    /// The workflow run `elri.step` records into, if any.
+    workflow: Option<uuid::Uuid>,
 }
 
 impl Access {
@@ -272,6 +281,31 @@ impl Host {
         args: serde_json::Value,
         identity: RunIdentity,
     ) -> RunResult {
+        self.run_in(space, script, args, identity, None).await
+    }
+
+    /// [`Self::run`] as workflow run `workflow`: `elri.step` records each
+    /// step's intent and result under it and reuses recorded results.
+    pub async fn run_workflow(
+        &self,
+        space: SpaceId,
+        script: &Script,
+        args: serde_json::Value,
+        identity: RunIdentity,
+        workflow: uuid::Uuid,
+    ) -> RunResult {
+        self.run_in(space, script, args, identity, Some(workflow))
+            .await
+    }
+
+    async fn run_in(
+        &self,
+        space: SpaceId,
+        script: &Script,
+        args: serde_json::Value,
+        identity: RunIdentity,
+        workflow: Option<uuid::Uuid>,
+    ) -> RunResult {
         let started = Instant::now();
         let manifest = script.manifest.clone().unwrap_or_default();
         let access = Arc::new(Mutex::new(Access {
@@ -281,6 +315,7 @@ impl Host {
             logs: Vec::new(),
             calls: 0,
             bytes_out: 0,
+            workflow,
         }));
         let outcome = self
             .run_inner(space, script, args, &identity, Arc::clone(&access), started)
@@ -319,6 +354,7 @@ impl Host {
             logs: Vec::new(),
             calls: 0,
             bytes_out: 0,
+            workflow: None,
         }));
         let identity = RunIdentity {
             script_id: String::new(),
@@ -371,6 +407,7 @@ impl Host {
             logs: Vec::new(),
             calls: 0,
             bytes_out: 0,
+            workflow: None,
         }));
         let result: Result<serde_json::Value, ScriptError> = async {
             let lua = self.vm(space, &identity, &access, started, false)?;
@@ -734,6 +771,82 @@ impl Host {
             })
             .map_err(|e| lua_err(&e))?;
         elri.set("delete", delete).map_err(|e| lua_err(&e))?;
+
+        // elri.step(name, fn | value): inside a workflow run the step's
+        // intent is recorded before `fn` runs and its result after; a
+        // recorded result is returned without running `fn` again. Outside
+        // a workflow it just runs `fn`.
+        let a = Arc::clone(access);
+        let store = Arc::clone(&self.store);
+        let step = lua
+            .create_async_function(move |lua, (name, body): (String, LuaValue)| {
+                let a = Arc::clone(&a);
+                let store = Arc::clone(&store);
+                async move {
+                    let run = {
+                        let mut g = a.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+                        g.charge().map_err(to_lua)?;
+                        g.workflow
+                    };
+                    let name = name.trim().to_owned();
+                    if name.is_empty() || name.len() > STEP_NAME_LIMIT {
+                        return Err(mlua::Error::runtime("step: a name of 1..200 characters"));
+                    }
+                    if let Some(run) = run {
+                        match store.workflow_step(run, &name).await.map_err(to_lua)? {
+                            Some(rec) if rec.status == st::DONE => {
+                                let v: serde_json::Value =
+                                    serde_json::from_str(&rec.result_json).unwrap_or_default();
+                                return lua.to_value(&v);
+                            }
+                            Some(rec) if rec.status == st::INTENT || rec.status == st::UNKNOWN => {
+                                return Err(mlua::Error::runtime(format!(
+                                    "step {name}: outcome unknown; resolve it before resuming"
+                                )));
+                            }
+                            _ => {}
+                        }
+                        store
+                            .workflow_step_intent(run, &name)
+                            .await
+                            .map_err(to_lua)?;
+                    }
+                    let result = match body {
+                        LuaValue::Function(f) => f.call_async::<LuaValue>(()).await,
+                        other => Ok(other),
+                    };
+                    let Some(run) = run else {
+                        return result;
+                    };
+                    match result {
+                        Ok(v) => {
+                            let json: serde_json::Value = lua.from_value(v.clone())?;
+                            let text = if json.is_null() {
+                                String::new()
+                            } else {
+                                json.to_string()
+                            };
+                            if text.len() > OUTPUT_LIMIT {
+                                return Err(to_lua(ScriptError::Limit("step result size")));
+                            }
+                            store
+                                .workflow_step_finish(run, &name, st::DONE, &text, "")
+                                .await
+                                .map_err(to_lua)?;
+                            Ok(v)
+                        }
+                        Err(e) => {
+                            store
+                                .workflow_step_finish(run, &name, st::FAILED, "", &e.to_string())
+                                .await
+                                .map_err(to_lua)?;
+                            Err(e)
+                        }
+                    }
+                }
+            })
+            .map_err(|e| lua_err(&e))?;
+        elri.set("step", step).map_err(|e| lua_err(&e))?;
 
         // elri.ext(name, func, args): an installed, granted extension the
         // script's manifest names.

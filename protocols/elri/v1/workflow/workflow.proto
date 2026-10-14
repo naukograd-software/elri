@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package elri.v1.workflow;
+
+/*
+Durable workflows: a script run whose steps survive an interruption. The
+script marks each step with `elri.step(name, fn)`; the device records the
+intent before the step runs and its result after. A resumed run reuses
+recorded results and continues from the first step without one. A step
+interrupted between intent and result has an unknown outcome: the run
+pauses until the user says what happened, so an action with effects
+outside the system is never repeated blindly. Runs live on the device
+that started them; the server neither runs nor stores them.
+*/
+service WorkflowService {
+    /* Starts a script as a workflow run on this device. */
+    rpc StartWorkflow(StartWorkflowRequest) returns (StartWorkflowResponse);
+    rpc ListWorkflowRuns(ListWorkflowRunsRequest) returns (ListWorkflowRunsResponse);
+    rpc GetWorkflowRun(GetWorkflowRunRequest) returns (GetWorkflowRunResponse);
+    /* Continues a paused or failed run from its first unfinished step. A
+       run with a step of unknown outcome cannot resume until that step is
+       resolved. */
+    rpc ResumeWorkflowRun(ResumeWorkflowRunRequest) returns (ResumeWorkflowRunResponse);
+    /* Records what the user found out about a step of unknown outcome, or
+       lets a failed step run again. The run stays paused until resumed. */
+    rpc ResolveWorkflowStep(ResolveWorkflowStepRequest) returns (ResolveWorkflowStepResponse);
+    /* Abandons a paused or failed run; its records stay. */
+    rpc CancelWorkflowRun(CancelWorkflowRunRequest) returns (CancelWorkflowRunResponse);
+}
+
+enum RunStatus {
+    RUN_STATUS_UNSPECIFIED = 0;
+    RUN_STATUS_RUNNING = 1;
+    /* Waiting for the user: interrupted, a step's outcome is unknown, the
+       script changed, or its grant is gone. `reason` says which. */
+    RUN_STATUS_PAUSED = 2;
+    RUN_STATUS_DONE = 3;
+    /* The script raised; resumable after the cause is fixed. */
+    RUN_STATUS_FAILED = 4;
+    RUN_STATUS_CANCELLED = 5;
+}
+
+enum StepStatus {
+    STEP_STATUS_UNSPECIFIED = 0;
+    /* Recorded before the step ran; the step is running. */
+    STEP_STATUS_INTENT = 1;
+    STEP_STATUS_DONE = 2;
+    STEP_STATUS_FAILED = 3;
+    /* The device stopped between intent and result. */
+    STEP_STATUS_UNKNOWN = 4;
+}
+
+/* What happens to an interrupted run when the device starts again. */
+enum ResumePolicy {
+    RESUME_POLICY_UNSPECIFIED = 0;
+    /* Pause and wait for the user (default). */
+    RESUME_POLICY_ASK = 1;
+    /* Continue by itself, unless a step's outcome is unknown. */
+    RESUME_POLICY_AUTO = 2;
+}
+
+message WorkflowStep {
+    string name = 1;
+    StepStatus status = 2;
+    /* The step's value as JSON, when done. */
+    string result_json = 3;
+    string error = 4;
+    int64 at_ms = 5;
+}
+
+message WorkflowRun {
+    string id = 1;
+    string space_id = 2;
+    string script_id = 3;
+    /* The script version the run is pinned to; a changed script pauses it. */
+    string version = 4;
+    string args_json = 5;
+    RunStatus status = 6;
+    /* Why it paused or failed. */
+    string reason = 7;
+    /* The script's return value as JSON, when done. */
+    string output_json = 8;
+    ResumePolicy resume = 9;
+    int64 created_at_ms = 10;
+    int64 updated_at_ms = 11;
+    /* Steps in the order they were first reached. */
+    repeated WorkflowStep steps = 12;
+}
+
+message StartWorkflowRequest {
+    string space_id = 1;
+    string script_id = 2;
+    /* JSON passed as `elri.args`; empty = null. */
+    string args_json = 3;
+    ResumePolicy resume = 4;
+}
+
+message StartWorkflowResponse {
+    WorkflowRun run = 1;
+}
+
+message ListWorkflowRunsRequest {
+    string space_id = 1;
+    /* Only runs of this script, if set. */
+    string script_id = 2;
+    /* 0 = default. */
+    int32 limit = 3;
+}
+
+message ListWorkflowRunsResponse {
+    repeated WorkflowRun runs = 1;
+}
+
+message GetWorkflowRunRequest {
+    string id = 1;
+}
+
+message GetWorkflowRunResponse {
+    WorkflowRun run = 1;
+}
+
+message ResumeWorkflowRunRequest {
+    string id = 1;
+}
+
+message ResumeWorkflowRunResponse {
+    WorkflowRun run = 1;
+}
+
+message ResolveWorkflowStepRequest {
+    string id = 1;
+    string step = 2;
+    oneof outcome {
+        /* The step did happen; this is its result. */
+        string result_json = 3;
+        /* The step did not happen, or may safely happen again. */
+        bool retry = 4;
+    }
+}
+
+message ResolveWorkflowStepResponse {
+    WorkflowRun run = 1;
+}
+
+message CancelWorkflowRunRequest {
+    string id = 1;
+}
+
+message CancelWorkflowRunResponse {
+    WorkflowRun run = 1;
+}

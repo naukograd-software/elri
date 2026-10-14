@@ -41,10 +41,11 @@ use models::{
     BlobRow, ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, ExtensionRow,
     FieldValueRow, GrantRow, GraveyardRow, JournalRow, ObjectRow, ObjectTypeRow, ParticipantRow,
     PeerRow, PinRow, PlacementRow, RemoteRow, RuleRunRow, SettingRow, SpaceLogRow, SpaceRow,
-    SyncStateRow, TypeFieldRow,
+    SyncStateRow, TypeFieldRow, WorkflowRunRow, WorkflowStepRow,
 };
 
 mod coordinator;
+pub mod workflows;
 pub use coordinator::{Edit, Journaled};
 
 /// Actor of a Change the user made directly.
@@ -271,7 +272,9 @@ impl Store {
                 GrantRow,
                 SettingRow,
                 ExtensionRow,
-                RuleRunRow
+                RuleRunRow,
+                WorkflowRunRow,
+                WorkflowStepRow
             ),
         )
         .await?;
