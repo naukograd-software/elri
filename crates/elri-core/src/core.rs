@@ -61,6 +61,26 @@ impl Config {
     }
 }
 
+/// The core's HTTP clients from the stored proxy settings, with the
+/// password put back from the credential store. A stored proxy that no
+/// longer parses must not keep the core from starting: it goes direct
+/// until fixed.
+async fn open_net(store: &Store, secrets: &Secrets) -> Result<Arc<crate::net::Net>, CoreError> {
+    let settings = store.settings().await?;
+    let mut proxy = settings.proxy.unwrap_or_default();
+    if let Some(pw) = secrets.get(crate::net::PROXY_PASSWORD_KEY).await? {
+        proxy.url = crate::net::with_password(&proxy.url, &pw);
+    }
+    let net = crate::net::Net::new(proxy).or_else(|e| {
+        tracing::warn!(error = %e, "stored proxy unusable; connecting directly");
+        crate::net::Net::new(elri_proto::elri::v1::settings::ProxySettings {
+            mode: elri_proto::elri::v1::settings::ProxyMode::None.into(),
+            ..Default::default()
+        })
+    })?;
+    Ok(Arc::new(net))
+}
+
 /// How a client reaches a running core. Written to `data_dir/endpoint.json`
 /// while the core runs so that the CLI and other local tools can find it.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,18 +221,7 @@ impl Core {
         let token = LaunchToken::generate();
         let store = Arc::new(Store::open(&config.data_dir, device_id).await?);
         let secrets = Secrets::open(config.secrets, &config.data_dir, &device_id.as_string())?;
-        let settings = store.settings().await?;
-        let net = Arc::new(
-            crate::net::Net::new(settings.proxy.clone().unwrap_or_default()).or_else(|e| {
-                // A stored proxy that no longer parses must not keep the
-                // core from starting; it goes direct until fixed.
-                tracing::warn!(error = %e, "stored proxy unusable; connecting directly");
-                crate::net::Net::new(elri_proto::elri::v1::settings::ProxySettings {
-                    mode: elri_proto::elri::v1::settings::ProxyMode::None.into(),
-                    ..Default::default()
-                })
-            })?,
-        );
+        let net = open_net(&store, &secrets).await?;
         let remote = Arc::new(Remote::new(
             Arc::clone(&store),
             device_id.as_string(),

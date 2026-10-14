@@ -156,6 +156,32 @@ async fn a_device_reaches_its_server_through_a_manual_proxy() {
         .expect_err("garbage");
     assert_eq!(err.code, Code::InvalidArgument);
 
+    // A password goes to the credential store and is shown back masked;
+    // sending the mask keeps it.
+    let with_pw = proxy.replacen("http://", "http://alice:s3cret@", 1);
+    let shown = settings
+        .update_settings(authed.req(UpdateSettingsRequest {
+            proxy: Some(ProxySettings {
+                mode: ProxyMode::Manual.into(),
+                url: with_pw,
+                no_proxy: "intranet.example".into(),
+            }),
+            semantic: None,
+        }))
+        .await
+        .expect("manual proxy with password")
+        .msg
+        .settings
+        .expect("settings");
+    let shown_url = shown.proxy.expect("proxy").url;
+    assert!(shown_url.contains("alice:***@"), "{shown_url}");
+    let db = std::fs::read(dir.join("device.db")).expect("device.db");
+    assert!(
+        !db.windows(6).any(|w| w == b"s3cret"),
+        "the proxy password must not be in device.db"
+    );
+    let secrets = std::fs::read_to_string(dir.join("secrets.json")).expect("secrets");
+    assert!(secrets.contains("s3cret"));
     settings
         .update_settings(authed.req(UpdateSettingsRequest {
             proxy: Some(ProxySettings {
@@ -167,6 +193,11 @@ async fn a_device_reaches_its_server_through_a_manual_proxy() {
         }))
         .await
         .expect("manual proxy");
+    let secrets = std::fs::read_to_string(dir.join("secrets.json")).expect("secrets");
+    assert!(
+        !secrets.contains("s3cret"),
+        "a URL without a password drops it"
+    );
     let resolved = settings
         .resolve_proxy(authed.req(ResolveProxyRequest { url: server.url() }))
         .await

@@ -12,6 +12,12 @@ use elri_proto::elri::v1::settings::{
 use ws_proto::{Request, Response, Server, Status};
 
 use super::{invalid, Services};
+use crate::net::{split_password, with_password, PROXY_PASSWORD_KEY};
+
+fn secret_status(e: &crate::secrets::SecretsError) -> Status {
+    tracing::error!(error = %e, "credential store failed");
+    Status::new(ws_proto::Code::Internal, "credential store failed")
+}
 
 pub(super) fn register(server: &Server, services: Arc<Services>) {
     register_settings_service_arc(server, services);
@@ -22,8 +28,21 @@ impl SettingsServiceHandler for Services {
         &self,
         _req: Request<GetSettingsRequest>,
     ) -> Result<Response<GetSettingsResponse>, Status> {
+        let mut settings = self.store.settings().await?;
+        // The stored URL carries no password; show that one is kept.
+        if let Some(proxy) = settings.proxy.as_mut() {
+            if self
+                .secrets
+                .get(PROXY_PASSWORD_KEY)
+                .await
+                .map_err(|e| secret_status(&e))?
+                .is_some()
+            {
+                proxy.url = with_password(&proxy.url, "***");
+            }
+        }
         Ok(Response::new(GetSettingsResponse {
-            settings: Some(self.store.settings().await?),
+            settings: Some(settings),
         }))
     }
 
@@ -33,21 +52,56 @@ impl SettingsServiceHandler for Services {
     ) -> Result<Response<UpdateSettingsResponse>, Status> {
         let m = req.msg;
         let mut settings = self.store.settings().await?;
-        if let Some(proxy) = m.proxy {
+        if let Some(mut proxy) = m.proxy {
             if proxy.mode() == ProxyMode::Manual && proxy.url.trim().is_empty() {
                 return Err(invalid("a manual proxy needs a url"));
             }
+            // The password goes to the credential store, never into the
+            // settings record. `***` is the password shown back: keep it.
+            let (bare, password) = split_password(proxy.url.trim());
+            let kept = self
+                .secrets
+                .get(PROXY_PASSWORD_KEY)
+                .await
+                .map_err(|e| secret_status(&e))?;
+            let password = match password.as_deref() {
+                Some("***") => kept,
+                Some(p) => Some(p.to_owned()),
+                None => None,
+            };
+            let mut live = proxy.clone();
+            live.url = match &password {
+                Some(p) => with_password(&bare, p),
+                None => bare.clone(),
+            };
             // Applied first: a URL the client cannot use is refused and
             // the stored settings stay as they were.
             self.net
-                .reconfigure(proxy.clone())
+                .reconfigure(live)
                 .map_err(|e| invalid(e.to_string()))?;
+            match &password {
+                Some(p) => self.secrets.set(PROXY_PASSWORD_KEY, p).await,
+                None => self.secrets.delete(PROXY_PASSWORD_KEY).await,
+            }
+            .map_err(|e| secret_status(&e))?;
+            proxy.url = bare;
             settings.proxy = Some(proxy);
         }
         if let Some(semantic) = m.semantic {
             settings.semantic = Some(semantic);
         }
         self.store.set_settings(&settings).await?;
+        if let Some(proxy) = settings.proxy.as_mut() {
+            if self
+                .secrets
+                .get(PROXY_PASSWORD_KEY)
+                .await
+                .map_err(|e| secret_status(&e))?
+                .is_some()
+            {
+                proxy.url = with_password(&proxy.url, "***");
+            }
+        }
         Ok(Response::new(UpdateSettingsResponse {
             settings: Some(settings),
         }))

@@ -243,6 +243,32 @@ pub fn parse_kioslaverc(text: &str) -> Option<DesktopProxy> {
     })
 }
 
+/// Secret-store key of a manual proxy's password.
+pub const PROXY_PASSWORD_KEY: &str = "proxy-password";
+
+/// Splits a proxy URL into the URL without its password and the password.
+pub fn split_password(url: &str) -> (String, Option<String>) {
+    match reqwest::Url::parse(url) {
+        Ok(mut u) if u.password().is_some() => {
+            let pw = u.password().map(urlish_decode);
+            let _ = u.set_password(None);
+            (u.to_string(), pw)
+        }
+        _ => (url.to_owned(), None),
+    }
+}
+
+/// Puts a password back into a proxy URL that names a user.
+pub fn with_password(url: &str, password: &str) -> String {
+    match reqwest::Url::parse(url) {
+        Ok(mut u) if !u.username().is_empty() => {
+            let _ = u.set_password(Some(password));
+            u.to_string()
+        }
+        _ => url.to_owned(),
+    }
+}
+
 /// A URL with its password replaced, for display.
 pub fn redacted(url: &str) -> String {
     match reqwest::Url::parse(url) {
@@ -298,7 +324,8 @@ fn build(plan: &Plan) -> Result<reqwest::Client, NetError> {
             b.proxy(proxy)
         }
     };
-    b.build().map_err(|e| NetError::Client(e.to_string()))
+    b.build()
+        .map_err(|e| NetError::Client(e.without_url().to_string()))
 }
 
 fn base64(input: &[u8]) -> String {
@@ -698,6 +725,14 @@ mod tests {
         assert!(!bypassed("api.openai.com", "localhost,.corp"));
         assert!(bypassed("anything", "*"));
         assert_eq!(redacted("http://u:secret@p:1/"), "http://u:***@p:1/");
+        let (bare, pw) = split_password("http://u:p%40ss@p:1/");
+        assert_eq!(bare, "http://u@p:1/");
+        assert_eq!(pw.as_deref(), Some("p@ss"));
+        assert_eq!(with_password(&bare, "p@ss"), "http://u:p%40ss@p:1/");
+        assert_eq!(
+            split_password("http://p:1/"),
+            ("http://p:1/".to_owned(), None)
+        );
     }
 
     #[test]
