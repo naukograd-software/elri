@@ -768,6 +768,13 @@ fn value_to_lua(lua: &Lua, v: &Value) -> mlua::Result<LuaValue> {
             }
             LuaValue::Table(items)
         }
+        Some(value::Value::Map(m)) => {
+            let entries = lua.create_table()?;
+            for (k, v) in &m.entries {
+                entries.set(k.clone(), value_to_lua(lua, v)?)?;
+            }
+            LuaValue::Table(entries)
+        }
         None => LuaValue::Nil,
     })
 }
@@ -787,13 +794,29 @@ fn value_from_lua(v: LuaValue) -> mlua::Result<Option<Value>> {
             } else if let Some(text) = t.get::<Option<String>>("text")? {
                 value::Value::Text(text)
             } else {
-                let mut items = Vec::new();
-                for item in t.sequence_values::<LuaValue>() {
-                    if let Some(v) = value_from_lua(item?)? {
-                        items.push(v);
+                // A table with any string key is a map; otherwise a list.
+                let mut entries = HashMap::new();
+                let mut keyed = false;
+                for pair in t.clone().pairs::<LuaValue, LuaValue>() {
+                    let (k, v) = pair?;
+                    if let LuaValue::String(k) = k {
+                        keyed = true;
+                        if let Some(v) = value_from_lua(v)? {
+                            entries.insert(k.to_str()?.to_owned(), v);
+                        }
                     }
                 }
-                value::Value::List(elri_proto::elri::v1::object::ValueList { items })
+                if keyed {
+                    value::Value::Map(elri_proto::elri::v1::object::ValueMap { entries })
+                } else {
+                    let mut items = Vec::new();
+                    for item in t.sequence_values::<LuaValue>() {
+                        if let Some(v) = value_from_lua(item?)? {
+                            items.push(v);
+                        }
+                    }
+                    value::Value::List(elri_proto::elri::v1::object::ValueList { items })
+                }
             }
         }
         other => {

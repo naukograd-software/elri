@@ -6,6 +6,13 @@ pub struct ValueList {
     #[prost(message, repeated, tag = "1")]
     pub items: ::prost::alloc::vec::Vec<Value>,
 }
+/// Entries of a map value; scalars only. Concurrent edits to different keys
+/// both land; the same key is last-writer-wins. 
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ValueMap {
+    #[prost(map = "string, message", tag = "1")]
+    pub entries: ::std::collections::HashMap<::prost::alloc::string::String, Value>,
+}
 ///
 /// A field value. Fields are keyed by field-definition id; the definition fixes
 /// which variant is valid.
@@ -17,7 +24,7 @@ pub struct ValueList {
 /// deletions.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Value {
-    #[prost(oneof = "value::Value", tags = "1, 2, 3, 4, 5, 6, 7, 8")]
+    #[prost(oneof = "value::Value", tags = "1, 2, 3, 4, 5, 6, 7, 8, 9")]
     pub value: ::core::option::Option<value::Value>,
 }
 /// Nested message and enum types in `Value`.
@@ -42,6 +49,8 @@ pub mod value {
         Text(::prost::alloc::string::String),
         #[prost(message, tag = "8")]
         List(super::ValueList),
+        #[prost(message, tag = "9")]
+        Map(super::ValueMap),
     }
 }
 /// One participant of a Relation. 

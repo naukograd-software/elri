@@ -25,6 +25,7 @@ use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest, Object,
     ObjectKind, Participant, Placement, PurgeObjectRequest, UpdateObjectRequest, Value, ValueList,
+    ValueMap,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::RemoteServiceClient;
 use elri_proto::elri::v1::remote::{
@@ -471,7 +472,8 @@ enum ObjectCmd {
         #[arg(long = "type")]
         types: Vec<String>,
         /// Fields as `id=value`; value is parsed as bool, int, float, `ref:<id>`,
-        /// `time:<ms>`, `text:<collaborative text>`, `list:a,b,c`, or a string.
+        /// `time:<ms>`, `text:<collaborative text>`, `list:a,b,c`, `map:k=v,k2=v2`,
+        /// or a string.
         #[arg(long = "field", value_parser = parse_field)]
         fields: Vec<(String, Value)>,
         /// Relation participants as `slot=object_id[:role_id]`.
@@ -585,6 +587,23 @@ fn parse_field(s: &str) -> Result<(String, Value), String> {
                 })
                 .collect(),
         })
+    } else if let Some(entries) = v.strip_prefix("map:") {
+        value::Value::Map(ValueMap {
+            entries: entries
+                .split(',')
+                .map(str::trim)
+                .filter(|x| !x.is_empty())
+                .map(|x| {
+                    let (k, v) = x.split_once('=').unwrap_or((x, ""));
+                    (
+                        k.trim().to_owned(),
+                        Value {
+                            value: Some(value::Value::String(v.trim().to_owned())),
+                        },
+                    )
+                })
+                .collect(),
+        })
     } else if let Some(ms) = v.strip_prefix("time:") {
         value::Value::TimeMs(ms.parse().map_err(|e| format!("time: {e}"))?)
     } else if v == "true" || v == "false" {
@@ -638,6 +657,11 @@ fn value_json(v: &Value) -> serde_json::Value {
         Some(value::Value::Ref(r)) => json!({ "ref": r }),
         Some(value::Value::Text(t)) => json!({ "text": t }),
         Some(value::Value::List(l)) => json!(l.items.iter().map(value_json).collect::<Vec<_>>()),
+        Some(value::Value::Map(m)) => json!(m
+            .entries
+            .iter()
+            .map(|(k, v)| (k.clone(), value_json(v)))
+            .collect::<serde_json::Map<_, _>>()),
         None => serde_json::Value::Null,
     }
 }

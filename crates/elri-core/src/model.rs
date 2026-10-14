@@ -24,7 +24,7 @@ use std::collections::HashMap;
 
 use elri_proto::elri::v1::definition::{FieldKind, Publication, TypeField};
 use elri_proto::elri::v1::object::{
-    value, Object, ObjectKind, Participant, Placement, Value, ValueList,
+    value, Object, ObjectKind, Participant, Placement, Value, ValueList, ValueMap,
 };
 use elri_proto::elri::v1::ui::Node as UiNode;
 use loro::{
@@ -150,6 +150,7 @@ pub fn kind_accepts(kind: FieldKind, v: &Value) -> bool {
             | (FieldKind::Ref, Some(value::Value::Ref(_)))
             | (FieldKind::Text, Some(value::Value::Text(_)))
             | (FieldKind::List, Some(value::Value::List(_)))
+            | (FieldKind::Map, Some(value::Value::Map(_)))
     )
 }
 
@@ -158,7 +159,7 @@ pub fn kind_accepts(kind: FieldKind, v: &Value) -> bool {
 pub fn is_scalar(v: &Value) -> bool {
     !matches!(
         v.value,
-        Some(value::Value::Text(_) | value::Value::List(_)) | None
+        Some(value::Value::Text(_) | value::Value::List(_) | value::Value::Map(_)) | None
     )
 }
 
@@ -206,7 +207,7 @@ pub fn value_to_loro(v: &Value) -> Option<LoroValue> {
         value::Value::String(s) => LoroValue::from(s.as_str()),
         value::Value::TimeMs(ms) => tagged(TIME_TAG, LoroValue::from(*ms)),
         value::Value::Ref(id) => tagged(REF_TAG, LoroValue::from(id.as_str())),
-        value::Value::Text(_) | value::Value::List(_) => return None,
+        value::Value::Text(_) | value::Value::List(_) | value::Value::Map(_) => return None,
     })
 }
 
@@ -263,6 +264,15 @@ pub fn int_value(i: i64) -> Value {
 pub fn bool_value(b: bool) -> Value {
     Value {
         value: Some(value::Value::Bool(b)),
+    }
+}
+
+/// Shorthand for a map value.
+pub fn map_value(entries: impl IntoIterator<Item = (String, Value)>) -> Value {
+    Value {
+        value: Some(value::Value::Map(ValueMap {
+            entries: entries.into_iter().collect(),
+        })),
     }
 }
 
@@ -601,6 +611,28 @@ impl ObjectDoc {
                 apply_list_diff(&list, &items)?;
                 Ok(())
             }
+            Some(value::Value::Map(m)) => {
+                let map = self.map_container(field_id)?;
+                let current: HashMap<String, LoroValue> = match map.get_value() {
+                    LoroValue::Map(cur) => {
+                        cur.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+                    }
+                    _ => HashMap::new(),
+                };
+                for (k, v) in &m.entries {
+                    let v = value_to_loro(v)
+                        .ok_or_else(|| ModelError::NestedContainer(field_id.to_owned()))?;
+                    if current.get(k) != Some(&v) {
+                        map.insert(k, v)?;
+                    }
+                }
+                for k in current.keys() {
+                    if !m.entries.contains_key(k) {
+                        map.delete(k)?;
+                    }
+                }
+                Ok(())
+            }
             Some(_) => {
                 let v = value_to_loro(value)
                     .ok_or_else(|| ModelError::EmptyValue(field_id.to_owned()))?;
@@ -632,6 +664,18 @@ impl ObjectDoc {
             self.fields().delete(field_id)?;
         }
         Ok(self.fields().ensure_mergeable_movable_list(field_id)?)
+    }
+
+    /// The map container of a field, replacing a scalar or a container of
+    /// another type if one is there.
+    fn map_container(&self, field_id: &str) -> Result<LoroMap, ModelError> {
+        if !matches!(
+            self.fields().get(field_id),
+            None | Some(ValueOrContainer::Container(Container::Map(_)))
+        ) {
+            self.fields().delete(field_id)?;
+        }
+        Ok(self.fields().ensure_mergeable_map(field_id)?)
     }
 
     /// Removes a field.
@@ -692,6 +736,41 @@ impl ObjectDoc {
         Ok(())
     }
 
+    /// The fields of the document as protocol values.
+    fn read_fields(&self) -> HashMap<String, Value> {
+        let mut fields: HashMap<String, Value> = HashMap::new();
+        if let LoroValue::Map(m) = self.fields().get_value() {
+            for key in m.keys() {
+                let value = match self.fields().get(key) {
+                    Some(ValueOrContainer::Value(v)) => value_from_loro(&v),
+                    Some(ValueOrContainer::Container(Container::Text(t))) => {
+                        Some(text_value(t.to_string()))
+                    }
+                    Some(ValueOrContainer::Container(Container::MovableList(l))) => {
+                        let items: Option<Vec<Value>> =
+                            l.to_vec().iter().map(value_from_loro).collect();
+                        items.map(list_value)
+                    }
+                    Some(ValueOrContainer::Container(Container::Map(m))) => match m.get_value() {
+                        LoroValue::Map(entries) => {
+                            let entries: Option<HashMap<String, Value>> = entries
+                                .iter()
+                                .map(|(k, v)| value_from_loro(v).map(|v| (k.clone(), v)))
+                                .collect();
+                            entries.map(map_value)
+                        }
+                        _ => None,
+                    },
+                    _ => None,
+                };
+                if let Some(v) = value {
+                    fields.insert(key.clone(), v);
+                }
+            }
+        }
+        fields
+    }
+
     /// Materializes the current state.
     pub fn read(&self) -> Result<Object, ModelError> {
         let LoroValue::Map(meta) = self.meta().get_value() else {
@@ -727,26 +806,7 @@ impl ObjectDoc {
         };
         types.sort();
 
-        let mut fields: HashMap<String, Value> = HashMap::new();
-        if let LoroValue::Map(m) = self.fields().get_value() {
-            for key in m.keys() {
-                let value = match self.fields().get(key) {
-                    Some(ValueOrContainer::Value(v)) => value_from_loro(&v),
-                    Some(ValueOrContainer::Container(Container::Text(t))) => {
-                        Some(text_value(t.to_string()))
-                    }
-                    Some(ValueOrContainer::Container(Container::MovableList(l))) => {
-                        let items: Option<Vec<Value>> =
-                            l.to_vec().iter().map(value_from_loro).collect();
-                        items.map(list_value)
-                    }
-                    _ => None,
-                };
-                if let Some(v) = value {
-                    fields.insert(key.clone(), v);
-                }
-            }
-        }
+        let fields = self.read_fields();
 
         let mut participants = Vec::new();
         if let LoroValue::Map(m) = self.participants().get_value() {
@@ -1030,6 +1090,44 @@ mod tests {
         let rec = layer.read().expect("ok");
         assert_eq!(rec.kind(), ObjectKind::Layer);
         assert_eq!(rec.target_id.as_deref(), Some(a.to_string().as_str()));
+    }
+
+    #[test]
+    fn map_fields_merge_key_by_key() {
+        let space = ObjectId::new();
+        let doc = ObjectDoc::create(ObjectId::new(), space, ObjectKind::Entity, 1).expect("ok");
+        let mut m = HashMap::new();
+        m.insert("a".to_owned(), int_value(1));
+        m.insert("b".to_owned(), string_value("x"));
+        doc.set_field("tags", &map_value(m.clone())).expect("ok");
+        doc.touch(2).expect("ok");
+        assert_eq!(doc.read().expect("ok").fields["tags"], map_value(m.clone()));
+
+        // Two replicas touch different keys; both land. The same key goes
+        // last-writer-wins.
+        let other = ObjectDoc::from_snapshot(doc.id(), &doc.snapshot().expect("ok")).expect("ok");
+        let before = other.version_vector();
+        let mut theirs = m.clone();
+        theirs.insert("c".to_owned(), int_value(3));
+        theirs.remove("b");
+        other.set_field("tags", &map_value(theirs)).expect("ok");
+        other.touch(3).expect("ok");
+        let mut mine = m.clone();
+        mine.insert("a".to_owned(), int_value(10));
+        doc.set_field("tags", &map_value(mine)).expect("ok");
+        doc.touch(3).expect("ok");
+        doc.import(&other.updates_since(&before).expect("ok"))
+            .expect("ok");
+        let Some(value::Value::Map(mm)) = doc.read().expect("ok").fields["tags"].value.clone()
+        else {
+            unreachable!("a map was written");
+        };
+        let merged = mm.entries;
+        assert_eq!(merged.get("a"), Some(&int_value(10)));
+        assert_eq!(merged.get("c"), Some(&int_value(3)));
+        assert!(!merged.contains_key("b"));
+        assert!(kind_accepts(FieldKind::Map, &map_value(HashMap::new())));
+        assert!(!is_scalar(&map_value(HashMap::new())));
     }
 
     #[test]

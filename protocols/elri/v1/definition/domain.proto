@@ -22,6 +22,8 @@ enum FieldKind {
     FIELD_KIND_TEXT = 7;
     /* Ordered list of scalars. */
     FIELD_KIND_LIST = 8;
+    /* String-keyed map of scalars. */
+    FIELD_KIND_MAP = 9;
 }
 
 message FieldDefinition {

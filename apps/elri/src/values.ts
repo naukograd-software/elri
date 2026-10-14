@@ -3,7 +3,16 @@
 import { create } from '@bufbuild/protobuf'
 import { type Value, ValueSchema } from '@elri/proto/elri/v1/object/domain_pb.ts'
 
-export type ValueKind = 'string' | 'text' | 'int' | 'double' | 'bool' | 'time' | 'ref' | 'list'
+export type ValueKind =
+  | 'string'
+  | 'text'
+  | 'int'
+  | 'double'
+  | 'bool'
+  | 'time'
+  | 'ref'
+  | 'list'
+  | 'map'
 
 export const VALUE_KINDS: ValueKind[] = [
   'string',
@@ -14,6 +23,7 @@ export const VALUE_KINDS: ValueKind[] = [
   'time',
   'ref',
   'list',
+  'map',
 ]
 
 export function kindOf(v: Value): ValueKind {
@@ -32,6 +42,8 @@ export function kindOf(v: Value): ValueKind {
       return 'text'
     case 'list':
       return 'list'
+    case 'map':
+      return 'map'
     default:
       return 'string'
   }
@@ -55,6 +67,10 @@ export function textOf(v: Value): string {
       return v.value.value
     case 'list':
       return v.value.value.items.map(textOf).join(', ')
+    case 'map':
+      return Object.entries(v.value.value.entries)
+        .map(([k, x]) => `${k}=${textOf(x)}`)
+        .join(', ')
     default:
       return ''
   }
@@ -97,6 +113,19 @@ export function parseValue(kind: ValueKind, text: string): Value | string {
         .filter((x) => x.length > 0)
         .map((x) => create(ValueSchema, { value: { case: 'string', value: x } }))
       return create(ValueSchema, { value: { case: 'list', value: { items } } })
+    }
+    case 'map': {
+      // Comma-separated k=v pairs of strings.
+      const entries: Record<string, Value> = {}
+      for (const part of text.split(',')) {
+        const p = part.trim()
+        if (!p) continue
+        const i = p.indexOf('=')
+        const k = (i < 0 ? p : p.slice(0, i)).trim()
+        const val = i < 0 ? '' : p.slice(i + 1).trim()
+        if (k) entries[k] = create(ValueSchema, { value: { case: 'string', value: val } })
+      }
+      return create(ValueSchema, { value: { case: 'map', value: { entries } } })
     }
   }
 }

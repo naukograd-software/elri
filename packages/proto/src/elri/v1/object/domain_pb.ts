@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/object/domain.proto.
  */
 export const file_elri_v1_object_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0IjEKCVZhbHVlTGlzdBIkCgVpdGVtcxgBIAMoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlIrABCgVWYWx1ZRIOCgRib29sGAEgASgISAASDQoDaW50GAIgASgDSAASEAoGZG91YmxlGAMgASgBSAASEAoGc3RyaW5nGAQgASgJSAASEQoHdGltZV9tcxgFIAEoA0gAEg0KA3JlZhgGIAEoCUgAEg4KBHRleHQYByABKAlIABIpCgRsaXN0GAggASgLMhkuZWxyaS52MS5vYmplY3QuVmFsdWVMaXN0SABCBwoFdmFsdWUiPwoLUGFydGljaXBhbnQSDAoEc2xvdBgBIAEoCRIRCglvYmplY3RfaWQYAiABKAkSDwoHcm9sZV9pZBgDIAEoCSJLCglQbGFjZW1lbnQSCgoCaWQYASABKAkSEQoJcGFyZW50X2lkGAIgASgJEg0KBWluZGV4GAMgASgFEhAKCGJsb2NrX2lkGAQgASgJIvEDCgZPYmplY3QSCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSKAoEa2luZBgDIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSDQoFdHlwZXMYBCADKAkSMgoGZmllbGRzGAUgAygLMiIuZWxyaS52MS5vYmplY3QuT2JqZWN0LkZpZWxkc0VudHJ5EhUKDWNyZWF0ZWRfYXRfbXMYBiABKAMSFQoNdXBkYXRlZF9hdF9tcxgHIAEoAxIaCg1kZWxldGVkX2F0X21zGAggASgDSACIAQESMQoMcGFydGljaXBhbnRzGAkgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSFgoJdGFyZ2V0X2lkGAogASgJSAGIAQESMgoLdHlwZV9maWVsZHMYCyADKAsyHS5lbHJpLnYxLmRlZmluaXRpb24uVHlwZUZpZWxkEi0KCnBsYWNlbWVudHMYDCADKAsyGS5lbHJpLnYxLm9iamVjdC5QbGFjZW1lbnQaRAoLRmllbGRzRW50cnkSCwoDa2V5GAEgASgJEiQKBXZhbHVlGAIgASgLMhUuZWxyaS52MS5vYmplY3QuVmFsdWU6AjgBQhAKDl9kZWxldGVkX2F0X21zQgwKCl90YXJnZXRfaWQqwwIKCk9iamVjdEtpbmQSGwoXT0JKRUNUX0tJTkRfVU5TUEVDSUZJRUQQABIWChJPQkpFQ1RfS0lORF9FTlRJVFkQARIYChRPQkpFQ1RfS0lORF9SRUxBVElPThACEhUKEU9CSkVDVF9LSU5EX0xBWUVSEAMSGQoVT0JKRUNUX0tJTkRfRklFTERfREVGEAQSGAoUT0JKRUNUX0tJTkRfVFlQRV9ERUYQBRIYChRPQkpFQ1RfS0lORF9ST0xFX0RFRhAGEhoKFk9CSkVDVF9LSU5EX0FUVEFDSE1FTlQQBxIWChJPQkpFQ1RfS0lORF9TQ1JJUFQQCBIUChBPQkpFQ1RfS0lORF9SVUxFEAkSGQoVT0JKRUNUX0tJTkRfSU5URVJGQUNFEAoSGwoXT0JKRUNUX0tJTkRfUFVCTElDQVRJT04QC2IGcHJvdG8z", [file_elri_v1_definition_domain]);
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0IjEKCVZhbHVlTGlzdBIkCgVpdGVtcxgBIAMoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlIokBCghWYWx1ZU1hcBI2CgdlbnRyaWVzGAEgAygLMiUuZWxyaS52MS5vYmplY3QuVmFsdWVNYXAuRW50cmllc0VudHJ5GkUKDEVudHJpZXNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5lbHJpLnYxLm9iamVjdC5WYWx1ZToCOAEi2QEKBVZhbHVlEg4KBGJvb2wYASABKAhIABINCgNpbnQYAiABKANIABIQCgZkb3VibGUYAyABKAFIABIQCgZzdHJpbmcYBCABKAlIABIRCgd0aW1lX21zGAUgASgDSAASDQoDcmVmGAYgASgJSAASDgoEdGV4dBgHIAEoCUgAEikKBGxpc3QYCCABKAsyGS5lbHJpLnYxLm9iamVjdC5WYWx1ZUxpc3RIABInCgNtYXAYCSABKAsyGC5lbHJpLnYxLm9iamVjdC5WYWx1ZU1hcEgAQgcKBXZhbHVlIj8KC1BhcnRpY2lwYW50EgwKBHNsb3QYASABKAkSEQoJb2JqZWN0X2lkGAIgASgJEg8KB3JvbGVfaWQYAyABKAkiSwoJUGxhY2VtZW50EgoKAmlkGAEgASgJEhEKCXBhcmVudF9pZBgCIAEoCRINCgVpbmRleBgDIAEoBRIQCghibG9ja19pZBgEIAEoCSLxAwoGT2JqZWN0EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEigKBGtpbmQYAyABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAQgAygJEjIKBmZpZWxkcxgFIAMoCzIiLmVscmkudjEub2JqZWN0Lk9iamVjdC5GaWVsZHNFbnRyeRIVCg1jcmVhdGVkX2F0X21zGAYgASgDEhUKDXVwZGF0ZWRfYXRfbXMYByABKAMSGgoNZGVsZXRlZF9hdF9tcxgIIAEoA0gAiAEBEjEKDHBhcnRpY2lwYW50cxgJIAMoCzIbLmVscmkudjEub2JqZWN0LlBhcnRpY2lwYW50EhYKCXRhcmdldF9pZBgKIAEoCUgBiAEBEjIKC3R5cGVfZmllbGRzGAsgAygLMh0uZWxyaS52MS5kZWZpbml0aW9uLlR5cGVGaWVsZBItCgpwbGFjZW1lbnRzGAwgAygLMhkuZWxyaS52MS5vYmplY3QuUGxhY2VtZW50GkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4AUIQCg5fZGVsZXRlZF9hdF9tc0IMCgpfdGFyZ2V0X2lkKsMCCgpPYmplY3RLaW5kEhsKF09CSkVDVF9LSU5EX1VOU1BFQ0lGSUVEEAASFgoST0JKRUNUX0tJTkRfRU5USVRZEAESGAoUT0JKRUNUX0tJTkRfUkVMQVRJT04QAhIVChFPQkpFQ1RfS0lORF9MQVlFUhADEhkKFU9CSkVDVF9LSU5EX0ZJRUxEX0RFRhAEEhgKFE9CSkVDVF9LSU5EX1RZUEVfREVGEAUSGAoUT0JKRUNUX0tJTkRfUk9MRV9ERUYQBhIaChZPQkpFQ1RfS0lORF9BVFRBQ0hNRU5UEAcSFgoST0JKRUNUX0tJTkRfU0NSSVBUEAgSFAoQT0JKRUNUX0tJTkRfUlVMRRAJEhkKFU9CSkVDVF9LSU5EX0lOVEVSRkFDRRAKEhsKF09CSkVDVF9LSU5EX1BVQkxJQ0FUSU9OEAtiBnByb3RvMw", [file_elri_v1_definition_domain]);
 
 /**
  * Items of a list value; scalars only. 
@@ -44,6 +44,39 @@ export type ValueListJson = {
  */
 export const ValueListSchema: GenMessage<ValueList, {jsonType: ValueListJson}> = /*@__PURE__*/
   messageDesc(file_elri_v1_object_domain, 0);
+
+/**
+ * Entries of a map value; scalars only. Concurrent edits to different keys
+ * both land; the same key is last-writer-wins. 
+ *
+ * @generated from message elri.v1.object.ValueMap
+ */
+export type ValueMap = Message<"elri.v1.object.ValueMap"> & {
+  /**
+   * @generated from field: map<string, elri.v1.object.Value> entries = 1;
+   */
+  entries: { [key: string]: Value };
+};
+
+/**
+ * Entries of a map value; scalars only. Concurrent edits to different keys
+ * both land; the same key is last-writer-wins. 
+ *
+ * @generated from message elri.v1.object.ValueMap
+ */
+export type ValueMapJson = {
+  /**
+   * @generated from field: map<string, elri.v1.object.Value> entries = 1;
+   */
+  entries?: { [key: string]: ValueJson };
+};
+
+/**
+ * Describes the message elri.v1.object.ValueMap.
+ * Use `create(ValueMapSchema)` to create a new message.
+ */
+export const ValueMapSchema: GenMessage<ValueMap, {jsonType: ValueMapJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_domain, 1);
 
 /**
  *
@@ -114,6 +147,12 @@ export type Value = Message<"elri.v1.object.Value"> & {
      */
     value: ValueList;
     case: "list";
+  } | {
+    /**
+     * @generated from field: elri.v1.object.ValueMap map = 9;
+     */
+    value: ValueMap;
+    case: "map";
   } | { case: undefined; value?: undefined };
 };
 
@@ -174,6 +213,11 @@ export type ValueJson = {
    * @generated from field: elri.v1.object.ValueList list = 8;
    */
   list?: ValueListJson;
+
+  /**
+   * @generated from field: elri.v1.object.ValueMap map = 9;
+   */
+  map?: ValueMapJson;
 };
 
 /**
@@ -181,7 +225,7 @@ export type ValueJson = {
  * Use `create(ValueSchema)` to create a new message.
  */
 export const ValueSchema: GenMessage<Value, {jsonType: ValueJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_domain, 1);
+  messageDesc(file_elri_v1_object_domain, 2);
 
 /**
  * One participant of a Relation. 
@@ -244,7 +288,7 @@ export type ParticipantJson = {
  * Use `create(ParticipantSchema)` to create a new message.
  */
 export const ParticipantSchema: GenMessage<Participant, {jsonType: ParticipantJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_domain, 2);
+  messageDesc(file_elri_v1_object_domain, 3);
 
 /**
  *
@@ -329,7 +373,7 @@ export type PlacementJson = {
  * Use `create(PlacementSchema)` to create a new message.
  */
 export const PlacementSchema: GenMessage<Placement, {jsonType: PlacementJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_domain, 3);
+  messageDesc(file_elri_v1_object_domain, 4);
 
 /**
  * @generated from message elri.v1.object.Object
@@ -498,7 +542,7 @@ export type ObjectJson = {
  * Use `create(ObjectSchema)` to create a new message.
  */
 export const ObjectSchema: GenMessage<Object$, {jsonType: ObjectJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_domain, 4);
+  messageDesc(file_elri_v1_object_domain, 5);
 
 /**
  * What an Object is. Every kind shares the same document shape. 
