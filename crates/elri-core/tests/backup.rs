@@ -97,6 +97,18 @@ async fn backup_is_verified_and_restores_with_a_fresh_identity() {
         Err(backup::BackupError::Checksum { .. })
     ));
 
+    // A manifest naming a file outside the backup layout is refused before
+    // anything is read or written.
+    let crafted = tmp_dir("crafted");
+    copy_dir(&backup_dir, &crafted);
+    let manifest_path = crafted.join(backup::MANIFEST);
+    let text = std::fs::read_to_string(&manifest_path).expect("manifest");
+    std::fs::write(&manifest_path, text.replace("device.db", "../escape.db")).expect("write");
+    assert!(matches!(
+        backup::check(&crafted),
+        Err(backup::BackupError::BadEntry(_))
+    ));
+
     // Restoring onto a running core is refused; onto a fresh directory it
     // brings the data back under a new identity.
     assert!(matches!(

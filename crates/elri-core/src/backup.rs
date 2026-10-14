@@ -100,6 +100,9 @@ pub enum BackupError {
     /// The manifest is of a format this code does not read.
     #[error("manifest format {0} is not supported")]
     Format(u32),
+    /// A manifest names a file this code never writes.
+    #[error("manifest names a file that is not part of a backup: {0}")]
+    BadEntry(String),
     /// The destination already holds data.
     #[error("{0} already holds a device; pass replace to move it aside")]
     Occupied(PathBuf),
@@ -169,6 +172,9 @@ pub fn check(dir: &Path) -> Result<Manifest, BackupError> {
         return Err(BackupError::Format(manifest.format));
     }
     for f in &manifest.files {
+        // The manifest is data from outside; only the exact names a backup
+        // writes may be joined onto a directory.
+        known_entry(&f.path)?;
         let path = dir.join(&f.path);
         let (sha256, bytes) = hash_file(&path)?;
         if sha256 != f.sha256 || bytes != f.bytes {
@@ -232,6 +238,21 @@ pub async fn restore(
         DeviceId::load_or_create(data_dir)?;
     }
     Ok(manifest)
+}
+
+/// Accepts only `device.db` or `spaces/<uuid>.db`: no other names, no
+/// separators, no parent components.
+fn known_entry(path: &str) -> Result<(), BackupError> {
+    if path == "device.db" {
+        return Ok(());
+    }
+    let id = path
+        .strip_prefix("spaces/")
+        .and_then(|rest| rest.strip_suffix(".db"))
+        .filter(|id| !id.contains(['/', '\\']))
+        .ok_or_else(|| BackupError::BadEntry(path.to_owned()))?;
+    uuid::Uuid::parse_str(id).map_err(|_| BackupError::BadEntry(path.to_owned()))?;
+    Ok(())
 }
 
 fn read_manifest(dir: &Path) -> Result<Manifest, BackupError> {

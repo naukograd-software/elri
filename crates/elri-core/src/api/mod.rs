@@ -509,7 +509,9 @@ impl From<crate::backup::BackupError> for Status {
         match e {
             E::Store(s) => s.into(),
             E::Occupied(_) | E::InUse(_) => Status::new(Code::FailedPrecondition, e.to_string()),
-            E::Format(_) | E::Checksum { .. } => Status::new(Code::InvalidArgument, e.to_string()),
+            E::Format(_) | E::Checksum { .. } | E::BadEntry(_) => {
+                Status::new(Code::InvalidArgument, e.to_string())
+            }
             other => {
                 tracing::error!(error = %other, "backup failure");
                 Status::new(Code::Internal, other.to_string())
