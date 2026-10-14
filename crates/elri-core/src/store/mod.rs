@@ -1984,6 +1984,11 @@ impl SpaceStore {
             if rec.kind != part.kind {
                 return Ok(rejected(Reason::Invalid, "kind mismatch"));
             }
+            // The document's own Space claim must name this Space, so checks
+            // that read it see the Space authorization was checked for.
+            if rec.space_id != self.id.to_string() {
+                return Ok(rejected(Reason::Invalid, "space mismatch"));
+            }
             if let Err(msg) = check(&rec) {
                 return Ok(rejected(Reason::Invalid, msg));
             }
@@ -2725,7 +2730,7 @@ fn canonical(v: &PbValue) -> Option<String> {
         value::Value::Double(d) => format!("real:{d}"),
         value::Value::String(s) => format!("text:{}", s.trim()),
         value::Value::TimeMs(t) => format!("time:{t}"),
-        value::Value::Ref(r) => format!("ref:{r}"),
+        value::Value::Ref(r) => format!("ref:{}", ObjectId::parse(r).ok()?),
         value::Value::Text(_)
         | value::Value::Rich(_)
         | value::Value::List(_)

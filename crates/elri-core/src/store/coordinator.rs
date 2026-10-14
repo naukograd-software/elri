@@ -575,6 +575,11 @@ async fn stage_admit(
         if d.rec.kind != part.kind {
             return Ok(Err(rejected(Reason::Invalid, "kind mismatch")));
         }
+        // The document's own Space claim must agree with where the part is
+        // routed: authorization was checked against the route.
+        if d.rec.space_id != part.space_id {
+            return Ok(Err(rejected(Reason::Invalid, "space mismatch")));
+        }
     }
     Ok(Ok(docs))
 }
