@@ -160,6 +160,21 @@ pub struct FieldValueRow {
     pub v_ref: Option<Uuid>,
 }
 
+/// Projection: fields of a type definition.
+#[derive(Debug, toasty::Model)]
+#[table = "type_fields"]
+#[index(field_id, type_id)]
+pub struct TypeFieldRow {
+    /// Type-definition id.
+    #[key]
+    pub type_id: Uuid,
+    /// Field-definition id (a string: ids of unknown definitions are allowed).
+    #[key]
+    pub field_id: String,
+    /// Whether objects of the type must carry the field.
+    pub required: bool,
+}
+
 /// Projection: participants of a Relation.
 #[derive(Debug, toasty::Model)]
 #[table = "participants"]

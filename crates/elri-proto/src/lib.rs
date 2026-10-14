@@ -13,6 +13,12 @@ pub mod elri {
             include!("elri/v1/core/elri.v1.core.rs");
             // @@protoc_insertion_point(elri.v1.core)
         }
+        #[cfg(feature = "elri-v1-definition")]
+        // @@protoc_insertion_point(attribute:elri.v1.definition)
+        pub mod definition {
+            include!("elri/v1/definition/elri.v1.definition.rs");
+            // @@protoc_insertion_point(elri.v1.definition)
+        }
         #[cfg(feature = "elri-v1-object")]
         // @@protoc_insertion_point(attribute:elri.v1.object)
         pub mod object {

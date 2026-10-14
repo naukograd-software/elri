@@ -25,6 +25,12 @@ pub struct Change {
     pub status: i32,
     #[prost(message, repeated, tag = "6")]
     pub parts: ::prost::alloc::vec::Vec<ChangePart>,
+    /// Position in the Space log once accepted. 
+    #[prost(int64, optional, tag = "7")]
+    pub accepted_seq: ::core::option::Option<i64>,
+    /// Why it was rejected, if it was. 
+    #[prost(string, tag = "8")]
+    pub rejection: ::prost::alloc::string::String,
 }
 /// Where a Change is on its way from this device to acceptance. 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]

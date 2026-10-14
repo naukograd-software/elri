@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/change/domain.proto.
  */
 export const file_elri_v1_change_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL2NoYW5nZS9kb21haW4ucHJvdG8SDmVscmkudjEuY2hhbmdlIjIKCkNoYW5nZVBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEhEKCWJ5dGVzX2xlbhgCIAEoDSKpAQoGQ2hhbmdlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIVCg1jcmVhdGVkX2F0X21zGAQgASgDEiwKBnN0YXR1cxgFIAEoDjIcLmVscmkudjEuY2hhbmdlLkNoYW5nZVN0YXR1cxIpCgVwYXJ0cxgGIAMoCzIaLmVscmkudjEuY2hhbmdlLkNoYW5nZVBhcnQqzQEKDENoYW5nZVN0YXR1cxIdChlDSEFOR0VfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFwoTQ0hBTkdFX1NUQVRVU19MT0NBTBABEhgKFENIQU5HRV9TVEFUVVNfUVVFVUVEEAISGQoVQ0hBTkdFX1NUQVRVU19XQUlUSU5HEAMSGgoWQ0hBTkdFX1NUQVRVU19BQ0NFUFRFRBAEEhoKFkNIQU5HRV9TVEFUVVNfUkVKRUNURUQQBRIYChRDSEFOR0VfU1RBVFVTX1BBVVNFRBAGYgZwcm90bzM");
+  fileDesc("ChtlbHJpL3YxL2NoYW5nZS9kb21haW4ucHJvdG8SDmVscmkudjEuY2hhbmdlIjIKCkNoYW5nZVBhcnQSEQoJb2JqZWN0X2lkGAEgASgJEhEKCWJ5dGVzX2xlbhgCIAEoDSLoAQoGQ2hhbmdlEgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEhEKCWRldmljZV9pZBgDIAEoCRIVCg1jcmVhdGVkX2F0X21zGAQgASgDEiwKBnN0YXR1cxgFIAEoDjIcLmVscmkudjEuY2hhbmdlLkNoYW5nZVN0YXR1cxIpCgVwYXJ0cxgGIAMoCzIaLmVscmkudjEuY2hhbmdlLkNoYW5nZVBhcnQSGQoMYWNjZXB0ZWRfc2VxGAcgASgDSACIAQESEQoJcmVqZWN0aW9uGAggASgJQg8KDV9hY2NlcHRlZF9zZXEqzQEKDENoYW5nZVN0YXR1cxIdChlDSEFOR0VfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFwoTQ0hBTkdFX1NUQVRVU19MT0NBTBABEhgKFENIQU5HRV9TVEFUVVNfUVVFVUVEEAISGQoVQ0hBTkdFX1NUQVRVU19XQUlUSU5HEAMSGgoWQ0hBTkdFX1NUQVRVU19BQ0NFUFRFRBAEEhoKFkNIQU5HRV9TVEFUVVNfUkVKRUNURUQQBRIYChRDSEFOR0VfU1RBVFVTX1BBVVNFRBAGYgZwcm90bzM");
 
 /**
  * One document touched by a Change. 
@@ -94,6 +94,20 @@ export type Change = Message<"elri.v1.change.Change"> & {
    * @generated from field: repeated elri.v1.change.ChangePart parts = 6;
    */
   parts: ChangePart[];
+
+  /**
+   * Position in the Space log once accepted. 
+   *
+   * @generated from field: optional int64 accepted_seq = 7;
+   */
+  acceptedSeq?: bigint | undefined;
+
+  /**
+   * Why it was rejected, if it was. 
+   *
+   * @generated from field: string rejection = 8;
+   */
+  rejection: string;
 };
 
 /**
@@ -133,6 +147,20 @@ export type ChangeJson = {
    * @generated from field: repeated elri.v1.change.ChangePart parts = 6;
    */
   parts?: ChangePartJson[];
+
+  /**
+   * Position in the Space log once accepted. 
+   *
+   * @generated from field: optional int64 accepted_seq = 7;
+   */
+  acceptedSeq?: string;
+
+  /**
+   * Why it was rejected, if it was. 
+   *
+   * @generated from field: string rejection = 8;
+   */
+  rejection?: string;
 };
 
 /**

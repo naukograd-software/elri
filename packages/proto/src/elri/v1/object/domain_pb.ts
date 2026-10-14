@@ -4,13 +4,15 @@
 
 import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { TypeField, TypeFieldJson } from "../definition/domain_pb.ts";
+import { file_elri_v1_definition_domain } from "../definition/domain_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file elri/v1/object/domain.proto.
  */
 export const file_elri_v1_object_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0InUKBVZhbHVlEg4KBGJvb2wYASABKAhIABINCgNpbnQYAiABKANIABIQCgZkb3VibGUYAyABKAFIABIQCgZzdHJpbmcYBCABKAlIABIRCgd0aW1lX21zGAUgASgDSAASDQoDcmVmGAYgASgJSABCBwoFdmFsdWUiPwoLUGFydGljaXBhbnQSDAoEc2xvdBgBIAEoCRIRCglvYmplY3RfaWQYAiABKAkSDwoHcm9sZV9pZBgDIAEoCSKOAwoGT2JqZWN0EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEigKBGtpbmQYAyABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAQgAygJEjIKBmZpZWxkcxgFIAMoCzIiLmVscmkudjEub2JqZWN0Lk9iamVjdC5GaWVsZHNFbnRyeRIVCg1jcmVhdGVkX2F0X21zGAYgASgDEhUKDXVwZGF0ZWRfYXRfbXMYByABKAMSGgoNZGVsZXRlZF9hdF9tcxgIIAEoA0gAiAEBEjEKDHBhcnRpY2lwYW50cxgJIAMoCzIbLmVscmkudjEub2JqZWN0LlBhcnRpY2lwYW50EhYKCXRhcmdldF9pZBgKIAEoCUgBiAEBGkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4AUIQCg5fZGVsZXRlZF9hdF9tc0IMCgpfdGFyZ2V0X2lkKnIKCk9iamVjdEtpbmQSGwoXT0JKRUNUX0tJTkRfVU5TUEVDSUZJRUQQABIWChJPQkpFQ1RfS0lORF9FTlRJVFkQARIYChRPQkpFQ1RfS0lORF9SRUxBVElPThACEhUKEU9CSkVDVF9LSU5EX0xBWUVSEANiBnByb3RvMw");
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0InUKBVZhbHVlEg4KBGJvb2wYASABKAhIABINCgNpbnQYAiABKANIABIQCgZkb3VibGUYAyABKAFIABIQCgZzdHJpbmcYBCABKAlIABIRCgd0aW1lX21zGAUgASgDSAASDQoDcmVmGAYgASgJSABCBwoFdmFsdWUiPwoLUGFydGljaXBhbnQSDAoEc2xvdBgBIAEoCRIRCglvYmplY3RfaWQYAiABKAkSDwoHcm9sZV9pZBgDIAEoCSLCAwoGT2JqZWN0EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEigKBGtpbmQYAyABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAQgAygJEjIKBmZpZWxkcxgFIAMoCzIiLmVscmkudjEub2JqZWN0Lk9iamVjdC5GaWVsZHNFbnRyeRIVCg1jcmVhdGVkX2F0X21zGAYgASgDEhUKDXVwZGF0ZWRfYXRfbXMYByABKAMSGgoNZGVsZXRlZF9hdF9tcxgIIAEoA0gAiAEBEjEKDHBhcnRpY2lwYW50cxgJIAMoCzIbLmVscmkudjEub2JqZWN0LlBhcnRpY2lwYW50EhYKCXRhcmdldF9pZBgKIAEoCUgBiAEBEjIKC3R5cGVfZmllbGRzGAsgAygLMh0uZWxyaS52MS5kZWZpbml0aW9uLlR5cGVGaWVsZBpECgtGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5lbHJpLnYxLm9iamVjdC5WYWx1ZToCOAFCEAoOX2RlbGV0ZWRfYXRfbXNCDAoKX3RhcmdldF9pZCrBAQoKT2JqZWN0S2luZBIbChdPQkpFQ1RfS0lORF9VTlNQRUNJRklFRBAAEhYKEk9CSkVDVF9LSU5EX0VOVElUWRABEhgKFE9CSkVDVF9LSU5EX1JFTEFUSU9OEAISFQoRT0JKRUNUX0tJTkRfTEFZRVIQAxIZChVPQkpFQ1RfS0lORF9GSUVMRF9ERUYQBBIYChRPQkpFQ1RfS0lORF9UWVBFX0RFRhAFEhgKFE9CSkVDVF9LSU5EX1JPTEVfREVGEAZiBnByb3RvMw", [file_elri_v1_definition_domain]);
 
 /**
  *
@@ -246,6 +248,13 @@ export type Object$ = Message<"elri.v1.object.Object"> & {
    * @generated from field: optional string target_id = 10;
    */
   targetId?: string | undefined;
+
+  /**
+   * Type definitions only: the fields of the type. 
+   *
+   * @generated from field: repeated elri.v1.definition.TypeField type_fields = 11;
+   */
+  typeFields: TypeField[];
 };
 
 /**
@@ -313,6 +322,13 @@ export type ObjectJson = {
    * @generated from field: optional string target_id = 10;
    */
   targetId?: string;
+
+  /**
+   * Type definitions only: the fields of the type. 
+   *
+   * @generated from field: repeated elri.v1.definition.TypeField type_fields = 11;
+   */
+  typeFields?: TypeFieldJson[];
 };
 
 /**
@@ -347,6 +363,27 @@ export enum ObjectKind {
    * @generated from enum value: OBJECT_KIND_LAYER = 3;
    */
   LAYER = 3,
+
+  /**
+   * A field definition; see elri.v1.definition. 
+   *
+   * @generated from enum value: OBJECT_KIND_FIELD_DEF = 4;
+   */
+  FIELD_DEF = 4,
+
+  /**
+   * A type definition. 
+   *
+   * @generated from enum value: OBJECT_KIND_TYPE_DEF = 5;
+   */
+  TYPE_DEF = 5,
+
+  /**
+   * A participant-role definition. 
+   *
+   * @generated from enum value: OBJECT_KIND_ROLE_DEF = 6;
+   */
+  ROLE_DEF = 6,
 }
 
 /**
@@ -354,7 +391,7 @@ export enum ObjectKind {
  *
  * @generated from enum elri.v1.object.ObjectKind
  */
-export type ObjectKindJson = "OBJECT_KIND_UNSPECIFIED" | "OBJECT_KIND_ENTITY" | "OBJECT_KIND_RELATION" | "OBJECT_KIND_LAYER";
+export type ObjectKindJson = "OBJECT_KIND_UNSPECIFIED" | "OBJECT_KIND_ENTITY" | "OBJECT_KIND_RELATION" | "OBJECT_KIND_LAYER" | "OBJECT_KIND_FIELD_DEF" | "OBJECT_KIND_TYPE_DEF" | "OBJECT_KIND_ROLE_DEF";
 
 /**
  * Describes the enum elri.v1.object.ObjectKind.

@@ -1,23 +1,32 @@
 //! Objects and their documents.
 //!
-//! Every Object is one Loro document with three root maps:
+//! Every Object is one Loro document with these root containers:
 //!
 //! - `meta`: `kind`, `space`, `created_at`, `updated_at`, `deleted_at`, and
 //!   `target` for Layers
 //! - `types`: type-definition id → `true`
 //! - `fields`: field-definition id → value
 //! - `participants` (Relations): slot id → `{object, role}`
+//! - `type_fields` (type definitions): field-definition id → required
+//!
+//! Definitions keep their attributes in reserved `$`-prefixed field ids.
 //!
 //! Scalar values live directly in `fields`. References and timestamps are
 //! tagged maps (`{"$ref": id}`, `{"$time": ms}`) so that they survive the
 //! round trip through Loro's value model unambiguously.
+//!
+//! The materialized form of a document is the protocol message
+//! [`Object`]; there is no separate in-memory record type.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
+use elri_proto::elri::v1::definition::{FieldKind, TypeField};
+use elri_proto::elri::v1::object::{value, Object, ObjectKind, Participant, Value};
 use loro::{ExportMode, LoroDoc, LoroMap, LoroValue, VersionVector};
 use uuid::Uuid;
 
-/// Identity of an Object: a `UUIDv7`.
+/// Identity of an Object: a `UUIDv7`. The protocol carries it as its
+/// canonical string; storage keys by the raw UUID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ObjectId(Uuid);
 
@@ -60,94 +69,118 @@ impl std::fmt::Display for ObjectId {
 /// Identity of a Space; the same shape as an Object id.
 pub type SpaceId = ObjectId;
 
-/// What an Object is.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ObjectKind {
-    /// A thing in the graph.
-    Entity,
-    /// A connection between participants; an Object in its own right.
-    Relation,
-    /// Independent values over another Object.
-    Layer,
+/// Whether a kind is a definition rather than user content.
+pub fn is_definition(kind: ObjectKind) -> bool {
+    matches!(
+        kind,
+        ObjectKind::FieldDef | ObjectKind::TypeDef | ObjectKind::RoleDef
+    )
 }
 
-impl ObjectKind {
-    /// Stable number used in documents and projections.
-    pub fn code(self) -> i64 {
-        match self {
-            Self::Entity => 1,
-            Self::Relation => 2,
-            Self::Layer => 3,
-        }
-    }
-
-    /// Inverse of [`ObjectKind::code`].
-    pub fn from_code(code: i64) -> Option<Self> {
-        match code {
-            1 => Some(Self::Entity),
-            2 => Some(Self::Relation),
-            3 => Some(Self::Layer),
-            _ => None,
-        }
-    }
+/// Whether `value` is of `kind`.
+pub fn kind_accepts(kind: FieldKind, v: &Value) -> bool {
+    matches!(
+        (kind, &v.value),
+        (FieldKind::Bool, Some(value::Value::Bool(_)))
+            | (FieldKind::Int, Some(value::Value::Int(_)))
+            | (FieldKind::Double, Some(value::Value::Double(_)))
+            | (FieldKind::String, Some(value::Value::String(_)))
+            | (FieldKind::Time, Some(value::Value::TimeMs(_)))
+            | (FieldKind::Ref, Some(value::Value::Ref(_)))
+    )
 }
 
-/// A scalar field value.
-#[derive(Debug, Clone, PartialEq)]
-pub enum FieldValue {
-    /// Boolean.
-    Bool(bool),
-    /// 64-bit integer.
-    Int(i64),
-    /// Double-precision float.
-    Double(f64),
-    /// Text.
-    String(String),
-    /// Instant, milliseconds since the Unix epoch.
-    TimeMs(i64),
-    /// Reference to another Object.
-    Ref(ObjectId),
+/// Reserved field ids that definitions use for their own attributes.
+pub mod reserved {
+    /// Display name of a definition.
+    pub const NAME: &str = "$name";
+    /// Free-text description of a definition.
+    pub const DESCRIPTION: &str = "$description";
+    /// `FieldKind` code of a field definition, as an integer.
+    pub const FIELD_KIND: &str = "$field_kind";
 }
 
 const REF_TAG: &str = "$ref";
 const TIME_TAG: &str = "$time";
 
-impl FieldValue {
-    fn to_loro(&self) -> LoroValue {
-        match self {
-            Self::Bool(b) => LoroValue::from(*b),
-            Self::Int(i) => LoroValue::from(*i),
-            Self::Double(d) => LoroValue::from(*d),
-            Self::String(s) => LoroValue::from(s.as_str()),
-            Self::TimeMs(ms) => tagged(TIME_TAG, LoroValue::from(*ms)),
-            Self::Ref(id) => tagged(REF_TAG, LoroValue::from(id.to_string())),
-        }
-    }
-
-    fn from_loro(v: &LoroValue) -> Option<Self> {
-        match v {
-            LoroValue::Bool(b) => Some(Self::Bool(*b)),
-            LoroValue::I64(i) => Some(Self::Int(*i)),
-            LoroValue::Double(d) => Some(Self::Double(*d)),
-            LoroValue::String(s) => Some(Self::String(s.to_string())),
-            LoroValue::Map(m) => {
-                if let Some(LoroValue::I64(ms)) = m.get(TIME_TAG) {
-                    return Some(Self::TimeMs(*ms));
-                }
-                if let Some(LoroValue::String(id)) = m.get(REF_TAG) {
-                    return ObjectId::parse(id).ok().map(Self::Ref);
-                }
-                None
-            }
-            _ => None,
-        }
-    }
-}
-
 fn tagged(tag: &str, value: LoroValue) -> LoroValue {
     let mut m = HashMap::new();
     m.insert(tag.to_owned(), value);
     LoroValue::from(m)
+}
+
+/// Loro form of a field value.
+pub fn value_to_loro(v: &Value) -> Option<LoroValue> {
+    Some(match v.value.as_ref()? {
+        value::Value::Bool(b) => LoroValue::from(*b),
+        value::Value::Int(i) => LoroValue::from(*i),
+        value::Value::Double(d) => LoroValue::from(*d),
+        value::Value::String(s) => LoroValue::from(s.as_str()),
+        value::Value::TimeMs(ms) => tagged(TIME_TAG, LoroValue::from(*ms)),
+        value::Value::Ref(id) => tagged(REF_TAG, LoroValue::from(id.as_str())),
+    })
+}
+
+/// Field value of a Loro value; `None` for shapes a field cannot hold.
+pub fn value_from_loro(v: &LoroValue) -> Option<Value> {
+    let inner = match v {
+        LoroValue::Bool(b) => value::Value::Bool(*b),
+        LoroValue::I64(i) => value::Value::Int(*i),
+        LoroValue::Double(d) => value::Value::Double(*d),
+        LoroValue::String(s) => value::Value::String(s.to_string()),
+        LoroValue::Map(m) => {
+            if let Some(LoroValue::I64(ms)) = m.get(TIME_TAG) {
+                value::Value::TimeMs(*ms)
+            } else if let Some(LoroValue::String(id)) = m.get(REF_TAG) {
+                value::Value::Ref(id.to_string())
+            } else {
+                return None;
+            }
+        }
+        _ => return None,
+    };
+    Some(Value { value: Some(inner) })
+}
+
+/// Shorthand for a string value.
+pub fn string_value(s: impl Into<String>) -> Value {
+    Value {
+        value: Some(value::Value::String(s.into())),
+    }
+}
+
+/// Shorthand for an integer value.
+pub fn int_value(i: i64) -> Value {
+    Value {
+        value: Some(value::Value::Int(i)),
+    }
+}
+
+/// Text of a string field, if present.
+pub fn string_field<'a>(o: &'a Object, id: &str) -> Option<&'a str> {
+    match o.fields.get(id).and_then(|v| v.value.as_ref()) {
+        Some(value::Value::String(s)) => Some(s),
+        _ => None,
+    }
+}
+
+/// The kind a field definition fixes; `None` for other kinds or a
+/// malformed definition.
+pub fn field_def_kind(o: &Object) -> Option<FieldKind> {
+    if o.kind() != ObjectKind::FieldDef {
+        return None;
+    }
+    match o
+        .fields
+        .get(reserved::FIELD_KIND)
+        .and_then(|v| v.value.as_ref())
+    {
+        Some(value::Value::Int(code)) => i32::try_from(*code)
+            .ok()
+            .and_then(|c| FieldKind::try_from(c).ok())
+            .filter(|k| *k != FieldKind::Unspecified),
+        _ => None,
+    }
 }
 
 /// Errors from building or reading Object documents.
@@ -159,48 +192,15 @@ pub enum ModelError {
     /// The document lacks the expected `meta` entries.
     #[error("object document is malformed: {0}")]
     Malformed(&'static str),
+    /// A value shape a field cannot hold.
+    #[error("field {0}: empty value")]
+    EmptyValue(String),
     /// Loro refused an operation.
     #[error(transparent)]
     Loro(#[from] loro::LoroError),
     /// Loro could not encode the document.
     #[error(transparent)]
     Encode(#[from] loro::LoroEncodeError),
-}
-
-/// One participant of a Relation.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Participant {
-    /// Stable slot id, unique within the Relation.
-    pub slot: String,
-    /// The participating Object.
-    pub object: ObjectId,
-    /// Participant-role definition id; empty when none.
-    pub role: String,
-}
-
-/// A plain, fully materialized view of an Object.
-#[derive(Debug, Clone, PartialEq)]
-pub struct ObjectRecord {
-    /// Identity.
-    pub id: ObjectId,
-    /// Owning Space.
-    pub space: SpaceId,
-    /// Kind.
-    pub kind: ObjectKind,
-    /// Applied type-definition ids, sorted.
-    pub types: Vec<String>,
-    /// Field-definition id → value, sorted by key.
-    pub fields: BTreeMap<String, FieldValue>,
-    /// Creation instant, ms since epoch.
-    pub created_at_ms: i64,
-    /// Last change instant, ms since epoch.
-    pub updated_at_ms: i64,
-    /// Deletion instant, if deleted.
-    pub deleted_at_ms: Option<i64>,
-    /// Relations only, sorted by slot.
-    pub participants: Vec<Participant>,
-    /// Layers only: the enriched Object.
-    pub target: Option<ObjectId>,
 }
 
 /// An Object's Loro document with typed accessors.
@@ -220,7 +220,7 @@ impl ObjectDoc {
         let doc = LoroDoc::new();
         doc.set_record_timestamp(true);
         let meta = doc.get_map("meta");
-        meta.insert("kind", kind.code())?;
+        meta.insert("kind", i64::from(kind as i32))?;
         meta.insert("space", space.to_string())?;
         meta.insert("created_at", now_ms)?;
         meta.insert("updated_at", now_ms)?;
@@ -324,24 +324,14 @@ impl ObjectDoc {
         self.doc.get_map("participants")
     }
 
-    /// Adds or replaces a participant by slot.
-    pub fn set_participant(&self, p: &Participant) -> Result<(), ModelError> {
-        let mut m = HashMap::new();
-        m.insert("object".to_owned(), LoroValue::from(p.object.to_string()));
-        m.insert("role".to_owned(), LoroValue::from(p.role.as_str()));
-        self.participants().insert(&p.slot, LoroValue::from(m))?;
-        Ok(())
-    }
-
-    /// Removes a participant slot.
-    pub fn remove_participant(&self, slot: &str) -> Result<(), ModelError> {
-        self.participants().delete(slot)?;
-        Ok(())
+    fn type_fields(&self) -> LoroMap {
+        self.doc.get_map("type_fields")
     }
 
     /// Sets a scalar field.
-    pub fn set_field(&self, field_id: &str, value: &FieldValue) -> Result<(), ModelError> {
-        self.fields().insert(field_id, value.to_loro())?;
+    pub fn set_field(&self, field_id: &str, value: &Value) -> Result<(), ModelError> {
+        let v = value_to_loro(value).ok_or_else(|| ModelError::EmptyValue(field_id.to_owned()))?;
+        self.fields().insert(field_id, v)?;
         Ok(())
     }
 
@@ -363,6 +353,33 @@ impl ObjectDoc {
         Ok(())
     }
 
+    /// Adds or replaces a participant by slot.
+    pub fn set_participant(&self, p: &Participant) -> Result<(), ModelError> {
+        let mut m = HashMap::new();
+        m.insert("object".to_owned(), LoroValue::from(p.object_id.as_str()));
+        m.insert("role".to_owned(), LoroValue::from(p.role_id.as_str()));
+        self.participants().insert(&p.slot, LoroValue::from(m))?;
+        Ok(())
+    }
+
+    /// Removes a participant slot.
+    pub fn remove_participant(&self, slot: &str) -> Result<(), ModelError> {
+        self.participants().delete(slot)?;
+        Ok(())
+    }
+
+    /// Type definitions: adds or replaces a field of the type.
+    pub fn set_type_field(&self, field_id: &str, required: bool) -> Result<(), ModelError> {
+        self.type_fields().insert(field_id, required)?;
+        Ok(())
+    }
+
+    /// Type definitions: removes a field from the type.
+    pub fn remove_type_field(&self, field_id: &str) -> Result<(), ModelError> {
+        self.type_fields().delete(field_id)?;
+        Ok(())
+    }
+
     /// Marks the Object deleted.
     pub fn mark_deleted(&self, now_ms: i64) -> Result<(), ModelError> {
         self.meta().insert("deleted_at", now_ms)?;
@@ -377,9 +394,8 @@ impl ObjectDoc {
     }
 
     /// Materializes the current state.
-    pub fn read(&self) -> Result<ObjectRecord, ModelError> {
-        let meta = self.meta().get_value();
-        let LoroValue::Map(meta) = meta else {
+    pub fn read(&self) -> Result<Object, ModelError> {
+        let LoroValue::Map(meta) = self.meta().get_value() else {
             return Err(ModelError::Malformed("meta is not a map"));
         };
         let int = |key: &str| match meta.get(key) {
@@ -387,45 +403,24 @@ impl ObjectDoc {
             _ => None,
         };
         let kind = int("kind")
-            .and_then(ObjectKind::from_code)
+            .and_then(|c| i32::try_from(c).ok())
+            .and_then(|c| ObjectKind::try_from(c).ok())
+            .filter(|k| *k != ObjectKind::Unspecified)
             .ok_or(ModelError::Malformed("meta.kind"))?;
-        let space = match meta.get("space") {
-            Some(LoroValue::String(s)) => ObjectId::parse(s)?,
+        let space_id = match meta.get("space") {
+            Some(LoroValue::String(s)) => ObjectId::parse(s)?.to_string(),
             _ => return Err(ModelError::Malformed("meta.space")),
         };
         let created_at_ms = int("created_at").ok_or(ModelError::Malformed("meta.created_at"))?;
         let updated_at_ms = int("updated_at").unwrap_or(created_at_ms);
         let deleted_at_ms = int("deleted_at");
-        let target = match meta.get("target") {
-            Some(LoroValue::String(s)) => Some(ObjectId::parse(s)?),
+        let target_id = match meta.get("target") {
+            Some(LoroValue::String(s)) => Some(ObjectId::parse(s)?.to_string()),
             _ => None,
         };
-        if kind == ObjectKind::Layer && target.is_none() {
+        if kind == ObjectKind::Layer && target_id.is_none() {
             return Err(ModelError::Malformed("layer without target"));
         }
-
-        let mut participants = Vec::new();
-        if let LoroValue::Map(m) = self.participants().get_value() {
-            for (slot, v) in m.iter() {
-                let LoroValue::Map(p) = v else {
-                    return Err(ModelError::Malformed("participant is not a map"));
-                };
-                let object = match p.get("object") {
-                    Some(LoroValue::String(s)) => ObjectId::parse(s)?,
-                    _ => return Err(ModelError::Malformed("participant.object")),
-                };
-                let role = match p.get("role") {
-                    Some(LoroValue::String(s)) => s.to_string(),
-                    _ => String::new(),
-                };
-                participants.push(Participant {
-                    slot: slot.clone(),
-                    object,
-                    role,
-                });
-            }
-        }
-        participants.sort_by(|a, b| a.slot.cmp(&b.slot));
 
         let mut types: Vec<String> = match self.types().get_value() {
             LoroValue::Map(m) => m.keys().cloned().collect(),
@@ -433,25 +428,61 @@ impl ObjectDoc {
         };
         types.sort();
 
-        let fields = match self.fields().get_value() {
+        let fields: HashMap<String, Value> = match self.fields().get_value() {
             LoroValue::Map(m) => m
                 .iter()
-                .filter_map(|(k, v)| FieldValue::from_loro(v).map(|v| (k.clone(), v)))
+                .filter_map(|(k, v)| value_from_loro(v).map(|v| (k.clone(), v)))
                 .collect(),
-            _ => BTreeMap::new(),
+            _ => HashMap::new(),
         };
 
-        Ok(ObjectRecord {
-            id: self.id,
-            space,
-            kind,
+        let mut participants = Vec::new();
+        if let LoroValue::Map(m) = self.participants().get_value() {
+            for (slot, v) in m.iter() {
+                let LoroValue::Map(p) = v else {
+                    return Err(ModelError::Malformed("participant is not a map"));
+                };
+                let object_id = match p.get("object") {
+                    Some(LoroValue::String(s)) => ObjectId::parse(s)?.to_string(),
+                    _ => return Err(ModelError::Malformed("participant.object")),
+                };
+                let role_id = match p.get("role") {
+                    Some(LoroValue::String(s)) => s.to_string(),
+                    _ => String::new(),
+                };
+                participants.push(Participant {
+                    slot: slot.clone(),
+                    object_id,
+                    role_id,
+                });
+            }
+        }
+        participants.sort_by(|a, b| a.slot.cmp(&b.slot));
+
+        let mut type_fields: Vec<TypeField> = match self.type_fields().get_value() {
+            LoroValue::Map(m) => m
+                .iter()
+                .map(|(k, v)| TypeField {
+                    field_id: k.clone(),
+                    required: matches!(v, LoroValue::Bool(true)),
+                })
+                .collect(),
+            _ => Vec::new(),
+        };
+        type_fields.sort_by(|a, b| a.field_id.cmp(&b.field_id));
+
+        Ok(Object {
+            id: self.id.to_string(),
+            space_id,
+            kind: kind.into(),
             types,
             fields,
             created_at_ms,
             updated_at_ms,
             deleted_at_ms,
             participants,
-            target,
+            target_id,
+            type_fields,
         })
     }
 }
@@ -469,37 +500,54 @@ pub fn now_ms() -> i64 {
 mod tests {
     use super::*;
 
+    fn bool_value(b: bool) -> Value {
+        Value {
+            value: Some(value::Value::Bool(b)),
+        }
+    }
+
+    fn time_value(ms: i64) -> Value {
+        Value {
+            value: Some(value::Value::TimeMs(ms)),
+        }
+    }
+
+    fn ref_value(id: ObjectId) -> Value {
+        Value {
+            value: Some(value::Value::Ref(id.to_string())),
+        }
+    }
+
     #[test]
     fn round_trips_through_snapshot() {
         let id = ObjectId::new();
         let space = ObjectId::new();
         let doc = ObjectDoc::create(id, space, ObjectKind::Entity, 1_000).expect("ok");
         doc.add_type("task").expect("ok");
-        doc.set_field("title", &FieldValue::String("hello".into()))
-            .expect("ok");
-        doc.set_field("done", &FieldValue::Bool(false)).expect("ok");
-        doc.set_field("due", &FieldValue::TimeMs(42)).expect("ok");
-        doc.set_field("parent", &FieldValue::Ref(space))
-            .expect("ok");
+        doc.set_field("title", &string_value("hello")).expect("ok");
+        doc.set_field("done", &bool_value(false)).expect("ok");
+        doc.set_field("due", &time_value(42)).expect("ok");
+        doc.set_field("parent", &ref_value(space)).expect("ok");
         doc.touch(2_000).expect("ok");
 
         let bytes = doc.snapshot().expect("ok");
         let loaded = ObjectDoc::from_snapshot(id, &bytes).expect("ok");
         let rec = loaded.read().expect("ok");
 
-        assert_eq!(rec.id, id);
-        assert_eq!(rec.space, space);
-        assert_eq!(rec.kind, ObjectKind::Entity);
+        assert_eq!(rec.id, id.to_string());
+        assert_eq!(rec.space_id, space.to_string());
+        assert_eq!(rec.kind(), ObjectKind::Entity);
         assert_eq!(rec.types, vec!["task".to_owned()]);
-        assert_eq!(rec.fields["title"], FieldValue::String("hello".into()));
-        assert_eq!(rec.fields["done"], FieldValue::Bool(false));
-        assert_eq!(rec.fields["due"], FieldValue::TimeMs(42));
-        assert_eq!(rec.fields["parent"], FieldValue::Ref(space));
+        assert_eq!(rec.fields["title"], string_value("hello"));
+        assert_eq!(rec.fields["done"], bool_value(false));
+        assert_eq!(rec.fields["due"], time_value(42));
+        assert_eq!(rec.fields["parent"], ref_value(space));
         assert_eq!(rec.created_at_ms, 1_000);
         assert_eq!(rec.updated_at_ms, 2_000);
         assert_eq!(rec.deleted_at_ms, None);
         assert!(rec.participants.is_empty());
-        assert_eq!(rec.target, None);
+        assert_eq!(rec.target_id, None);
+        assert!(rec.type_fields.is_empty());
     }
 
     #[test]
@@ -510,29 +558,62 @@ mod tests {
         let rel = ObjectDoc::create(ObjectId::new(), space, ObjectKind::Relation, 1).expect("ok");
         rel.set_participant(&Participant {
             slot: "from".into(),
-            object: a,
-            role: "parent".into(),
+            object_id: a.to_string(),
+            role_id: "parent".into(),
         })
         .expect("ok");
         rel.set_participant(&Participant {
             slot: "to".into(),
-            object: b,
-            role: String::new(),
+            object_id: b.to_string(),
+            role_id: String::new(),
         })
         .expect("ok");
         rel.touch(2).expect("ok");
         let rec = rel.read().expect("ok");
         assert_eq!(rec.participants.len(), 2);
         assert_eq!(rec.participants[0].slot, "from");
-        assert_eq!(rec.participants[0].object, a);
-        assert_eq!(rec.participants[0].role, "parent");
-        assert_eq!(rec.participants[1].object, b);
+        assert_eq!(rec.participants[0].object_id, a.to_string());
+        assert_eq!(rec.participants[0].role_id, "parent");
+        assert_eq!(rec.participants[1].object_id, b.to_string());
         rel.remove_participant("to").expect("ok");
         assert_eq!(rel.read().expect("ok").participants.len(), 1);
 
         let layer = ObjectDoc::create_layer(ObjectId::new(), space, a, 1).expect("ok");
         let rec = layer.read().expect("ok");
-        assert_eq!(rec.kind, ObjectKind::Layer);
-        assert_eq!(rec.target, Some(a));
+        assert_eq!(rec.kind(), ObjectKind::Layer);
+        assert_eq!(rec.target_id.as_deref(), Some(a.to_string().as_str()));
+    }
+
+    #[test]
+    fn definitions_carry_their_attributes() {
+        let space = ObjectId::new();
+        let fdef = ObjectDoc::create(ObjectId::new(), space, ObjectKind::FieldDef, 1).expect("ok");
+        fdef.set_field(reserved::NAME, &string_value("Due"))
+            .expect("ok");
+        fdef.set_field(
+            reserved::FIELD_KIND,
+            &int_value(i64::from(FieldKind::Time as i32)),
+        )
+        .expect("ok");
+        fdef.touch(2).expect("ok");
+        let rec = fdef.read().expect("ok");
+        assert_eq!(field_def_kind(&rec), Some(FieldKind::Time));
+        assert_eq!(string_field(&rec, reserved::NAME), Some("Due"));
+        assert!(kind_accepts(FieldKind::Time, &time_value(1)));
+        assert!(!kind_accepts(FieldKind::Time, &int_value(1)));
+
+        let tdef = ObjectDoc::create(ObjectId::new(), space, ObjectKind::TypeDef, 1).expect("ok");
+        tdef.set_type_field(&fdef.id().to_string(), true)
+            .expect("ok");
+        tdef.set_type_field("free", false).expect("ok");
+        tdef.touch(2).expect("ok");
+        let rec = tdef.read().expect("ok");
+        assert_eq!(rec.type_fields.len(), 2);
+        assert!(rec
+            .type_fields
+            .iter()
+            .any(|f| f.field_id == fdef.id().to_string() && f.required));
+        tdef.remove_type_field("free").expect("ok");
+        assert_eq!(tdef.read().expect("ok").type_fields.len(), 1);
     }
 }

@@ -2,12 +2,20 @@ syntax = "proto3";
 
 package elri.v1.object;
 
+import "elri/v1/definition/domain.proto";
+
 /* What an Object is. Every kind shares the same document shape. */
 enum ObjectKind {
     OBJECT_KIND_UNSPECIFIED = 0;
     OBJECT_KIND_ENTITY = 1;
     OBJECT_KIND_RELATION = 2;
     OBJECT_KIND_LAYER = 3;
+    /* A field definition; see elri.v1.definition. */
+    OBJECT_KIND_FIELD_DEF = 4;
+    /* A type definition. */
+    OBJECT_KIND_TYPE_DEF = 5;
+    /* A participant-role definition. */
+    OBJECT_KIND_ROLE_DEF = 6;
 }
 
 /*
@@ -55,4 +63,6 @@ message Object {
     repeated Participant participants = 9;
     /* Layers only: the Object this Layer enriches. */
     optional string target_id = 10;
+    /* Type definitions only: the fields of the type. */
+    repeated elri.v1.definition.TypeField type_fields = 11;
 }

@@ -1,22 +1,24 @@
 //! ws-proto surface of the core. Every client goes through the same server:
-//! a token middleware first, then the typed service handlers.
+//! a token middleware first, then the typed service handlers. Protocol
+//! messages are the model, so handlers mostly validate and delegate.
 
-use std::collections::HashMap;
+mod definitions;
+
 use std::sync::Arc;
 
 use elri_proto::elri::v1::change::change_service_ws::{
     register_change_service_arc, ChangeServiceHandler,
 };
-use elri_proto::elri::v1::change::{self as cpb, ListChangesRequest, ListChangesResponse};
+use elri_proto::elri::v1::change::{ListChangesRequest, ListChangesResponse};
 use elri_proto::elri::v1::core::core_service_ws::{register_core_service_arc, CoreServiceHandler};
 use elri_proto::elri::v1::core::{EndpointKind, GetInfoRequest, GetInfoResponse};
 use elri_proto::elri::v1::object::object_service_ws::{
     register_object_service_arc, ObjectServiceHandler,
 };
 use elri_proto::elri::v1::object::{
-    self as pb, CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest,
-    DeleteObjectResponse, GetObjectRequest, GetObjectResponse, ListObjectsRequest,
-    ListObjectsResponse, UpdateObjectRequest, UpdateObjectResponse,
+    CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest, DeleteObjectResponse,
+    GetObjectRequest, GetObjectResponse, ListObjectsRequest, ListObjectsResponse, ObjectKind,
+    Participant, UpdateObjectRequest, UpdateObjectResponse, Value,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::{
     register_remote_service_arc, RemoteServiceHandler,
@@ -31,18 +33,15 @@ use elri_proto::elri::v1::space::space_service_ws::{
     register_space_service_arc, SpaceServiceHandler,
 };
 use elri_proto::elri::v1::space::{
-    self as spb, CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse,
+    CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse,
 };
 use ws_proto::server::{Handler, OriginPolicy};
 use ws_proto::{Code, Request, Response, Server, ServerConfig, Status};
 
-use crate::change::{Change, ChangeStatus};
 use crate::device::{DeviceId, LaunchToken};
-use crate::model::{
-    now_ms, FieldValue, ModelError, ObjectDoc, ObjectId, ObjectKind, ObjectRecord, Participant,
-};
+use crate::model::{is_definition, kind_accepts, now_ms, ModelError, ObjectDoc, ObjectId};
 use crate::remote::{Remote, RemoteError};
-use crate::store::{Authority, ObjectFilter, SpaceInfo, Store, StoreError};
+use crate::store::{ObjectFilter, SpaceStore, Store, StoreError};
 use crate::BuildInfo;
 
 /// Everything the handlers need.
@@ -75,7 +74,8 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     register_space_service_arc(&server, Arc::clone(&services));
     register_object_service_arc(&server, Arc::clone(&services));
     register_change_service_arc(&server, Arc::clone(&services));
-    register_remote_service_arc(&server, services);
+    register_remote_service_arc(&server, Arc::clone(&services));
+    definitions::register(&server, services);
     server
 }
 
@@ -107,7 +107,7 @@ impl From<StoreError> for Status {
             StoreError::SpaceNotFound(_) | StoreError::ObjectNotFound(_) => {
                 Status::new(Code::NotFound, e.to_string())
             }
-            StoreError::Model(ModelError::InvalidId(_)) => {
+            StoreError::Model(ModelError::InvalidId(_) | ModelError::EmptyValue(_)) => {
                 Status::new(Code::InvalidArgument, e.to_string())
             }
             other => {
@@ -129,161 +129,74 @@ impl From<RemoteError> for Status {
     }
 }
 
-fn invalid(msg: impl Into<String>) -> Status {
+pub(crate) fn invalid(msg: impl Into<String>) -> Status {
     Status::new(Code::InvalidArgument, msg)
 }
 
-fn parse_id(s: &str, what: &str) -> Result<ObjectId, Status> {
+pub(crate) fn parse_id(s: &str, what: &str) -> Result<ObjectId, Status> {
     ObjectId::parse(s).map_err(|_| invalid(format!("{what}: not a valid id")))
 }
 
-// --- proto conversions -------------------------------------------------------
+fn kind_arg(kind: i32) -> Result<ObjectKind, Status> {
+    ObjectKind::try_from(kind)
+        .ok()
+        .filter(|k| *k != ObjectKind::Unspecified)
+        .ok_or_else(|| invalid("kind is required"))
+}
 
-fn space_to_pb(s: &SpaceInfo) -> spb::Space {
-    spb::Space {
-        id: s.id.to_string(),
-        name: s.name.clone(),
-        role: spb::Role::Owner.into(),
-        authority: match s.authority {
-            Authority::Local => spb::Authority::Local,
-            Authority::Server => spb::Authority::Server,
+// --- validation --------------------------------------------------------------
+
+fn check_fields(fields: &std::collections::HashMap<String, Value>) -> Result<(), Status> {
+    for (id, v) in fields {
+        if id.is_empty() {
+            return Err(invalid("field id must not be empty"));
         }
-        .into(),
+        match &v.value {
+            None => return Err(invalid(format!("field {id}: value is empty"))),
+            Some(elri_proto::elri::v1::object::value::Value::Ref(r)) => {
+                parse_id(r, &format!("field {id}"))?;
+            }
+            Some(_) => {}
+        }
     }
+    Ok(())
 }
 
-fn kind_from_pb(kind: i32) -> Result<ObjectKind, Status> {
-    match pb::ObjectKind::try_from(kind) {
-        Ok(pb::ObjectKind::Entity) => Ok(ObjectKind::Entity),
-        Ok(pb::ObjectKind::Relation) => Ok(ObjectKind::Relation),
-        Ok(pb::ObjectKind::Layer) => Ok(ObjectKind::Layer),
-        _ => Err(invalid("kind is required")),
-    }
-}
-
-fn kind_to_pb(kind: ObjectKind) -> pb::ObjectKind {
-    match kind {
-        ObjectKind::Entity => pb::ObjectKind::Entity,
-        ObjectKind::Relation => pb::ObjectKind::Relation,
-        ObjectKind::Layer => pb::ObjectKind::Layer,
-    }
-}
-
-fn value_from_pb(field: &str, v: &pb::Value) -> Result<FieldValue, Status> {
-    use pb::value::Value as V;
-    match &v.value {
-        Some(V::Bool(b)) => Ok(FieldValue::Bool(*b)),
-        Some(V::Int(i)) => Ok(FieldValue::Int(*i)),
-        Some(V::Double(d)) => Ok(FieldValue::Double(*d)),
-        Some(V::String(s)) => Ok(FieldValue::String(s.clone())),
-        Some(V::TimeMs(t)) => Ok(FieldValue::TimeMs(*t)),
-        Some(V::Ref(r)) => Ok(FieldValue::Ref(parse_id(r, &format!("field {field}"))?)),
-        None => Err(invalid(format!("field {field}: value is empty"))),
-    }
-}
-
-fn value_to_pb(v: &FieldValue) -> pb::Value {
-    use pb::value::Value as V;
-    pb::Value {
-        value: Some(match v {
-            FieldValue::Bool(b) => V::Bool(*b),
-            FieldValue::Int(i) => V::Int(*i),
-            FieldValue::Double(d) => V::Double(*d),
-            FieldValue::String(s) => V::String(s.clone()),
-            FieldValue::TimeMs(t) => V::TimeMs(*t),
-            FieldValue::Ref(r) => V::Ref(r.to_string()),
-        }),
-    }
-}
-
-fn object_to_pb(o: &ObjectRecord) -> pb::Object {
-    pb::Object {
-        id: o.id.to_string(),
-        space_id: o.space.to_string(),
-        kind: kind_to_pb(o.kind).into(),
-        types: o.types.clone(),
-        fields: o
-            .fields
-            .iter()
-            .map(|(k, v)| (k.clone(), value_to_pb(v)))
-            .collect(),
-        created_at_ms: o.created_at_ms,
-        updated_at_ms: o.updated_at_ms,
-        deleted_at_ms: o.deleted_at_ms,
-        participants: o
-            .participants
-            .iter()
-            .map(|p| pb::Participant {
-                slot: p.slot.clone(),
-                object_id: p.object.to_string(),
-                role_id: p.role.clone(),
-            })
-            .collect(),
-        target_id: o.target.map(|t| t.to_string()),
-    }
-}
-
-fn participants_from_pb(
-    kind: ObjectKind,
-    ps: &[pb::Participant],
-) -> Result<Vec<Participant>, Status> {
+fn check_participants(kind: ObjectKind, ps: &[Participant]) -> Result<(), Status> {
     if ps.is_empty() {
-        return Ok(Vec::new());
+        return Ok(());
     }
     if kind != ObjectKind::Relation {
         return Err(invalid("participants are only valid on relations"));
     }
-    let mut out = Vec::with_capacity(ps.len());
     for p in ps {
         if p.slot.is_empty() {
             return Err(invalid("participant slot must not be empty"));
         }
-        out.push(Participant {
-            slot: p.slot.clone(),
-            object: parse_id(&p.object_id, &format!("participant {}", p.slot))?,
-            role: p.role_id.clone(),
-        });
+        parse_id(&p.object_id, &format!("participant {}", p.slot))?;
     }
-    Ok(out)
+    Ok(())
 }
 
-fn fields_from_pb(
-    fields: &HashMap<String, pb::Value>,
-) -> Result<Vec<(String, FieldValue)>, Status> {
-    let mut out = Vec::with_capacity(fields.len());
-    for (k, v) in fields {
-        if k.is_empty() {
-            return Err(invalid("field id must not be empty"));
+impl Services {
+    /// Rejects values whose field definition fixes a different kind. Field
+    /// ids without a definition are free-form and pass through.
+    async fn check_field_kinds(
+        &self,
+        space: &SpaceStore,
+        fields: &std::collections::HashMap<String, Value>,
+    ) -> Result<(), Status> {
+        for (id, value) in fields {
+            if let Some(kind) = space.field_kind(id).await? {
+                if !kind_accepts(kind, value) {
+                    return Err(invalid(format!(
+                        "field {id}: definition requires {}",
+                        kind.as_str_name()
+                    )));
+                }
+            }
         }
-        out.push((k.clone(), value_from_pb(k, v)?));
-    }
-    out.sort_by(|a, b| a.0.cmp(&b.0));
-    Ok(out)
-}
-
-fn change_to_pb(space: &str, c: &Change) -> cpb::Change {
-    cpb::Change {
-        id: c.id.to_string(),
-        space_id: space.to_owned(),
-        device_id: c.device_id.clone(),
-        created_at_ms: c.created_at_ms,
-        status: match c.status {
-            ChangeStatus::Local => cpb::ChangeStatus::Local,
-            ChangeStatus::Queued => cpb::ChangeStatus::Queued,
-            ChangeStatus::Waiting => cpb::ChangeStatus::Waiting,
-            ChangeStatus::Accepted => cpb::ChangeStatus::Accepted,
-            ChangeStatus::Rejected => cpb::ChangeStatus::Rejected,
-            ChangeStatus::Paused => cpb::ChangeStatus::Paused,
-        }
-        .into(),
-        parts: c
-            .parts
-            .iter()
-            .map(|p| cpb::ChangePart {
-                object_id: p.object_id.to_string(),
-                bytes_len: u32::try_from(p.bytes.len()).unwrap_or(u32::MAX),
-            })
-            .collect(),
+        Ok(())
     }
 }
 
@@ -308,9 +221,8 @@ impl SpaceServiceHandler for Services {
         &self,
         _req: Request<ListSpacesRequest>,
     ) -> Result<Response<ListSpacesResponse>, Status> {
-        let spaces = self.store.list_spaces().await?;
         Ok(Response::new(ListSpacesResponse {
-            spaces: spaces.iter().map(space_to_pb).collect(),
+            spaces: self.store.list_spaces().await?,
         }))
     }
 
@@ -322,9 +234,8 @@ impl SpaceServiceHandler for Services {
         if name.is_empty() {
             return Err(invalid("name is required"));
         }
-        let space = self.store.create_space(name).await?;
         Ok(Response::new(CreateSpaceResponse {
-            space: Some(space_to_pb(&space)),
+            space: Some(self.store.create_space(name).await?),
         }))
     }
 }
@@ -336,9 +247,12 @@ impl ObjectServiceHandler for Services {
     ) -> Result<Response<CreateObjectResponse>, Status> {
         let m = &req.msg;
         let space_id = parse_id(&m.space_id, "space_id")?;
-        let kind = kind_from_pb(m.kind)?;
-        let fields = fields_from_pb(&m.fields)?;
-        let participants = participants_from_pb(kind, &m.participants)?;
+        let kind = kind_arg(m.kind)?;
+        if is_definition(kind) {
+            return Err(invalid("definitions are created through DefinitionService"));
+        }
+        check_fields(&m.fields)?;
+        check_participants(kind, &m.participants)?;
         let target = match (kind, m.target_id.is_empty()) {
             (ObjectKind::Layer, true) => return Err(invalid("target_id is required for layers")),
             (ObjectKind::Layer, false) => Some(parse_id(&m.target_id, "target_id")?),
@@ -346,25 +260,25 @@ impl ObjectServiceHandler for Services {
             (_, true) => None,
         };
         let space = self.store.space(space_id).await?;
+        self.check_field_kinds(&space, &m.fields).await?;
 
         let doc = match target {
             Some(t) => ObjectDoc::create_layer(ObjectId::new(), space_id, t, now_ms()),
             None => ObjectDoc::create(ObjectId::new(), space_id, kind, now_ms()),
         }
         .map_err(StoreError::from)?;
-        for p in &participants {
+        for p in &m.participants {
             doc.set_participant(p).map_err(StoreError::from)?;
         }
         for t in &m.types {
             doc.add_type(t).map_err(StoreError::from)?;
         }
-        for (k, v) in &fields {
+        for (k, v) in &m.fields {
             doc.set_field(k, v).map_err(StoreError::from)?;
         }
         doc.touch(now_ms()).map_err(StoreError::from)?;
-        let rec = space.insert(&doc).await?;
         Ok(Response::new(CreateObjectResponse {
-            object: Some(object_to_pb(&rec)),
+            object: Some(space.insert(&doc).await?),
         }))
     }
 
@@ -374,9 +288,8 @@ impl ObjectServiceHandler for Services {
     ) -> Result<Response<GetObjectResponse>, Status> {
         let space_id = parse_id(&req.msg.space_id, "space_id")?;
         let id = parse_id(&req.msg.id, "id")?;
-        let rec = self.store.space(space_id).await?.get(id).await?;
         Ok(Response::new(GetObjectResponse {
-            object: Some(object_to_pb(&rec)),
+            object: Some(self.store.space(space_id).await?.get(id).await?),
         }))
     }
 
@@ -387,25 +300,24 @@ impl ObjectServiceHandler for Services {
         let m = &req.msg;
         let space_id = parse_id(&m.space_id, "space_id")?;
         let id = parse_id(&m.id, "id")?;
-        let set = fields_from_pb(&m.set_fields)?;
+        check_fields(&m.set_fields)?;
         let space = self.store.space(space_id).await?;
+        self.check_field_kinds(&space, &m.set_fields).await?;
         let touches_participants =
             !m.set_participants.is_empty() || !m.remove_participants.is_empty();
-        let kind = if touches_participants {
-            space.get(id).await?.kind
-        } else {
-            ObjectKind::Entity
-        };
-        let set_participants = participants_from_pb(kind, &m.set_participants)?;
-        if !m.remove_participants.is_empty() && kind != ObjectKind::Relation {
-            return Err(invalid("participants are only valid on relations"));
+        if touches_participants {
+            let kind = space.get(id).await?.kind();
+            check_participants(kind, &m.set_participants)?;
+            if kind != ObjectKind::Relation {
+                return Err(invalid("participants are only valid on relations"));
+            }
         }
-        let rec = space
+        let object = space
             .update(id, |doc| {
-                for (k, v) in &set {
+                for (k, v) in &m.set_fields {
                     doc.set_field(k, v)?;
                 }
-                for p in &set_participants {
+                for p in &m.set_participants {
                     doc.set_participant(p)?;
                 }
                 for slot in &m.remove_participants {
@@ -424,7 +336,7 @@ impl ObjectServiceHandler for Services {
             })
             .await?;
         Ok(Response::new(UpdateObjectResponse {
-            object: Some(object_to_pb(&rec)),
+            object: Some(object),
         }))
     }
 
@@ -434,8 +346,11 @@ impl ObjectServiceHandler for Services {
     ) -> Result<Response<DeleteObjectResponse>, Status> {
         let space_id = parse_id(&req.msg.space_id, "space_id")?;
         let id = parse_id(&req.msg.id, "id")?;
-        let space = self.store.space(space_id).await?;
-        space.update(id, |doc| doc.mark_deleted(now_ms())).await?;
+        self.store
+            .space(space_id)
+            .await?
+            .update(id, |doc| doc.mark_deleted(now_ms()))
+            .await?;
         Ok(Response::new(DeleteObjectResponse {}))
     }
 
@@ -445,10 +360,9 @@ impl ObjectServiceHandler for Services {
     ) -> Result<Response<ListObjectsResponse>, Status> {
         let m = &req.msg;
         let space_id = parse_id(&m.space_id, "space_id")?;
-        let kind = match pb::ObjectKind::try_from(m.kind) {
-            Ok(pb::ObjectKind::Unspecified) | Err(_) => None,
-            Ok(_) => Some(kind_from_pb(m.kind)?),
-        };
+        let kind = ObjectKind::try_from(m.kind)
+            .ok()
+            .filter(|k| *k != ObjectKind::Unspecified);
         let filter = ObjectFilter {
             kind,
             type_id: (!m.type_id.is_empty()).then(|| m.type_id.clone()),
@@ -465,9 +379,8 @@ impl ObjectServiceHandler for Services {
                 Some(parse_id(&m.target_id, "target_id")?)
             },
         };
-        let objects = self.store.space(space_id).await?.list(&filter).await?;
         Ok(Response::new(ListObjectsResponse {
-            objects: objects.iter().map(object_to_pb).collect(),
+            objects: self.store.space(space_id).await?.list(&filter).await?,
         }))
     }
 }
@@ -479,17 +392,13 @@ impl ChangeServiceHandler for Services {
     ) -> Result<Response<ListChangesResponse>, Status> {
         let space_id = parse_id(&req.msg.space_id, "space_id")?;
         let limit = usize::try_from(req.msg.limit).unwrap_or(0);
-        let changes = self
-            .store
-            .space(space_id)
-            .await?
-            .list_changes(limit)
-            .await?;
         Ok(Response::new(ListChangesResponse {
-            changes: changes
-                .iter()
-                .map(|c| change_to_pb(&req.msg.space_id, c))
-                .collect(),
+            changes: self
+                .store
+                .space(space_id)
+                .await?
+                .list_changes(limit)
+                .await?,
         }))
     }
 }

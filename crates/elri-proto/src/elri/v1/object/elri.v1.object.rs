@@ -70,6 +70,9 @@ pub struct Object {
     /// Layers only: the Object this Layer enriches. 
     #[prost(string, optional, tag = "10")]
     pub target_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Type definitions only: the fields of the type. 
+    #[prost(message, repeated, tag = "11")]
+    pub type_fields: ::prost::alloc::vec::Vec<super::definition::TypeField>,
 }
 /// What an Object is. Every kind shares the same document shape. 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
@@ -79,6 +82,12 @@ pub enum ObjectKind {
     Entity = 1,
     Relation = 2,
     Layer = 3,
+    /// A field definition; see elri.v1.definition. 
+    FieldDef = 4,
+    /// A type definition. 
+    TypeDef = 5,
+    /// A participant-role definition. 
+    RoleDef = 6,
 }
 impl ObjectKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -91,6 +100,9 @@ impl ObjectKind {
             Self::Entity => "OBJECT_KIND_ENTITY",
             Self::Relation => "OBJECT_KIND_RELATION",
             Self::Layer => "OBJECT_KIND_LAYER",
+            Self::FieldDef => "OBJECT_KIND_FIELD_DEF",
+            Self::TypeDef => "OBJECT_KIND_TYPE_DEF",
+            Self::RoleDef => "OBJECT_KIND_ROLE_DEF",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -100,6 +112,9 @@ impl ObjectKind {
             "OBJECT_KIND_ENTITY" => Some(Self::Entity),
             "OBJECT_KIND_RELATION" => Some(Self::Relation),
             "OBJECT_KIND_LAYER" => Some(Self::Layer),
+            "OBJECT_KIND_FIELD_DEF" => Some(Self::FieldDef),
+            "OBJECT_KIND_TYPE_DEF" => Some(Self::TypeDef),
+            "OBJECT_KIND_ROLE_DEF" => Some(Self::RoleDef),
             _ => None,
         }
     }

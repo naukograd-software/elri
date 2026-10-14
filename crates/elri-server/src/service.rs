@@ -2,19 +2,17 @@
 
 use std::sync::Arc;
 
-use elri_core::change::{Admission, RejectReason};
+use elri_core::change::{rejected, Outcome, Reason};
 use elri_core::model::ObjectId;
-use elri_core::store::Authority;
-use elri_core::sync::{from_envelope, to_envelope};
-use elri_proto::elri::v1::space::{self as spb};
+use elri_core::sync::{envelope_space, validate_envelope};
+use elri_proto::elri::v1::space::{self as spb, Authority};
 use elri_proto::elri::v1::sync::sync_service_ws::{
     register_sync_service_arc, SubscribeServerStream, SyncServiceHandler,
 };
 use elri_proto::elri::v1::sync::{
-    rejection, submit_response, AddMemberRequest, AddMemberResponse, CreateSpaceRequest,
-    CreateSpaceResponse, Entry, HelloRequest, HelloResponse, ListSpacesRequest, ListSpacesResponse,
-    PullRequest, PullResponse, Rejection, SubmitRequest, SubmitResponse, SubscribeEvent,
-    SubscribeRequest,
+    AddMemberRequest, AddMemberResponse, CreateSpaceRequest, CreateSpaceResponse, HelloRequest,
+    HelloResponse, ListSpacesRequest, ListSpacesResponse, PullRequest, PullResponse, SubmitRequest,
+    SubmitResponse, SubscribeEvent, SubscribeRequest,
 };
 use uuid::Uuid;
 use ws_proto::{Code, Metadata, Request, Response, Server, Status};
@@ -116,15 +114,13 @@ impl SyncServiceHandler for State {
         let spaces = memberships
             .into_iter()
             .filter_map(|(space_id, role)| {
-                known
-                    .iter()
-                    .find(|s| s.id.uuid() == space_id)
-                    .map(|s| spb::Space {
-                        id: s.id.to_string(),
-                        name: s.name.clone(),
-                        role: role_to_pb(role).into(),
-                        authority: spb::Authority::Server.into(),
-                    })
+                let id = space_id.to_string();
+                known.iter().find(|s| s.id == id).map(|s| spb::Space {
+                    id: s.id.clone(),
+                    name: s.name.clone(),
+                    role: role_to_pb(role).into(),
+                    authority: Authority::Server.into(),
+                })
             })
             .collect();
         Ok(Response::new(ListSpacesResponse { spaces }))
@@ -139,22 +135,17 @@ impl SyncServiceHandler for State {
         if name.is_empty() {
             return Err(invalid("name is required"));
         }
-        let info = self
+        let id = ObjectId::new();
+        let mut space = self
             .spaces
-            .register_space(ObjectId::new(), name, Authority::Local)
+            .register_space(id, name, Authority::Local)
             .await
             .map_err(storage)?;
         self.registry
-            .set_role(info.id.uuid(), user.id, Role::Owner)
+            .set_role(id.uuid(), user.id, Role::Owner)
             .await?;
-        Ok(Response::new(CreateSpaceResponse {
-            space: Some(spb::Space {
-                id: info.id.to_string(),
-                name: info.name,
-                role: spb::Role::Owner.into(),
-                authority: spb::Authority::Server.into(),
-            }),
-        }))
+        space.authority = Authority::Server.into();
+        Ok(Response::new(CreateSpaceResponse { space: Some(space) }))
     }
 
     async fn add_member(
@@ -189,47 +180,35 @@ impl SyncServiceHandler for State {
         &self,
         req: Request<SubmitRequest>,
     ) -> Result<Response<SubmitResponse>, Status> {
+        // Authority comes from the token. The device id inside the envelope is
+        // a label the client chose; it is recorded for attribution, never
+        // trusted for authorization.
         let user = self.user(&req.header).await?;
         let env = req
             .msg
             .change
             .ok_or_else(|| invalid("change is required"))?;
-        let (space_id, change) = from_envelope(&env).map_err(|e| invalid(e.to_string()))?;
-        let reject = |reason: rejection::Reason, message: String| {
+        let reply = |outcome: Outcome| {
             Ok(Response::new(SubmitResponse {
-                outcome: Some(submit_response::Outcome::Rejected(Rejection {
-                    reason: reason.into(),
-                    message,
-                })),
+                outcome: Some(outcome),
             }))
         };
+        if let Err(e) = validate_envelope(&env) {
+            return reply(rejected(Reason::Invalid, e.to_string()));
+        }
+        let space_id = envelope_space(&env).map_err(|e| invalid(e.to_string()))?;
         let Some(role) = self.registry.role(space_id.uuid(), user.id).await? else {
-            return reject(rejection::Reason::PermissionDenied, "not a member".into());
+            return reply(rejected(Reason::PermissionDenied, "not a member"));
         };
         if !role.can_write() {
-            return reject(
-                rejection::Reason::PermissionDenied,
-                "viewer cannot write".into(),
-            );
+            return reply(rejected(Reason::PermissionDenied, "viewer cannot write"));
         }
         let space = self.spaces.space(space_id).await.map_err(storage)?;
-        match space.admit(&change).await.map_err(storage)? {
-            Admission::Accepted(seq) => {
-                let _ = self.events.send((space_id.uuid(), seq));
-                Ok(Response::new(SubmitResponse {
-                    outcome: Some(submit_response::Outcome::AcceptedSeq(seq)),
-                }))
-            }
-            Admission::Rejected(RejectReason::MissingPredecessors) => reject(
-                rejection::Reason::MissingPredecessors,
-                "operations build on history the server does not have".into(),
-            ),
-            Admission::Rejected(RejectReason::PermissionDenied) => reject(
-                rejection::Reason::PermissionDenied,
-                "permission denied".into(),
-            ),
-            Admission::Rejected(RejectReason::Invalid(m)) => reject(rejection::Reason::Invalid, m),
+        let outcome = space.admit(&env).await.map_err(storage)?;
+        if let Outcome::AcceptedSeq(seq) = outcome {
+            let _ = self.events.send((space_id.uuid(), seq));
         }
+        reply(outcome)
     }
 
     async fn pull(&self, req: Request<PullRequest>) -> Result<Response<PullResponse>, Status> {
@@ -248,15 +227,7 @@ impl SyncServiceHandler for State {
             .await
             .map_err(storage)?;
         let has_more = entries.len() > limit;
-        let entries = entries
-            .into_iter()
-            .take(limit)
-            .map(|(seq, change)| Entry {
-                seq,
-                accepted_at_ms: change.created_at_ms,
-                change: Some(to_envelope(ObjectId::from_uuid(space_id), &change)),
-            })
-            .collect();
+        let entries = entries.into_iter().take(limit).collect();
         Ok(Response::new(PullResponse { entries, has_more }))
     }
 

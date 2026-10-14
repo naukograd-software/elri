@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package elri.v1.definition;
+
+import "elri/v1/definition/domain.proto";
+
+/*
+Typed access to definitions. They are ordinary Objects too: ObjectService
+can read and delete them by id.
+*/
+service DefinitionService {
+    rpc CreateFieldDefinition(CreateFieldDefinitionRequest) returns (CreateFieldDefinitionResponse);
+    /* Name and description only; the kind never changes. */
+    rpc UpdateFieldDefinition(UpdateFieldDefinitionRequest) returns (UpdateFieldDefinitionResponse);
+    rpc ListFieldDefinitions(ListFieldDefinitionsRequest) returns (ListFieldDefinitionsResponse);
+
+    rpc CreateTypeDefinition(CreateTypeDefinitionRequest) returns (CreateTypeDefinitionResponse);
+    rpc UpdateTypeDefinition(UpdateTypeDefinitionRequest) returns (UpdateTypeDefinitionResponse);
+    rpc ListTypeDefinitions(ListTypeDefinitionsRequest) returns (ListTypeDefinitionsResponse);
+
+    rpc CreateRoleDefinition(CreateRoleDefinitionRequest) returns (CreateRoleDefinitionResponse);
+    rpc ListRoleDefinitions(ListRoleDefinitionsRequest) returns (ListRoleDefinitionsResponse);
+}
+
+message CreateFieldDefinitionRequest {
+    string space_id = 1;
+    string name = 2;
+    string description = 3;
+    FieldKind kind = 4;
+}
+
+message CreateFieldDefinitionResponse {
+    FieldDefinition definition = 1;
+}
+
+message UpdateFieldDefinitionRequest {
+    string space_id = 1;
+    string id = 2;
+    optional string name = 3;
+    optional string description = 4;
+}
+
+message UpdateFieldDefinitionResponse {
+    FieldDefinition definition = 1;
+}
+
+message ListFieldDefinitionsRequest {
+    string space_id = 1;
+    bool include_deleted = 2;
+}
+
+message ListFieldDefinitionsResponse {
+    repeated FieldDefinition definitions = 1;
+}
+
+message CreateTypeDefinitionRequest {
+    string space_id = 1;
+    string name = 2;
+    string description = 3;
+    repeated TypeField fields = 4;
+}
+
+message CreateTypeDefinitionResponse {
+    TypeDefinition definition = 1;
+}
+
+message UpdateTypeDefinitionRequest {
+    string space_id = 1;
+    string id = 2;
+    optional string name = 3;
+    optional string description = 4;
+    /* Add or replace fields by field id. */
+    repeated TypeField set_fields = 5;
+    repeated string remove_fields = 6;
+}
+
+message UpdateTypeDefinitionResponse {
+    TypeDefinition definition = 1;
+}
+
+message ListTypeDefinitionsRequest {
+    string space_id = 1;
+    bool include_deleted = 2;
+}
+
+message ListTypeDefinitionsResponse {
+    repeated TypeDefinition definitions = 1;
+}
+
+message CreateRoleDefinitionRequest {
+    string space_id = 1;
+    string name = 2;
+    string description = 3;
+}
+
+message CreateRoleDefinitionResponse {
+    RoleDefinition definition = 1;
+}
+
+message ListRoleDefinitionsRequest {
+    string space_id = 1;
+    bool include_deleted = 2;
+}
+
+message ListRoleDefinitionsResponse {
+    repeated RoleDefinition definitions = 1;
+}

@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package elri.v1.definition;
+
+/*
+Definitions are Objects: a field definition fixes the kind of value a field
+holds, a type definition groups field definitions, a role definition names a
+participant role. Objects refer to definitions by id; display names are
+labels and never identify anything.
+*/
+
+/* Storage kind of a field; fixed for the life of the definition. */
+enum FieldKind {
+    FIELD_KIND_UNSPECIFIED = 0;
+    FIELD_KIND_BOOL = 1;
+    FIELD_KIND_INT = 2;
+    FIELD_KIND_DOUBLE = 3;
+    FIELD_KIND_STRING = 4;
+    FIELD_KIND_TIME = 5;
+    FIELD_KIND_REF = 6;
+}
+
+message FieldDefinition {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    string description = 4;
+    FieldKind kind = 5;
+    int64 created_at_ms = 6;
+    int64 updated_at_ms = 7;
+    optional int64 deleted_at_ms = 8;
+}
+
+/* A field as part of a type. */
+message TypeField {
+    string field_id = 1;
+    bool required = 2;
+}
+
+message TypeDefinition {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    string description = 4;
+    repeated TypeField fields = 5;
+    int64 created_at_ms = 6;
+    int64 updated_at_ms = 7;
+    optional int64 deleted_at_ms = 8;
+}
+
+message RoleDefinition {
+    string id = 1;
+    string space_id = 2;
+    string name = 3;
+    string description = 4;
+    int64 created_at_ms = 5;
+    int64 updated_at_ms = 6;
+    optional int64 deleted_at_ms = 7;
+}

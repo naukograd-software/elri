@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use anyhow::{bail, Context, Result};
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 use elri_core::Endpoint;
 use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
 use elri_proto::elri::v1::change::ListChangesRequest;
@@ -62,13 +62,6 @@ enum Cmd {
     },
 }
 
-#[derive(Clone, Copy, Debug, ValueEnum)]
-enum MemberRole {
-    Admin,
-    Editor,
-    Viewer,
-}
-
 #[derive(Subcommand, Debug)]
 enum RemoteCmd {
     /// Store the server URL and token after verifying them. The token is
@@ -93,8 +86,9 @@ enum RemoteCmd {
         #[arg(long)]
         space: String,
         user: String,
-        #[arg(long, value_enum, default_value_t = MemberRole::Editor)]
-        role: MemberRole,
+        /// Role: admin, editor, or viewer.
+        #[arg(long, default_value = "editor", value_parser = parse_role)]
+        role: Role,
     },
 }
 
@@ -120,20 +114,32 @@ enum SpaceCmd {
     },
 }
 
-#[derive(Clone, Copy, Debug, ValueEnum)]
-enum Kind {
-    Entity,
-    Relation,
-    Layer,
+/// Parses a protocol enum from its short lowercase name (`entity`,
+/// `field-def`, `editor`, ...), given the enum's name prefix.
+fn parse_enum<E: TryFrom<i32> + Copy>(
+    prefix: &str,
+    s: &str,
+    from_str_name: fn(&str) -> Option<E>,
+) -> Result<E, String> {
+    let name = format!(
+        "{prefix}_{}",
+        s.trim().to_ascii_uppercase().replace('-', "_")
+    );
+    from_str_name(&name).ok_or_else(|| format!("unknown value `{s}`"))
 }
 
-impl From<Kind> for ObjectKind {
-    fn from(k: Kind) -> Self {
-        match k {
-            Kind::Entity => ObjectKind::Entity,
-            Kind::Relation => ObjectKind::Relation,
-            Kind::Layer => ObjectKind::Layer,
-        }
+fn parse_kind(s: &str) -> Result<ObjectKind, String> {
+    let k = parse_enum("OBJECT_KIND", s, ObjectKind::from_str_name)?;
+    if k == ObjectKind::Unspecified {
+        return Err("kind is required".to_owned());
+    }
+    Ok(k)
+}
+
+fn parse_role(s: &str) -> Result<Role, String> {
+    match parse_enum("ROLE", s, Role::from_str_name)? {
+        Role::Unspecified | Role::Owner => Err("role must be admin, editor, or viewer".to_owned()),
+        r => Ok(r),
     }
 }
 
@@ -144,9 +150,9 @@ enum ObjectCmd {
         /// Space id.
         #[arg(long)]
         space: String,
-        /// Kind.
-        #[arg(long, value_enum, default_value_t = Kind::Entity)]
-        kind: Kind,
+        /// Kind: entity, relation, or layer.
+        #[arg(long, default_value = "entity", value_parser = parse_kind)]
+        kind: ObjectKind,
         /// Type-definition ids to apply.
         #[arg(long = "type")]
         types: Vec<String>,
@@ -171,8 +177,9 @@ enum ObjectCmd {
     List {
         #[arg(long)]
         space: String,
-        #[arg(long, value_enum)]
-        kind: Option<Kind>,
+        /// Kind: entity, relation, layer, field-def, type-def, role-def.
+        #[arg(long, value_parser = parse_kind)]
+        kind: Option<ObjectKind>,
         #[arg(long = "type")]
         type_id: Option<String>,
         #[arg(long)]
@@ -366,7 +373,7 @@ async fn run_object(
                     endpoint,
                     CreateObjectRequest {
                         space_id: space,
-                        kind: ObjectKind::from(kind).into(),
+                        kind: kind.into(),
                         types,
                         fields,
                         participants,
@@ -408,9 +415,7 @@ async fn run_object(
                     endpoint,
                     ListObjectsRequest {
                         space_id: space,
-                        kind: kind
-                            .map_or(ObjectKind::Unspecified, ObjectKind::from)
-                            .into(),
+                        kind: kind.unwrap_or(ObjectKind::Unspecified).into(),
                         type_id: type_id.unwrap_or_default(),
                         include_deleted,
                         limit,
@@ -577,11 +582,6 @@ async fn run_remote(
             Ok(space_json(&s))
         }
         RemoteCmd::AddMember { space, user, role } => {
-            let role = match role {
-                MemberRole::Admin => Role::Admin,
-                MemberRole::Editor => Role::Editor,
-                MemberRole::Viewer => Role::Viewer,
-            };
             client
                 .add_member(authed(
                     endpoint,

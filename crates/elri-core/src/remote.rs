@@ -6,20 +6,19 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
-use elri_proto::elri::v1::space::Space as PbSpace;
+use elri_proto::elri::v1::space::{Authority, Space as PbSpace};
 use elri_proto::elri::v1::sync::sync_service_ws::SyncServiceClient;
 use elri_proto::elri::v1::sync::{
-    rejection, submit_response, AddMemberRequest, CreateSpaceRequest, HelloRequest,
-    ListSpacesRequest, PullRequest, SubmitRequest, SubscribeRequest,
+    AddMemberRequest, CreateSpaceRequest, HelloRequest, ListSpacesRequest, PullRequest,
+    SubmitRequest, SubscribeRequest,
 };
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use ws_proto::{Client, ClientConfig, Code, Reconnect, Request, Status};
 
-use crate::change::{Admission, RejectReason};
+use crate::change::{Outcome, Reason};
 use crate::model::{ObjectId, SpaceId};
-use crate::store::{Authority, RemoteConfig, SpaceStore, Store, StoreError};
-use crate::sync::{from_envelope, to_envelope};
+use crate::store::{RemoteConfig, SpaceStore, Store, StoreError};
 
 /// Protocol version this core speaks.
 pub const PROTOCOL_VERSION: u32 = 1;
@@ -177,16 +176,12 @@ impl Remote {
             workers: HashMap::new(),
         };
         for info in self.store.list_spaces().await? {
-            if info.authority == Authority::Server {
-                let space = self.store.space(info.id).await?;
+            if info.authority() == Authority::Server {
+                let id = ObjectId::parse(&info.id).map_err(StoreError::from)?;
+                let space = self.store.space(id).await?;
                 session.workers.insert(
-                    info.id,
-                    spawn_worker(
-                        info.id,
-                        space,
-                        session.client.clone(),
-                        session.token.clone(),
-                    ),
+                    id,
+                    spawn_worker(id, space, session.client.clone(), session.token.clone()),
                 );
             }
         }
@@ -213,11 +208,12 @@ impl Remote {
         let guard = self.session.lock().await;
         let mut spaces = Vec::new();
         for info in self.store.list_spaces().await? {
-            if info.authority == Authority::Server {
-                let space = self.store.space(info.id).await?;
+            if info.authority() == Authority::Server {
+                let id = ObjectId::parse(&info.id).map_err(StoreError::from)?;
+                let space = self.store.space(id).await?;
                 let (pending, rejected) = space.pending_counts().await?;
                 spaces.push(SpaceStatus {
-                    space_id: info.id,
+                    space_id: id,
                     cursor: space.cursor().await?,
                     pending,
                     rejected,
@@ -257,7 +253,7 @@ impl Remote {
             .spaces
             .into_iter()
             .map(|s| {
-                let joined = local.iter().any(|l| l.id.to_string() == s.id);
+                let joined = local.iter().any(|l| l.id == s.id);
                 (s, joined)
             })
             .collect())
@@ -429,36 +425,23 @@ async fn replicate_once(
 ) -> Result<(), RemoteError> {
     let sync = SyncServiceClient::new(client.clone());
 
-    for change in space.outbox(0).await? {
+    for env in space.outbox(0).await? {
         let res = sync
             .submit(authed(
                 token,
                 SubmitRequest {
-                    change: Some(to_envelope(space_id, &change)),
+                    change: Some(env.clone()),
                 },
             ))
             .await?
             .msg;
         match res.outcome {
-            Some(submit_response::Outcome::AcceptedSeq(seq)) => {
-                space
-                    .record_admission(change.id, &Admission::Accepted(seq))
-                    .await?;
+            Some(Outcome::Rejected(r)) if r.reason() == Reason::MissingPredecessors => {
+                // Transient: the server lacks history we have not pushed yet.
+                // Pull first and try again next round.
+                break;
             }
-            Some(submit_response::Outcome::Rejected(r)) => {
-                let reason = match rejection::Reason::try_from(r.reason) {
-                    Ok(rejection::Reason::PermissionDenied) => RejectReason::PermissionDenied,
-                    Ok(rejection::Reason::MissingPredecessors) => {
-                        // Transient: the server lacks history we have not
-                        // pushed yet. Pull first and try again next round.
-                        break;
-                    }
-                    _ => RejectReason::Invalid(r.message),
-                };
-                space
-                    .record_admission(change.id, &Admission::Rejected(reason))
-                    .await?;
-            }
+            Some(outcome) => space.record_outcome(&env.id, &outcome).await?,
             None => return Err(RemoteError::BadReply("submit outcome")),
         }
     }
@@ -481,8 +464,7 @@ async fn replicate_once(
                 .change
                 .as_ref()
                 .ok_or(RemoteError::BadReply("entry without change"))?;
-            let (_, change) = from_envelope(env).map_err(|_| RemoteError::BadReply("envelope"))?;
-            space.apply_accepted(entry.seq, &change).await?;
+            space.apply_accepted(entry.seq, env).await?;
         }
         if !res.has_more {
             break;
