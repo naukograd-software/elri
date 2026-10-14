@@ -11,6 +11,9 @@ ignore = [
     "RUSTSEC-2026-0251",
     # atomic-polyfill: transitive, no_std shim; no replacement in the pinned graph
     "RUSTSEC-2023-0089",
+    # paste: unmaintained proc-macro, compile time only, via gemm inside
+    # candle; no release of candle has moved off it yet
+    "RUSTSEC-2024-0436",
 ]
 
 [licenses]
