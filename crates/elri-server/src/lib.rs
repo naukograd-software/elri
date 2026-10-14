@@ -197,18 +197,16 @@ impl Server {
 }
 
 fn tls_acceptor(tls: &Tls) -> Result<tokio_rustls::TlsAcceptor, ServerError> {
-    let read = |p: &PathBuf| {
-        std::fs::read(p).map_err(|e| ServerError::Tls(format!("{}: {e}", p.display())))
-    };
-    let certs: Vec<_> = rustls_pemfile::certs(&mut read(&tls.cert)?.as_slice())
+    use tokio_rustls::rustls::pki_types::{pem::PemObject as _, CertificateDer, PrivateKeyDer};
+    let certs: Vec<CertificateDer<'static>> = CertificateDer::pem_file_iter(&tls.cert)
+        .map_err(|e| ServerError::Tls(format!("{}: {e}", tls.cert.display())))?
         .collect::<Result<_, _>>()
-        .map_err(|e| ServerError::Tls(e.to_string()))?;
+        .map_err(|e| ServerError::Tls(format!("{}: {e}", tls.cert.display())))?;
     if certs.is_empty() {
         return Err(ServerError::Tls("no certificate in the chain file".into()));
     }
-    let key = rustls_pemfile::private_key(&mut read(&tls.key)?.as_slice())
-        .map_err(|e| ServerError::Tls(e.to_string()))?
-        .ok_or_else(|| ServerError::Tls("no private key in the key file".into()))?;
+    let key = PrivateKeyDer::from_pem_file(&tls.key)
+        .map_err(|e| ServerError::Tls(format!("{}: {e}", tls.key.display())))?;
     let config = tokio_rustls::rustls::ServerConfig::builder()
         .with_no_client_auth()
         .with_single_cert(certs, key)
