@@ -130,6 +130,71 @@ async fn outbox_is_admitted_and_delivered() {
 }
 
 #[tokio::test]
+async fn joined_space_is_read_only_until_the_initial_download_lands() {
+    let space_id = SpaceId::new();
+    let server = store("server5").await;
+    let b = store("b5").await;
+    for s in [&server, &b] {
+        s.register_space(space_id, "shared", Authority::Server)
+            .await
+            .expect("register");
+    }
+    let s_space = server.space(space_id).await.expect("server space");
+    let b_space = b.space(space_id).await.expect("b space");
+
+    // The server already holds two accepted Changes when B joins.
+    let doc = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 1).expect("doc");
+    doc.touch(2).expect("touch");
+    let id = doc.id();
+    let first = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 1).expect("doc");
+    first.touch(2).expect("touch");
+    let a = store("a5").await;
+    a.register_space(space_id, "shared", Authority::Server)
+        .await
+        .expect("register");
+    let a_space = a.space(space_id).await.expect("a space");
+    a_space.insert(&first).await.expect("insert");
+    a_space.insert(&doc).await.expect("insert");
+    for env in a_space.outbox(0).await.expect("outbox") {
+        s_space.admit(&env).await.expect("admit");
+    }
+    assert_eq!(s_space.last_seq().await.expect("seq"), 2);
+
+    b_space.set_initial_target(2).await.expect("target");
+    assert_eq!(b_space.downloading().await.expect("state"), Some((0, 2)));
+    let own = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 1).expect("doc");
+    own.touch(2).expect("touch");
+    match b_space.insert(&own).await {
+        Err(elri_core::store::StoreError::Downloading { received, target }) => {
+            assert_eq!((received, target), (0, 2));
+        }
+        other => panic!("expected the download gate, got {:?}", other.map(|o| o.id)),
+    }
+
+    // Half way there: still read-only. All the way: writable.
+    let entries = s_space.log_after(0, 0).await.expect("log");
+    b_space
+        .apply_accepted(entries[0].seq, entries[0].change.as_ref().expect("change"))
+        .await
+        .expect("apply");
+    assert_eq!(b_space.downloading().await.expect("state"), Some((1, 2)));
+    assert!(b_space
+        .update(id, |d| d.set_field("n", &int_value(1)))
+        .await
+        .is_err());
+    b_space
+        .apply_accepted(entries[1].seq, entries[1].change.as_ref().expect("change"))
+        .await
+        .expect("apply");
+    assert_eq!(b_space.downloading().await.expect("state"), None);
+    b_space.insert(&own).await.expect("writable now");
+    b_space
+        .update(id, |d| d.set_field("n", &int_value(1)))
+        .await
+        .expect("writable now");
+}
+
+#[tokio::test]
 async fn missing_predecessors_are_rejected() {
     let space_id = SpaceId::new();
     let a = store("a2").await;

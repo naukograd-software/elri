@@ -11,6 +11,9 @@ pub struct Space {
     pub role: i32,
     #[prost(enumeration = "Authority", tag = "4")]
     pub authority: i32,
+    /// Server Spaces: highest accepted sequence on the server when listed. 
+    #[prost(int64, tag = "5")]
+    pub last_seq: i64,
 }
 /// Role of the current user in a Space. 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]

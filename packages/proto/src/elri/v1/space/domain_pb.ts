@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/space/domain.proto.
  */
 export const file_elri_v1_space_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChplbHJpL3YxL3NwYWNlL2RvbWFpbi5wcm90bxINZWxyaS52MS5zcGFjZSJxCgVTcGFjZRIKCgJpZBgBIAEoCRIMCgRuYW1lGAIgASgJEiEKBHJvbGUYAyABKA4yEy5lbHJpLnYxLnNwYWNlLlJvbGUSKwoJYXV0aG9yaXR5GAQgASgOMhguZWxyaS52MS5zcGFjZS5BdXRob3JpdHkqXgoEUm9sZRIUChBST0xFX1VOU1BFQ0lGSUVEEAASDgoKUk9MRV9PV05FUhABEg4KClJPTEVfQURNSU4QAhIPCgtST0xFX0VESVRPUhADEg8KC1JPTEVfVklFV0VSEAQqUQoJQXV0aG9yaXR5EhkKFUFVVEhPUklUWV9VTlNQRUNJRklFRBAAEhMKD0FVVEhPUklUWV9MT0NBTBABEhQKEEFVVEhPUklUWV9TRVJWRVIQAmIGcHJvdG8z");
+  fileDesc("ChplbHJpL3YxL3NwYWNlL2RvbWFpbi5wcm90bxINZWxyaS52MS5zcGFjZSKDAQoFU3BhY2USCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIhCgRyb2xlGAMgASgOMhMuZWxyaS52MS5zcGFjZS5Sb2xlEisKCWF1dGhvcml0eRgEIAEoDjIYLmVscmkudjEuc3BhY2UuQXV0aG9yaXR5EhAKCGxhc3Rfc2VxGAUgASgDKl4KBFJvbGUSFAoQUk9MRV9VTlNQRUNJRklFRBAAEg4KClJPTEVfT1dORVIQARIOCgpST0xFX0FETUlOEAISDwoLUk9MRV9FRElUT1IQAxIPCgtST0xFX1ZJRVdFUhAEKlEKCUF1dGhvcml0eRIZChVBVVRIT1JJVFlfVU5TUEVDSUZJRUQQABITCg9BVVRIT1JJVFlfTE9DQUwQARIUChBBVVRIT1JJVFlfU0VSVkVSEAJiBnByb3RvMw");
 
 /**
  * @generated from message elri.v1.space.Space
@@ -37,6 +37,13 @@ export type Space = Message<"elri.v1.space.Space"> & {
    * @generated from field: elri.v1.space.Authority authority = 4;
    */
   authority: Authority;
+
+  /**
+   * Server Spaces: highest accepted sequence on the server when listed. 
+   *
+   * @generated from field: int64 last_seq = 5;
+   */
+  lastSeq: bigint;
 };
 
 /**
@@ -64,6 +71,13 @@ export type SpaceJson = {
    * @generated from field: elri.v1.space.Authority authority = 4;
    */
   authority?: AuthorityJson;
+
+  /**
+   * Server Spaces: highest accepted sequence on the server when listed. 
+   *
+   * @generated from field: int64 last_seq = 5;
+   */
+  lastSeq?: string;
 };
 
 /**

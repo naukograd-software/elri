@@ -66,6 +66,14 @@ pub enum StoreError {
     /// No such Change in the Space.
     #[error("change {0} not found")]
     ChangeNotFound(String),
+    /// The Space's initial download is not finished; it is read-only.
+    #[error("space is downloading: {received} of {target} accepted changes received")]
+    Downloading {
+        /// Highest sequence installed.
+        received: i64,
+        /// Sequence the download must reach.
+        target: i64,
+    },
     /// No such Object in the Space.
     #[error("object {0} not found")]
     ObjectNotFound(ObjectId),
@@ -265,6 +273,7 @@ impl Store {
             name: name.to_owned(),
             role: Role::Owner.into(),
             authority: authority.into(),
+            last_seq: 0,
         })
     }
 
@@ -358,6 +367,7 @@ fn space_of(row: &SpaceRow) -> Result<Space, StoreError> {
         name: row.name.clone(),
         role: Role::Owner.into(),
         authority: authority.into(),
+        last_seq: 0,
     })
 }
 
@@ -493,6 +503,34 @@ impl SpaceStore {
         }
     }
 
+    /// Refuses local writes while the initial download is incomplete.
+    async fn writable(db: &mut Db) -> Result<(), StoreError> {
+        let target = read_state(db, INITIAL_TARGET).await?;
+        let cursor = read_cursor(db).await?;
+        if cursor < target {
+            return Err(StoreError::Downloading {
+                received: cursor,
+                target,
+            });
+        }
+        Ok(())
+    }
+
+    /// Marks the sequence the initial download must reach before the Space
+    /// accepts local writes; 0 for a Space that starts empty.
+    pub async fn set_initial_target(&self, seq: i64) -> Result<(), StoreError> {
+        let mut db = self.db.lock().await;
+        write_state(&mut db, INITIAL_TARGET, seq).await
+    }
+
+    /// `(received, target)` while the initial download is incomplete.
+    pub async fn downloading(&self) -> Result<Option<(i64, i64)>, StoreError> {
+        let mut db = self.db.lock().await;
+        let target = read_state(&mut db, INITIAL_TARGET).await?;
+        let cursor = read_cursor(&mut db).await?;
+        Ok((cursor < target).then_some((cursor, target)))
+    }
+
     /// Stores a freshly created document as one Change with a full snapshot.
     pub async fn insert(&self, doc: &ObjectDoc) -> Result<Object, StoreError> {
         let rec = doc.read()?;
@@ -506,6 +544,7 @@ impl SpaceStore {
         };
         let env = self.new_envelope(vec![part]);
         let mut db = self.db.lock().await;
+        Self::writable(&mut db).await?;
         let deps = dependencies(&mut db, &rec).await?;
         let mut tx = db.transaction().await?;
         write_change(&mut tx, &env, ChangeStatus::Local, None, "").await?;
@@ -539,6 +578,7 @@ impl SpaceStore {
         F: FnOnce(&ObjectDoc) -> Result<(), ModelError>,
     {
         let mut db = self.db.lock().await;
+        Self::writable(&mut db).await?;
         let (doc, pending) = load_doc(&mut db, id).await?;
         let before = doc.version_vector();
         edit(&doc)?;
@@ -1458,12 +1498,35 @@ async fn read_envelope(
     })
 }
 
-async fn read_cursor(db: &mut Db) -> Result<i64, StoreError> {
-    Ok(SyncStateRow::filter_by_key("cursor".to_owned())
+/// Sync-state key: highest Space-log sequence installed locally.
+const CURSOR: &str = "cursor";
+/// Sync-state key: sequence the initial download must reach.
+const INITIAL_TARGET: &str = "initial_target";
+
+async fn read_state(db: &mut Db, key: &str) -> Result<i64, StoreError> {
+    Ok(SyncStateRow::filter_by_key(key.to_owned())
         .first()
         .exec(&mut *db)
         .await?
         .map_or(0, |r| r.value))
+}
+
+async fn write_state(db: &mut Db, key: &str, value: i64) -> Result<(), StoreError> {
+    SyncStateRow::filter_by_key(key.to_owned())
+        .delete()
+        .exec(&mut *db)
+        .await?;
+    toasty::create!(SyncStateRow {
+        key: key.to_owned(),
+        value,
+    })
+    .exec(&mut *db)
+    .await?;
+    Ok(())
+}
+
+async fn read_cursor(db: &mut Db) -> Result<i64, StoreError> {
+    read_state(db, CURSOR).await
 }
 
 async fn last_seq(db: &mut Db) -> Result<i64, StoreError> {

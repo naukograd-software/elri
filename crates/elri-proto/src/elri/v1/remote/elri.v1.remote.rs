@@ -38,6 +38,13 @@ pub struct SpaceSyncStatus {
     pub rejected: i32,
     #[prost(bool, tag = "5")]
     pub connected: bool,
+    /// The initial download has not reached the sequence the server had at
+    /// join; the Space is read-only until it does. 
+    #[prost(bool, tag = "6")]
+    pub downloading: bool,
+    /// Sequence the initial download must reach. 
+    #[prost(int64, tag = "7")]
+    pub target_seq: i64,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetStatusResponse {

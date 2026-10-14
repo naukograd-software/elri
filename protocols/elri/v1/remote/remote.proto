@@ -48,6 +48,11 @@ message SpaceSyncStatus {
     /* Rejected Changes awaiting the user. */
     int32 rejected = 4;
     bool connected = 5;
+    /* The initial download has not reached the sequence the server had at
+       join; the Space is read-only until it does. */
+    bool downloading = 6;
+    /* Sequence the initial download must reach. */
+    int64 target_seq = 7;
 }
 
 message GetStatusResponse {

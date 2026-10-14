@@ -74,6 +74,8 @@ pub struct SpaceStatus {
     pub space_id: SpaceId,
     /// Highest server sequence installed locally.
     pub cursor: i64,
+    /// `(received, target)` while the initial download is incomplete.
+    pub downloading: Option<(i64, i64)>,
     /// Local Changes not yet accepted.
     pub pending: usize,
     /// Rejected Changes awaiting the user.
@@ -245,6 +247,7 @@ impl Remote {
                 spaces.push(SpaceStatus {
                     space_id: id,
                     cursor: space.cursor().await?,
+                    downloading: space.downloading().await?,
                     pending,
                     rejected,
                 });
@@ -332,6 +335,12 @@ impl Remote {
         if self.store.space(id).await.is_err() {
             self.store
                 .register_space(id, &space.name, Authority::Server)
+                .await?;
+            // Read-only until everything the server had at join is here.
+            self.store
+                .space(id)
+                .await?
+                .set_initial_target(space.last_seq)
                 .await?;
         }
         let store = self.store.space(id).await?;

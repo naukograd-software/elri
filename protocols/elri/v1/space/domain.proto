@@ -26,4 +26,6 @@ message Space {
     string name = 2;
     Role role = 3;
     Authority authority = 4;
+    /* Server Spaces: highest accepted sequence on the server when listed. */
+    int64 last_seq = 5;
 }

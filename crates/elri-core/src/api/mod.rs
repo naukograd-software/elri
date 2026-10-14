@@ -122,7 +122,9 @@ impl From<StoreError> for Status {
             StoreError::SpaceNotFound(_)
             | StoreError::ObjectNotFound(_)
             | StoreError::ChangeNotFound(_) => Status::new(Code::NotFound, e.to_string()),
-            StoreError::NotRejected(_) => Status::new(Code::FailedPrecondition, e.to_string()),
+            StoreError::NotRejected(_) | StoreError::Downloading { .. } => {
+                Status::new(Code::FailedPrecondition, e.to_string())
+            }
             StoreError::Model(
                 ModelError::InvalidId(_)
                 | ModelError::EmptyValue(_)
@@ -644,6 +646,8 @@ impl RemoteServiceHandler for Services {
                     pending: i32::try_from(s.pending).unwrap_or(i32::MAX),
                     rejected: i32::try_from(s.rejected).unwrap_or(i32::MAX),
                     connected: st.connected,
+                    downloading: s.downloading.is_some(),
+                    target_seq: s.downloading.map_or(0, |(_, t)| t),
                 })
                 .collect(),
         }))

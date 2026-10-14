@@ -327,18 +327,28 @@ impl SyncServiceHandler for State {
         let user = self.user(&req.header).await?;
         let memberships = self.registry.memberships(user.id).await?;
         let known = self.spaces.list_spaces().await.map_err(storage)?;
-        let spaces = memberships
-            .into_iter()
-            .filter_map(|(space_id, role)| {
-                let id = space_id.to_string();
-                known.iter().find(|s| s.id == id).map(|s| spb::Space {
-                    id: s.id.clone(),
-                    name: s.name.clone(),
-                    role: role_to_pb(role).into(),
-                    authority: Authority::Server.into(),
-                })
-            })
-            .collect();
+        let mut spaces = Vec::with_capacity(memberships.len());
+        for (space_id, role) in memberships {
+            let id = space_id.to_string();
+            let Some(s) = known.iter().find(|s| s.id == id) else {
+                continue;
+            };
+            let last_seq = self
+                .spaces
+                .space(ObjectId::from_uuid(space_id))
+                .await
+                .map_err(storage)?
+                .last_seq()
+                .await
+                .map_err(storage)?;
+            spaces.push(spb::Space {
+                id: s.id.clone(),
+                name: s.name.clone(),
+                role: role_to_pb(role).into(),
+                authority: Authority::Server.into(),
+                last_seq,
+            });
+        }
         Ok(Response::new(ListSpacesResponse { spaces }))
     }
 

@@ -185,35 +185,35 @@ fn token_json(t: &Token) -> serde_json::Value {
     })
 }
 
+fn authed<T>(token: &str, msg: T) -> Request<T> {
+    Request::new(msg).with_header("authorization", format!("Bearer {token}"))
+}
+
 async fn run_admin(
     server: &str,
     cmd: AdminCmd,
 ) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     let token = read_token()?;
     let conn = Client::dial(server, ClientConfig::default()).await?;
-    fn authed<T>(token: &str, msg: T) -> Request<T> {
-        Request::new(msg).with_header("authorization", format!("Bearer {token}"))
-    }
-
     let account = AccountServiceClient::new(conn.clone());
     let admin = AdminServiceClient::new(conn);
-    let out = match cmd {
+    match cmd {
         AdminCmd::Whoami => {
             let res = account
                 .who_am_i(authed(&token, WhoAmIRequest {}))
                 .await?
                 .msg;
-            json!({
+            Ok(json!({
                 "user": res.user.as_ref().map(user_json),
                 "token": res.token.as_ref().map(token_json),
-            })
+            }))
         }
         AdminCmd::Users => {
             let res = admin
                 .list_users(authed(&token, ListUsersRequest {}))
                 .await?
                 .msg;
-            json!(res.users.iter().map(user_json).collect::<Vec<_>>())
+            Ok(json!(res.users.iter().map(user_json).collect::<Vec<_>>()))
         }
         AdminCmd::UserAdd {
             name,
@@ -231,11 +231,11 @@ async fn run_admin(
                 ))
                 .await?
                 .msg;
-            json!({
+            Ok(json!({
                 "user": res.user.as_ref().map(user_json),
                 "token": res.token.as_ref().map(token_json),
                 "secret": res.secret,
-            })
+            }))
         }
         AdminCmd::SetAdmin { name, off } => {
             let res = admin
@@ -248,68 +248,77 @@ async fn run_admin(
                 ))
                 .await?
                 .msg;
-            json!({ "user": res.user.as_ref().map(user_json) })
+            Ok(json!({ "user": res.user.as_ref().map(user_json) }))
         }
+        other => run_admin_tokens(&token, &account, &admin, other).await,
+    }
+}
+
+async fn run_admin_tokens(
+    token: &str,
+    account: &AccountServiceClient,
+    admin: &AdminServiceClient,
+    cmd: AdminCmd,
+) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+    match cmd {
         AdminCmd::Tokens {
             user,
             include_revoked,
-        } => match user {
-            Some(user_name) => {
-                let res = admin
+        } => {
+            let tokens = if let Some(user_name) = user {
+                admin
                     .list_user_tokens(authed(
-                        &token,
+                        token,
                         ListUserTokensRequest {
                             user_name,
                             include_revoked,
                         },
                     ))
                     .await?
-                    .msg;
-                json!(res.tokens.iter().map(token_json).collect::<Vec<_>>())
-            }
-            None => {
-                let res = account
-                    .list_tokens(authed(&token, ListTokensRequest { include_revoked }))
+                    .msg
+                    .tokens
+            } else {
+                account
+                    .list_tokens(authed(token, ListTokensRequest { include_revoked }))
                     .await?
-                    .msg;
-                json!(res.tokens.iter().map(token_json).collect::<Vec<_>>())
-            }
-        },
-        AdminCmd::TokenIssue { user, label } => match user {
-            Some(user_name) => {
+                    .msg
+                    .tokens
+            };
+            Ok(json!(tokens.iter().map(token_json).collect::<Vec<_>>()))
+        }
+        AdminCmd::TokenIssue { user, label } => {
+            let (tok, secret) = if let Some(user_name) = user {
                 let res = admin
-                    .issue_user_token(authed(&token, IssueUserTokenRequest { user_name, label }))
+                    .issue_user_token(authed(token, IssueUserTokenRequest { user_name, label }))
                     .await?
                     .msg;
-                json!({ "token": res.token.as_ref().map(token_json), "secret": res.secret })
-            }
-            None => {
+                (res.token, res.secret)
+            } else {
                 let res = account
-                    .issue_token(authed(&token, IssueTokenRequest { label }))
+                    .issue_token(authed(token, IssueTokenRequest { label }))
                     .await?
                     .msg;
-                json!({ "token": res.token.as_ref().map(token_json), "secret": res.secret })
-            }
-        },
+                (res.token, res.secret)
+            };
+            Ok(json!({ "token": tok.as_ref().map(token_json), "secret": secret }))
+        }
         AdminCmd::TokenRevoke { id } => {
             // Own tokens go through the account service; an admin falls back
             // to the admin service for anyone else's.
-            match account
-                .revoke_token(authed(&token, RevokeTokenRequest { id: id.clone() }))
+            if account
+                .revoke_token(authed(token, RevokeTokenRequest { id: id.clone() }))
                 .await
+                .is_err()
             {
-                Ok(_) => json!({ "revoked": id }),
-                Err(_) => {
-                    admin
-                        .revoke_user_token(authed(
-                            &token,
-                            RevokeUserTokenRequest { id: id.clone() },
-                        ))
-                        .await?;
-                    json!({ "revoked": id })
-                }
+                admin
+                    .revoke_user_token(authed(token, RevokeUserTokenRequest { id: id.clone() }))
+                    .await?;
             }
+            Ok(json!({ "revoked": id }))
         }
-    };
-    Ok(out)
+        AdminCmd::Whoami
+        | AdminCmd::Users
+        | AdminCmd::UserAdd { .. }
+        | AdminCmd::SetAdmin { .. } => Err("not a token command".into()),
+    }
 }
