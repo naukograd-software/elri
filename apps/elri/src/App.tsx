@@ -4,6 +4,7 @@ import type { Space } from '@elri/proto/elri/v1/space/domain_pb.ts'
 import { ListSpacesRequestSchema } from '@elri/proto/elri/v1/space/space_pb.ts'
 import { useCallback, useEffect, useState } from 'react'
 import { type CoreClients, connect, errorText } from './core.ts'
+import { watch } from './events.ts'
 import { RemotePanel } from './RemotePanel.tsx'
 import { SpaceList } from './SpaceList.tsx'
 import { SpaceView } from './SpaceView.tsx'
@@ -43,6 +44,13 @@ export function App() {
       cancelled = true
     }
   }, [refreshSpaces])
+
+  useEffect(() => {
+    if (!clients) return
+    return watch(clients, [], (ev) => {
+      if (ev.event.case === 'space' || ev.event.case === 'lagged') void refreshSpaces(clients)
+    })
+  }, [clients, refreshSpaces])
 
   if (error) {
     return (

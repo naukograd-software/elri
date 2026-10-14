@@ -3,6 +3,7 @@
 
 import { ChangeServiceClient } from '@elri/proto/elri/v1/change/change_ws_pb.ts'
 import { CoreServiceClient } from '@elri/proto/elri/v1/core/core_ws_pb.ts'
+import { EventServiceClient } from '@elri/proto/elri/v1/events/event_ws_pb.ts'
 import { ObjectServiceClient } from '@elri/proto/elri/v1/object/object_ws_pb.ts'
 import { RemoteServiceClient } from '@elri/proto/elri/v1/remote/remote_ws_pb.ts'
 import { SpaceServiceClient } from '@elri/proto/elri/v1/space/space_ws_pb.ts'
@@ -21,6 +22,7 @@ export interface CoreClients {
   objects: ObjectServiceClient
   changes: ChangeServiceClient
   remote: RemoteServiceClient
+  events: EventServiceClient
 }
 
 const inTauri = '__TAURI_INTERNALS__' in window
@@ -50,6 +52,7 @@ export async function connect(): Promise<CoreClients> {
     objects: new ObjectServiceClient(transport),
     changes: new ChangeServiceClient(transport),
     remote: new RemoteServiceClient(transport),
+    events: new EventServiceClient(transport),
   }
 }
 

@@ -244,14 +244,16 @@ impl SyncServiceHandler for State {
             wanted.push(space);
         }
         let mut events = self.events.subscribe();
+        // The client half-closes right after its request; only an error
+        // means it went away.
+        let mut open = true;
         loop {
             tokio::select! {
-                closed = stream.recv() => {
-                    // The client half-closed or went away: stop.
-                    if matches!(closed, Ok(None) | Err(_)) {
-                        return Ok(());
-                    }
-                }
+                closed = stream.recv(), if open => match closed {
+                    Ok(Some(_)) => {}
+                    Ok(None) => open = false,
+                    Err(_) => return Ok(()),
+                },
                 ev = events.recv() => match ev {
                     Ok((space, seq)) if wanted.contains(&space) => {
                         stream

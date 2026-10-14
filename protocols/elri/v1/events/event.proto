@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package elri.v1.events;
+
+import "elri/v1/events/domain.proto";
+
+/* Live notifications from the core, for renderers and scripts. */
+service EventService {
+    /* Streams events as they happen; nothing is replayed. */
+    rpc Watch(WatchRequest) returns (stream Event);
+}
+
+message WatchRequest {
+    /* Only events of these Spaces; empty = every Space. Space and remote
+       events always pass. */
+    repeated string space_ids = 1;
+}

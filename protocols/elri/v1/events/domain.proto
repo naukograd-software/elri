@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package elri.v1.events;
+
+import "elri/v1/change/domain.proto";
+import "elri/v1/object/domain.proto";
+
+/* An Object's live state changed on this device, by a local write or an
+   installed remote Change. `removed` means it left the live state because
+   nothing accepted or pending creates it any more. */
+message ObjectEvent {
+    string space_id = 1;
+    string object_id = 2;
+    elri.v1.object.ObjectKind kind = 3;
+    bool removed = 4;
+}
+
+/* A Change was recorded or moved to another status. */
+message ChangeEvent {
+    string space_id = 1;
+    string change_id = 2;
+    elri.v1.change.ChangeStatus status = 3;
+}
+
+/* The set of Spaces on this device changed. */
+message SpaceEvent {
+    string space_id = 1;
+}
+
+/* The server link changed: configured, connected, or dropped. */
+message RemoteEvent {}
+
+/* The watcher fell behind and missed events; it should reload what it shows. */
+message Lagged {}
+
+message Event {
+    int64 at_ms = 1;
+    oneof event {
+        ObjectEvent object = 2;
+        ChangeEvent change = 3;
+        SpaceEvent space = 4;
+        RemoteEvent remote = 5;
+        Lagged lagged = 6;
+    }
+}

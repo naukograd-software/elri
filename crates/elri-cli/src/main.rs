@@ -12,6 +12,8 @@ use elri_proto::elri::v1::change::{
 };
 use elri_proto::elri::v1::core::core_service_ws::CoreServiceClient;
 use elri_proto::elri::v1::core::GetInfoRequest;
+use elri_proto::elri::v1::events::event_service_ws::EventServiceClient;
+use elri_proto::elri::v1::events::{event, WatchRequest};
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest, Object,
@@ -42,6 +44,12 @@ struct Args {
 enum Cmd {
     /// Show what the core reports about itself.
     Info,
+    /// Print core events as they happen, one JSON object per line.
+    Watch {
+        /// Only these Spaces; every Space when omitted.
+        #[arg(long = "space")]
+        spaces: Vec<String>,
+    },
     /// Spaces on this device.
     Space {
         #[command(subcommand)]
@@ -389,12 +397,39 @@ async fn main() -> Result<()> {
 
     let out = match args.cmd {
         Cmd::Info => run_info(&endpoint, conn).await?,
+        Cmd::Watch { spaces } => return run_watch(&endpoint, conn, spaces).await,
         Cmd::Space { cmd } => run_space(&endpoint, conn, cmd).await?,
         Cmd::Object { cmd } => run_object(&endpoint, conn, cmd).await?,
         Cmd::Change { cmd } => run_change(&endpoint, conn, cmd).await?,
         Cmd::Remote { cmd } => run_remote(&endpoint, conn, cmd).await?,
     };
     print(&out)
+}
+
+async fn run_watch(endpoint: &Endpoint, conn: Client, spaces: Vec<String>) -> Result<()> {
+    let stream = EventServiceClient::new(conn)
+        .watch(authed(endpoint, WatchRequest { space_ids: spaces }))
+        .await?;
+    while let Some(ev) = stream.recv().await? {
+        let body = match ev.event {
+            Some(event::Event::Object(o)) => json!({
+                "object": { "space_id": o.space_id, "object_id": o.object_id,
+                            "kind": o.kind().as_str_name(), "removed": o.removed }
+            }),
+            Some(event::Event::Change(c)) => json!({
+                "change": { "space_id": c.space_id, "change_id": c.change_id,
+                            "status": c.status().as_str_name() }
+            }),
+            Some(event::Event::Space(s)) => json!({ "space": { "space_id": s.space_id } }),
+            Some(event::Event::Remote(_)) => json!({ "remote": {} }),
+            Some(event::Event::Lagged(_)) => json!({ "lagged": {} }),
+            None => continue,
+        };
+        let mut line = body;
+        line["at_ms"] = json!(ev.at_ms);
+        println!("{line}");
+    }
+    Ok(())
 }
 
 async fn run_info(endpoint: &Endpoint, conn: Client) -> Result<serde_json::Value> {

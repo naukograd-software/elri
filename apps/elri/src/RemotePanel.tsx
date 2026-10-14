@@ -11,6 +11,7 @@ import {
 } from '@elri/proto/elri/v1/remote/remote_pb.ts'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { type CoreClients, errorText } from './core.ts'
+import { coalesce, watch } from './events.ts'
 
 interface Props {
   clients: CoreClients
@@ -43,9 +44,17 @@ export function RemotePanel({ clients, onChanged }: Props) {
 
   useEffect(() => {
     void refresh()
-    const timer = setInterval(() => void refresh(), 3000)
-    return () => clearInterval(timer)
-  }, [refresh])
+    const reload = coalesce(() => void refresh())
+    // Connection drops are not announced yet; a slow check covers them.
+    const timer = setInterval(reload, 15000)
+    const stop = watch(clients, [], (ev) => {
+      if (ev.event.case !== 'object') reload()
+    })
+    return () => {
+      clearInterval(timer)
+      stop()
+    }
+  }, [clients, refresh])
 
   const run = async (f: () => Promise<unknown>) => {
     try {

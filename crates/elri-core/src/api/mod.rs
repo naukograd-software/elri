@@ -15,6 +15,10 @@ use elri_proto::elri::v1::change::{
 };
 use elri_proto::elri::v1::core::core_service_ws::{register_core_service_arc, CoreServiceHandler};
 use elri_proto::elri::v1::core::{EndpointKind, GetInfoRequest, GetInfoResponse};
+use elri_proto::elri::v1::events::event_service_ws::{
+    register_event_service_arc, EventServiceHandler, WatchServerStream,
+};
+use elri_proto::elri::v1::events::{event, Event, Lagged, WatchRequest};
 use elri_proto::elri::v1::object::object_service_ws::{
     register_object_service_arc, ObjectServiceHandler,
 };
@@ -80,6 +84,7 @@ pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server 
     register_object_service_arc(&server, Arc::clone(&services));
     register_change_service_arc(&server, Arc::clone(&services));
     register_remote_service_arc(&server, Arc::clone(&services));
+    register_event_service_arc(&server, Arc::clone(&services));
     definitions::register(&server, services);
     server
 }
@@ -451,6 +456,50 @@ impl ObjectServiceHandler for Services {
         Ok(Response::new(ListObjectsResponse {
             objects: self.store.space(space_id).await?.list(&filter).await?,
         }))
+    }
+}
+
+impl EventServiceHandler for Services {
+    async fn watch(
+        &self,
+        req: Request<WatchRequest>,
+        stream: WatchServerStream,
+    ) -> Result<(), Status> {
+        let mut wanted = Vec::with_capacity(req.msg.space_ids.len());
+        for id in &req.msg.space_ids {
+            wanted.push(parse_id(id, "space_ids")?.to_string());
+        }
+        let passes = |ev: &Event| match &ev.event {
+            Some(event::Event::Object(o)) => wanted.is_empty() || wanted.contains(&o.space_id),
+            Some(event::Event::Change(c)) => wanted.is_empty() || wanted.contains(&c.space_id),
+            _ => true,
+        };
+        let mut events = self.store.watch();
+        // The client half-closes right after its request; only an error
+        // means it went away.
+        let mut open = true;
+        loop {
+            tokio::select! {
+                closed = stream.recv(), if open => match closed {
+                    Ok(Some(_)) => {}
+                    Ok(None) => open = false,
+                    Err(_) => return Ok(()),
+                },
+                ev = events.recv() => match ev {
+                    Ok(ev) if passes(&ev) => stream.send(&ev).await?,
+                    Ok(_) => {}
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {
+                        stream
+                            .send(&Event {
+                                at_ms: now_ms(),
+                                event: Some(event::Event::Lagged(Lagged {})),
+                            })
+                            .await?;
+                    }
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => return Ok(()),
+                },
+            }
+        }
     }
 }
 

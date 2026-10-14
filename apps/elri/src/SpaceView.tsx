@@ -7,6 +7,7 @@ import {
 import type { Space } from '@elri/proto/elri/v1/space/domain_pb.ts'
 import { type FormEvent, useCallback, useEffect, useState } from 'react'
 import { type CoreClients, errorText } from './core.ts'
+import { coalesce, watch } from './events.ts'
 import { ObjectInspector } from './ObjectInspector.tsx'
 import { textOf } from './values.ts'
 
@@ -53,9 +54,11 @@ export function SpaceView({ clients, space }: Props) {
 
   useEffect(() => {
     void refresh()
-    const timer = setInterval(() => void refresh(), 3000)
-    return () => clearInterval(timer)
-  }, [refresh])
+    const reload = coalesce(() => void refresh())
+    return watch(clients, [space.id], (ev) => {
+      if (ev.event.case === 'object' || ev.event.case === 'lagged') reload()
+    })
+  }, [clients, space.id, refresh])
 
   const handleCreate = async (ev: FormEvent) => {
     ev.preventDefault()

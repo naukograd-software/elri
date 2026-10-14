@@ -15,6 +15,9 @@ use std::sync::Arc;
 
 use elri_proto::elri::v1::change::{Change, ChangePart, ChangeStatus};
 use elri_proto::elri::v1::definition::FieldKind;
+use elri_proto::elri::v1::events::{
+    event, ChangeEvent, Event, ObjectEvent, RemoteEvent, SpaceEvent,
+};
 use elri_proto::elri::v1::object::{value, Object, ObjectKind, Value as PbValue};
 use elri_proto::elri::v1::space::{Authority, Role, Space};
 use elri_proto::elri::v1::sync::{Entry, Envelope, Part};
@@ -22,7 +25,7 @@ use loro::VersionVector;
 use toasty::stmt::Value;
 use toasty::Db;
 use toasty_driver_turso::Turso;
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::{broadcast, Mutex, Notify};
 use uuid::Uuid;
 
 use crate::change::{accepted, rejected, Outcome, Reason};
@@ -167,6 +170,18 @@ pub struct Store {
     device_id: DeviceId,
     device: Mutex<Db>,
     spaces: Mutex<HashMap<SpaceId, Arc<SpaceStore>>>,
+    events: broadcast::Sender<Event>,
+}
+
+/// Events a watcher can miss before it is told it lagged.
+const EVENT_BUFFER: usize = 1024;
+
+fn emit(events: &broadcast::Sender<Event>, body: event::Event) {
+    // No receivers is not an error: nobody is watching.
+    let _ = events.send(Event {
+        at_ms: now_ms(),
+        event: Some(body),
+    });
 }
 
 impl Store {
@@ -183,7 +198,18 @@ impl Store {
             device_id,
             device: Mutex::new(db),
             spaces: Mutex::new(HashMap::new()),
+            events: broadcast::channel(EVENT_BUFFER).0,
         })
+    }
+
+    /// Subscribes to everything that happens in this store from now on.
+    pub fn watch(&self) -> broadcast::Receiver<Event> {
+        self.events.subscribe()
+    }
+
+    /// Announces a change of the server link.
+    pub fn emit_remote(&self) {
+        emit(&self.events, event::Event::Remote(RemoteEvent {}));
     }
 
     /// Every Space registered on this device, newest first. The role is the
@@ -212,7 +238,8 @@ impl Store {
         name: &str,
         authority: Authority,
     ) -> Result<Space, StoreError> {
-        let space = SpaceStore::open(&self.space_path(id), self.device_id).await?;
+        let space =
+            SpaceStore::open(&self.space_path(id), self.device_id, self.events.clone()).await?;
         {
             let mut db = self.device.lock().await;
             toasty::create!(SpaceRow {
@@ -225,6 +252,12 @@ impl Store {
             .await?;
         }
         self.spaces.lock().await.insert(id, Arc::new(space));
+        emit(
+            &self.events,
+            event::Event::Space(SpaceEvent {
+                space_id: id.to_string(),
+            }),
+        );
         Ok(Space {
             id: id.to_string(),
             name: name.to_owned(),
@@ -249,7 +282,9 @@ impl Store {
         if !known {
             return Err(StoreError::SpaceNotFound(id));
         }
-        let space = Arc::new(SpaceStore::open(&self.space_path(id), self.device_id).await?);
+        let space = Arc::new(
+            SpaceStore::open(&self.space_path(id), self.device_id, self.events.clone()).await?,
+        );
         self.spaces
             .lock()
             .await
@@ -351,10 +386,15 @@ pub struct SpaceStore {
     db: Mutex<Db>,
     /// Signalled after every local write, so a sync worker can push.
     dirty: Notify,
+    events: broadcast::Sender<Event>,
 }
 
 impl SpaceStore {
-    async fn open(path: &Path, device_id: DeviceId) -> Result<Self, StoreError> {
+    async fn open(
+        path: &Path,
+        device_id: DeviceId,
+        events: broadcast::Sender<Event>,
+    ) -> Result<Self, StoreError> {
         let stem = path
             .file_stem()
             .and_then(|s| s.to_str())
@@ -387,7 +427,45 @@ impl SpaceStore {
             device_id,
             db: Mutex::new(db),
             dirty: Notify::new(),
+            events,
         })
+    }
+
+    fn emit_object(&self, rec: &Object) {
+        emit(
+            &self.events,
+            event::Event::Object(ObjectEvent {
+                space_id: self.id.to_string(),
+                object_id: rec.id.clone(),
+                kind: rec.kind,
+                removed: false,
+            }),
+        );
+    }
+
+    fn emit_objects(&self, touched: &[(Uuid, i64, bool)]) {
+        for (object, kind, live) in touched {
+            emit(
+                &self.events,
+                event::Event::Object(ObjectEvent {
+                    space_id: self.id.to_string(),
+                    object_id: object.to_string(),
+                    kind: i32::try_from(*kind).unwrap_or_default(),
+                    removed: !live,
+                }),
+            );
+        }
+    }
+
+    fn emit_change(&self, change_id: Uuid, status: ChangeStatus) {
+        emit(
+            &self.events,
+            event::Event::Change(ChangeEvent {
+                space_id: self.id.to_string(),
+                change_id: change_id.to_string(),
+                status: status.into(),
+            }),
+        );
     }
 
     /// Resolves after the next local write (or immediately if one happened
@@ -427,6 +505,8 @@ impl SpaceStore {
         write_projections(&mut tx, &rec).await?;
         tx.commit().await?;
         self.dirty.notify_one();
+        self.emit_change(uuid_arg(&env.id)?, ChangeStatus::Local);
+        self.emit_object(&rec);
         Ok(rec)
     }
 
@@ -486,6 +566,8 @@ impl SpaceStore {
         write_projections(&mut tx, &rec).await?;
         tx.commit().await?;
         self.dirty.notify_one();
+        self.emit_change(uuid_arg(&env.id)?, ChangeStatus::Local);
+        self.emit_object(&rec);
         Ok(rec)
     }
 
@@ -647,11 +729,17 @@ impl SpaceStore {
             .exec(&mut tx)
             .await?;
         }
-        for object in touched {
-            rebuild_doc(&mut tx, object).await?;
+        let mut rebuilt = Vec::with_capacity(touched.len());
+        for (object, kind) in touched {
+            let live = rebuild_doc(&mut tx, object).await?;
+            rebuilt.push((object, kind, live));
         }
         tx.commit().await?;
         self.dirty.notify_one();
+        for id in &revived {
+            self.emit_change(*id, ChangeStatus::Local);
+        }
+        self.emit_objects(&rebuilt);
         let row = change_row(&mut db, change_id).await?;
         read_change(&mut db, self.id, &row).await
     }
@@ -690,6 +778,9 @@ impl SpaceStore {
                 .await?;
         }
         tx.commit().await?;
+        for id in &dropped {
+            self.emit_change(*id, ChangeStatus::Unspecified);
+        }
         Ok(dropped.iter().map(ToString::to_string).collect())
     }
 
@@ -778,10 +869,17 @@ impl SpaceStore {
             .exec(&mut tx)
             .await?;
         }
-        for object in touched {
-            rebuild_doc(&mut tx, object).await?;
+        let mut rebuilt = Vec::with_capacity(touched.len());
+        for (object, kind) in touched {
+            let live = rebuild_doc(&mut tx, object).await?;
+            rebuilt.push((object, kind, live));
         }
         tx.commit().await?;
+        self.emit_change(id, status);
+        for dep in &paused {
+            self.emit_change(*dep, ChangeStatus::Paused);
+        }
+        self.emit_objects(&rebuilt);
         Ok(())
     }
 
@@ -925,6 +1023,7 @@ impl SpaceStore {
             .first()
             .exec(&mut *db)
             .await?;
+        let mut installed: Vec<(Uuid, i64, bool)> = Vec::new();
         let mut tx = db.transaction().await?;
         if let Some(row) = mine {
             if row.accepted_seq != Some(seq) {
@@ -959,6 +1058,7 @@ impl SpaceStore {
                 };
                 let rec = doc.read()?;
                 install_part(&mut tx, &doc, &rec, part, change_id, pending).await?;
+                installed.push((object_id.uuid(), i64::from(rec.kind), true));
             }
         }
         SpaceLogRow::filter_by_seq(seq)
@@ -983,6 +1083,8 @@ impl SpaceStore {
         .exec(&mut tx)
         .await?;
         tx.commit().await?;
+        self.emit_change(change_id, ChangeStatus::Accepted);
+        self.emit_objects(&installed);
         Ok(())
     }
 }
@@ -1151,17 +1253,17 @@ async fn dependents(
     Ok(out)
 }
 
-/// Objects touched by any of `changes`.
-async fn objects_of(db: &mut Db, changes: &[Uuid]) -> Result<Vec<Uuid>, StoreError> {
-    let mut out: Vec<Uuid> = Vec::new();
+/// Objects touched by any of `changes`, with their kind codes.
+async fn objects_of(db: &mut Db, changes: &[Uuid]) -> Result<Vec<(Uuid, i64)>, StoreError> {
+    let mut out: Vec<(Uuid, i64)> = Vec::new();
     for id in changes {
         let parts = ChangePartRow::filter(ChangePartRow::fields().change_id().eq(*id))
             .exec(&mut *db)
             .await?;
-        out.extend(parts.iter().map(|p| p.object_id));
+        out.extend(parts.iter().map(|p| (p.object_id, p.kind)));
     }
     out.sort_unstable();
-    out.dedup();
+    out.dedup_by_key(|(id, _)| *id);
     Ok(out)
 }
 
@@ -1169,7 +1271,8 @@ async fn objects_of(db: &mut Db, changes: &[Uuid]) -> Result<Vec<Uuid>, StoreErr
 /// rejected nor paused, in recording order, and rewrites its snapshot,
 /// update log, and projections. A document none of them created is
 /// removed from the live state; its parts stay with their Changes.
-async fn rebuild_doc(tx: &mut toasty::Transaction<'_>, object: Uuid) -> Result<(), StoreError> {
+/// Returns whether the document is live afterwards.
+async fn rebuild_doc(tx: &mut toasty::Transaction<'_>, object: Uuid) -> Result<bool, StoreError> {
     let rows = toasty::sql::query(
         "SELECT p.bytes FROM change_parts p JOIN changes c ON c.id = p.change_id \
          WHERE p.object_id = ?1 AND c.status NOT IN (?2, ?3) ORDER BY c.seq ASC",
@@ -1207,18 +1310,19 @@ async fn rebuild_doc(tx: &mut toasty::Transaction<'_>, object: Uuid) -> Result<(
         .await?;
     delete_projections(tx, object).await?;
     if updates.is_empty() {
-        return Ok(());
+        return Ok(false);
     }
     let id = ObjectId::from_uuid(object);
     let doc = match ObjectDoc::from_updates(id, &updates) {
         Ok(doc) => doc,
         // Nothing left that created the document: it leaves the live state.
-        Err(ModelError::Malformed(_)) => return Ok(()),
+        Err(ModelError::Malformed(_)) => return Ok(false),
         Err(e) => return Err(e.into()),
     };
     let rec = doc.read()?;
     write_snapshot(tx, &doc, &rec).await?;
-    write_projections(tx, &rec).await
+    write_projections(tx, &rec).await?;
+    Ok(true)
 }
 
 async fn delete_projections(tx: &mut toasty::Transaction<'_>, id: Uuid) -> Result<(), StoreError> {

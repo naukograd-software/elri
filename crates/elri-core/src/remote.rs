@@ -186,6 +186,7 @@ impl Remote {
             }
         }
         *self.session.lock().await = Some(session);
+        self.store.emit_remote();
         Ok(())
     }
 
@@ -195,6 +196,7 @@ impl Remote {
                 w.abort();
             }
             s.client.close();
+            self.store.emit_remote();
         }
     }
 
