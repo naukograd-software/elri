@@ -32,6 +32,8 @@ enum ObjectKind {
     OBJECT_KIND_CONSTRAINT = 13;
     /* A reusable interface subtree with parameters. */
     OBJECT_KIND_COMPONENT = 14;
+    /* The transfer rules of a Space; one per Space, set by its managers. */
+    OBJECT_KIND_TRANSFER_POLICY = 15;
 }
 
 /* Items of a list value; scalars only. */

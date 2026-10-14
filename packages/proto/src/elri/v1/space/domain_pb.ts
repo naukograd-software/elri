@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/space/domain.proto.
  */
 export const file_elri_v1_space_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChplbHJpL3YxL3NwYWNlL2RvbWFpbi5wcm90bxINZWxyaS52MS5zcGFjZSKbAQoFU3BhY2USCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIhCgRyb2xlGAMgASgOMhMuZWxyaS52MS5zcGFjZS5Sb2xlEisKCWF1dGhvcml0eRgEIAEoDjIYLmVscmkudjEuc3BhY2UuQXV0aG9yaXR5EhAKCGxhc3Rfc2VxGAUgASgDEhYKDnJldGVudGlvbl9kYXlzGAYgASgFKl4KBFJvbGUSFAoQUk9MRV9VTlNQRUNJRklFRBAAEg4KClJPTEVfT1dORVIQARIOCgpST0xFX0FETUlOEAISDwoLUk9MRV9FRElUT1IQAxIPCgtST0xFX1ZJRVdFUhAEKlEKCUF1dGhvcml0eRIZChVBVVRIT1JJVFlfVU5TUEVDSUZJRUQQABITCg9BVVRIT1JJVFlfTE9DQUwQARIUChBBVVRIT1JJVFlfU0VSVkVSEAJiBnByb3RvMw");
+  fileDesc("ChplbHJpL3YxL3NwYWNlL2RvbWFpbi5wcm90bxINZWxyaS52MS5zcGFjZSKbAQoFU3BhY2USCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRIhCgRyb2xlGAMgASgOMhMuZWxyaS52MS5zcGFjZS5Sb2xlEisKCWF1dGhvcml0eRgEIAEoDjIYLmVscmkudjEuc3BhY2UuQXV0aG9yaXR5EhAKCGxhc3Rfc2VxGAUgASgDEhYKDnJldGVudGlvbl9kYXlzGAYgASgFInsKDFRyYW5zZmVyUnVsZRIlCgJvcBgBIAEoDjIZLmVscmkudjEuc3BhY2UuVHJhbnNmZXJPcBITCgtkZXN0aW5hdGlvbhgCIAEoCRIvCgdvdXRjb21lGAMgASgOMh4uZWxyaS52MS5zcGFjZS5UcmFuc2Zlck91dGNvbWUiZQoOVHJhbnNmZXJQb2xpY3kSEAoIc3BhY2VfaWQYASABKAkSKgoFcnVsZXMYAiADKAsyGy5lbHJpLnYxLnNwYWNlLlRyYW5zZmVyUnVsZRIVCg11cGRhdGVkX2F0X21zGAMgASgDKl4KBFJvbGUSFAoQUk9MRV9VTlNQRUNJRklFRBAAEg4KClJPTEVfT1dORVIQARIOCgpST0xFX0FETUlOEAISDwoLUk9MRV9FRElUT1IQAxIPCgtST0xFX1ZJRVdFUhAEKlEKCUF1dGhvcml0eRIZChVBVVRIT1JJVFlfVU5TUEVDSUZJRUQQABITCg9BVVRIT1JJVFlfTE9DQUwQARIUChBBVVRIT1JJVFlfU0VSVkVSEAIqcQoKVHJhbnNmZXJPcBIbChdUUkFOU0ZFUl9PUF9VTlNQRUNJRklFRBAAEhQKEFRSQU5TRkVSX09QX0NPUFkQARIWChJUUkFOU0ZFUl9PUF9FWFBPUlQQAhIYChRUUkFOU0ZFUl9PUF9FWFRFUk5BTBADKoQBCg9UcmFuc2Zlck91dGNvbWUSIAocVFJBTlNGRVJfT1VUQ09NRV9VTlNQRUNJRklFRBAAEhoKFlRSQU5TRkVSX09VVENPTUVfQUxMT1cQARIYChRUUkFOU0ZFUl9PVVRDT01FX0FTSxACEhkKFVRSQU5TRkVSX09VVENPTUVfREVOWRADYgZwcm90bzM");
 
 /**
  * @generated from message elri.v1.space.Space
@@ -102,6 +102,116 @@ export const SpaceSchema: GenMessage<Space, {jsonType: SpaceJson}> = /*@__PURE__
   messageDesc(file_elri_v1_space_domain, 0);
 
 /**
+ * One rule of a Space's transfer policy. The rule naming the destination
+ * wins over the rule for any destination; among equals the later wins;
+ * without a rule the operation is allowed. 
+ *
+ * @generated from message elri.v1.space.TransferRule
+ */
+export type TransferRule = Message<"elri.v1.space.TransferRule"> & {
+  /**
+   * @generated from field: elri.v1.space.TransferOp op = 1;
+   */
+  op: TransferOp;
+
+  /**
+   * A Space id, `extension:<name>`, or empty for any destination. 
+   *
+   * @generated from field: string destination = 2;
+   */
+  destination: string;
+
+  /**
+   * @generated from field: elri.v1.space.TransferOutcome outcome = 3;
+   */
+  outcome: TransferOutcome;
+};
+
+/**
+ * One rule of a Space's transfer policy. The rule naming the destination
+ * wins over the rule for any destination; among equals the later wins;
+ * without a rule the operation is allowed. 
+ *
+ * @generated from message elri.v1.space.TransferRule
+ */
+export type TransferRuleJson = {
+  /**
+   * @generated from field: elri.v1.space.TransferOp op = 1;
+   */
+  op?: TransferOpJson;
+
+  /**
+   * A Space id, `extension:<name>`, or empty for any destination. 
+   *
+   * @generated from field: string destination = 2;
+   */
+  destination?: string;
+
+  /**
+   * @generated from field: elri.v1.space.TransferOutcome outcome = 3;
+   */
+  outcome?: TransferOutcomeJson;
+};
+
+/**
+ * Describes the message elri.v1.space.TransferRule.
+ * Use `create(TransferRuleSchema)` to create a new message.
+ */
+export const TransferRuleSchema: GenMessage<TransferRule, {jsonType: TransferRuleJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_space_domain, 1);
+
+/**
+ * The transfer rules of a Space: what may leave it, and where. 
+ *
+ * @generated from message elri.v1.space.TransferPolicy
+ */
+export type TransferPolicy = Message<"elri.v1.space.TransferPolicy"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: repeated elri.v1.space.TransferRule rules = 2;
+   */
+  rules: TransferRule[];
+
+  /**
+   * @generated from field: int64 updated_at_ms = 3;
+   */
+  updatedAtMs: bigint;
+};
+
+/**
+ * The transfer rules of a Space: what may leave it, and where. 
+ *
+ * @generated from message elri.v1.space.TransferPolicy
+ */
+export type TransferPolicyJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: repeated elri.v1.space.TransferRule rules = 2;
+   */
+  rules?: TransferRuleJson[];
+
+  /**
+   * @generated from field: int64 updated_at_ms = 3;
+   */
+  updatedAtMs?: string;
+};
+
+/**
+ * Describes the message elri.v1.space.TransferPolicy.
+ * Use `create(TransferPolicySchema)` to create a new message.
+ */
+export const TransferPolicySchema: GenMessage<TransferPolicy, {jsonType: TransferPolicyJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_space_domain, 2);
+
+/**
  * Role of the current user in a Space. 
  *
  * @generated from enum elri.v1.space.Role
@@ -184,4 +294,93 @@ export type AuthorityJson = "AUTHORITY_UNSPECIFIED" | "AUTHORITY_LOCAL" | "AUTHO
  */
 export const AuthoritySchema: GenEnum<Authority, AuthorityJson> = /*@__PURE__*/
   enumDesc(file_elri_v1_space_domain, 1);
+
+/**
+ * An operation a transfer rule governs. 
+ *
+ * @generated from enum elri.v1.space.TransferOp
+ */
+export enum TransferOp {
+  /**
+   * @generated from enum value: TRANSFER_OP_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * Writing what was read from this Space into another Space: a script
+   * or handler that read here and writes there, an import of a bundle
+   * exported from here, a move. 
+   *
+   * @generated from enum value: TRANSFER_OP_COPY = 1;
+   */
+  COPY = 1,
+
+  /**
+   * Exporting a bundle from this Space. 
+   *
+   * @generated from enum value: TRANSFER_OP_EXPORT = 2;
+   */
+  EXPORT = 2,
+
+  /**
+   * Passing what was read from this Space to code outside the core: an
+   * extension function. 
+   *
+   * @generated from enum value: TRANSFER_OP_EXTERNAL = 3;
+   */
+  EXTERNAL = 3,
+}
+
+/**
+ * An operation a transfer rule governs. 
+ *
+ * @generated from enum elri.v1.space.TransferOp
+ */
+export type TransferOpJson = "TRANSFER_OP_UNSPECIFIED" | "TRANSFER_OP_COPY" | "TRANSFER_OP_EXPORT" | "TRANSFER_OP_EXTERNAL";
+
+/**
+ * Describes the enum elri.v1.space.TransferOp.
+ */
+export const TransferOpSchema: GenEnum<TransferOp, TransferOpJson> = /*@__PURE__*/
+  enumDesc(file_elri_v1_space_domain, 2);
+
+/**
+ * @generated from enum elri.v1.space.TransferOutcome
+ */
+export enum TransferOutcome {
+  /**
+   * @generated from enum value: TRANSFER_OUTCOME_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: TRANSFER_OUTCOME_ALLOW = 1;
+   */
+  ALLOW = 1,
+
+  /**
+   * The user must confirm each time; code cannot. 
+   *
+   * @generated from enum value: TRANSFER_OUTCOME_ASK = 2;
+   */
+  ASK = 2,
+
+  /**
+   * Mandatory: no confirmation overrides it. 
+   *
+   * @generated from enum value: TRANSFER_OUTCOME_DENY = 3;
+   */
+  DENY = 3,
+}
+
+/**
+ * @generated from enum elri.v1.space.TransferOutcome
+ */
+export type TransferOutcomeJson = "TRANSFER_OUTCOME_UNSPECIFIED" | "TRANSFER_OUTCOME_ALLOW" | "TRANSFER_OUTCOME_ASK" | "TRANSFER_OUTCOME_DENY";
+
+/**
+ * Describes the enum elri.v1.space.TransferOutcome.
+ */
+export const TransferOutcomeSchema: GenEnum<TransferOutcome, TransferOutcomeJson> = /*@__PURE__*/
+  enumDesc(file_elri_v1_space_domain, 3);
 

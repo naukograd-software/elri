@@ -56,7 +56,10 @@ use elri_proto::elri::v1::search::search_service_ws::SearchServiceClient;
 use elri_proto::elri::v1::search::SearchRequest;
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::Role;
-use elri_proto::elri::v1::space::{CreateSpaceRequest, ListSpacesRequest};
+use elri_proto::elri::v1::space::{
+    CreateSpaceRequest, GetTransferPolicyRequest, ListSpacesRequest, SetTransferPolicyRequest,
+    TransferOp, TransferOutcome, TransferPolicy, TransferRule,
+};
 use elri_proto::elri::v1::transfer::transfer_service_ws::TransferServiceClient;
 use elri_proto::elri::v1::transfer::{
     ExportObjectsRequest, ImportObjectsRequest, MoveObjectsRequest,
@@ -457,6 +460,9 @@ enum TransferCmd {
         /// Also what they refer to within the Space.
         #[arg(long)]
         deps: bool,
+        /// Confirm, for a transfer policy that asks.
+        #[arg(long)]
+        confirm: bool,
         ids: Vec<String>,
     },
     /// Import a bundle file as copies with fresh ids.
@@ -467,6 +473,9 @@ enum TransferCmd {
         /// Keep the original ids (refused if any is taken).
         #[arg(long)]
         keep_ids: bool,
+        /// Confirm, for a transfer policy of the origin that asks.
+        #[arg(long)]
+        confirm: bool,
     },
     /// Move Objects between two local Spaces, keeping their ids.
     Move {
@@ -474,6 +483,9 @@ enum TransferCmd {
         from: String,
         #[arg(long)]
         to: String,
+        /// Confirm, for a transfer policy of the source that asks.
+        #[arg(long)]
+        confirm: bool,
         ids: Vec<String>,
     },
 }
@@ -679,6 +691,49 @@ enum SpaceCmd {
         /// Display name.
         name: String,
     },
+    /// Show the transfer rules of a Space, or replace them with --rule.
+    Policy {
+        #[arg(long)]
+        space: String,
+        /// `OP:DEST:OUTCOME`: op copy|export|external, dest a space id,
+        /// `extension:NAME` or `*`, outcome allow|ask|deny. Repeatable;
+        /// given at all, the rules replace the current ones.
+        #[arg(long = "rule", value_parser = parse_rule)]
+        rules: Vec<TransferRule>,
+        /// Replace the rules with none.
+        #[arg(long)]
+        clear: bool,
+    },
+}
+
+fn parse_rule(s: &str) -> Result<TransferRule, String> {
+    let mut parts = s.splitn(3, ':');
+    let op = parts.next().unwrap_or_default();
+    let dest = parts.next().ok_or("rule needs OP:DEST:OUTCOME")?;
+    let outcome = parts.next().ok_or("rule needs OP:DEST:OUTCOME")?;
+    let op = parse_enum("TRANSFER_OP", op, TransferOp::from_str_name)?;
+    let outcome = parse_enum("TRANSFER_OUTCOME", outcome, TransferOutcome::from_str_name)?;
+    Ok(TransferRule {
+        op: op.into(),
+        destination: if dest == "*" {
+            String::new()
+        } else {
+            dest.to_owned()
+        },
+        outcome: outcome.into(),
+    })
+}
+
+fn policy_json(p: &TransferPolicy) -> serde_json::Value {
+    json!({
+        "space_id": p.space_id,
+        "updated_at_ms": p.updated_at_ms,
+        "rules": p.rules.iter().map(|r| json!({
+            "op": r.op().as_str_name().trim_start_matches("TRANSFER_OP_").to_lowercase(),
+            "destination": if r.destination.is_empty() { "*" } else { r.destination.as_str() },
+            "outcome": r.outcome().as_str_name().trim_start_matches("TRANSFER_OUTCOME_").to_lowercase(),
+        })).collect::<Vec<_>>(),
+    })
 }
 
 /// Parses a protocol enum from its short lowercase name (`entity`,
@@ -1678,6 +1733,7 @@ async fn run_transfer(
             space,
             out,
             deps,
+            confirm,
             ids,
         } => {
             let res = client
@@ -1687,6 +1743,7 @@ async fn run_transfer(
                         space_id: space,
                         ids,
                         with_dependencies: deps,
+                        confirm,
                     },
                 ))
                 .await?
@@ -1698,6 +1755,7 @@ async fn run_transfer(
             space,
             file,
             keep_ids,
+            confirm,
         } => {
             let bundle = std::fs::read(&file)?;
             let res = client
@@ -1707,6 +1765,7 @@ async fn run_transfer(
                         space_id: space,
                         bundle: bundle.into(),
                         keep_ids,
+                        confirm,
                     },
                 ))
                 .await?
@@ -1716,7 +1775,12 @@ async fn run_transfer(
                 "objects": res.objects.iter().map(object_json).collect::<Vec<_>>(),
             }))
         }
-        TransferCmd::Move { from, to, ids } => {
+        TransferCmd::Move {
+            from,
+            to,
+            confirm,
+            ids,
+        } => {
             let res = client
                 .move_objects(authed(
                     endpoint,
@@ -1724,6 +1788,7 @@ async fn run_transfer(
                         source_space_id: from,
                         dest_space_id: to,
                         ids,
+                        confirm,
                     },
                 ))
                 .await?
@@ -2297,6 +2362,35 @@ async fn run_space(endpoint: &Endpoint, conn: Client, cmd: SpaceCmd) -> Result<s
                 bail!("core returned no space");
             };
             Ok(json!({ "id": s.id, "name": s.name }))
+        }
+        SpaceCmd::Policy {
+            space,
+            rules,
+            clear,
+        } => {
+            let policy = if rules.is_empty() && !clear {
+                client
+                    .get_transfer_policy(authed(
+                        endpoint,
+                        GetTransferPolicyRequest { space_id: space },
+                    ))
+                    .await?
+                    .msg
+                    .policy
+            } else {
+                client
+                    .set_transfer_policy(authed(
+                        endpoint,
+                        SetTransferPolicyRequest {
+                            space_id: space,
+                            rules,
+                        },
+                    ))
+                    .await?
+                    .msg
+                    .policy
+            };
+            Ok(policy.as_ref().map_or(serde_json::Value::Null, policy_json))
         }
     }
 }

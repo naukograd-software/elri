@@ -461,7 +461,8 @@ impl SyncServiceHandler for State {
             }
         }
         // An accepted attachment must name bytes this server holds; a strict
-        // constraint may only be set by an Owner or Admin of its Space.
+        // constraint or a transfer policy may only be set by an Owner or
+        // Admin of its Space.
         let blobs = self.blobs.clone();
         let mut managers: Vec<Uuid> = Vec::new();
         for space_id in &spaces {
@@ -478,6 +479,12 @@ impl SyncServiceHandler for State {
         // envelope says about its device.
         let owner = user.id.to_string();
         let check = move |o: &elri_proto::elri::v1::object::Object| -> Result<(), String> {
+            if o.kind() == elri_proto::elri::v1::object::ObjectKind::TransferPolicy {
+                let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
+                if !managers.contains(&space.uuid()) {
+                    return Err("a transfer policy needs an owner or admin".to_owned());
+                }
+            }
             if let Some(c) = elri_core::model::constraint_of(o) {
                 let space = ObjectId::parse(&o.space_id).map_err(|e| e.to_string())?;
                 if c.strict && !managers.contains(&space.uuid()) {

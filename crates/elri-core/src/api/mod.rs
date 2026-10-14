@@ -56,15 +56,18 @@ use elri_proto::elri::v1::space::space_service_ws::{
     register_space_service_arc, SpaceServiceHandler,
 };
 use elri_proto::elri::v1::space::{
-    Authority, CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse,
-    SetRetentionRequest, SetRetentionResponse,
+    Authority, CreateSpaceRequest, CreateSpaceResponse, GetTransferPolicyRequest,
+    GetTransferPolicyResponse, ListSpacesRequest, ListSpacesResponse, SetRetentionRequest,
+    SetRetentionResponse, SetTransferPolicyRequest, SetTransferPolicyResponse, TransferPolicy,
 };
 use ws_proto::server::{Handler, OriginPolicy};
 use ws_proto::{Code, Request, Response, Server, ServerConfig, Status};
 
 use crate::device::{DeviceId, LaunchToken};
 use crate::model::SpaceId;
-use crate::model::{is_managed, is_scalar, kind_accepts, now_ms, ModelError, ObjectDoc, ObjectId};
+use crate::model::{
+    is_managed, is_scalar, kind_accepts, now_ms, string_value, ModelError, ObjectDoc, ObjectId,
+};
 use crate::remote::{Remote, RemoteError};
 use crate::store::{Edit, ObjectFilter, SpaceStore, Store, StoreError};
 use crate::BuildInfo;
@@ -353,6 +356,66 @@ impl SpaceServiceHandler for Services {
             .set_retention_days(i64::from(req.msg.days))
             .await?;
         Ok(Response::new(SetRetentionResponse { days: req.msg.days }))
+    }
+
+    async fn get_transfer_policy(
+        &self,
+        req: Request<GetTransferPolicyRequest>,
+    ) -> Result<Response<GetTransferPolicyResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let policy = crate::policy::policy_object(&self.store, space_id)
+            .await?
+            .as_ref()
+            .map_or_else(
+                || TransferPolicy {
+                    space_id: space_id.to_string(),
+                    rules: Vec::new(),
+                    updated_at_ms: 0,
+                },
+                crate::policy::policy_of,
+            );
+        Ok(Response::new(GetTransferPolicyResponse {
+            policy: Some(policy),
+        }))
+    }
+
+    async fn set_transfer_policy(
+        &self,
+        req: Request<SetTransferPolicyRequest>,
+    ) -> Result<Response<SetTransferPolicyResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        for r in &req.msg.rules {
+            crate::policy::check_rule(r).map_err(invalid)?;
+        }
+        let rules = crate::policy::rules_json(&req.msg.rules);
+        let space = self.store.space(space_id).await?;
+        // One policy Object per Space: rewrite it, or create the first.
+        let rec = match crate::policy::policy_object(&self.store, space_id).await? {
+            Some(existing) => {
+                let id = parse_id(&existing.id, "policy id")?;
+                space
+                    .update(id, move |doc| {
+                        doc.set_field(crate::model::reserved::RULES, &string_value(rules))
+                    })
+                    .await?
+            }
+            None => {
+                let doc = ObjectDoc::create(
+                    ObjectId::new(),
+                    space_id,
+                    ObjectKind::TransferPolicy,
+                    now_ms(),
+                )
+                .map_err(StoreError::from)?;
+                doc.set_field(crate::model::reserved::RULES, &string_value(rules))
+                    .map_err(StoreError::from)?;
+                doc.touch(now_ms()).map_err(StoreError::from)?;
+                space.insert(&doc).await?
+            }
+        };
+        Ok(Response::new(SetTransferPolicyResponse {
+            policy: Some(crate::policy::policy_of(&rec)),
+        }))
     }
 
     async fn create_space(

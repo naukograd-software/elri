@@ -21,8 +21,10 @@ use sha2::{Digest as _, Sha256};
 use crate::model::{
     int_field, now_ms, reserved, string_field, text_value, ObjectDoc, ObjectId, SpaceId,
 };
+use crate::policy;
 use crate::store::workflows::step as st;
 use crate::store::{ObjectFilter, Store, StoreError};
+use elri_proto::elri::v1::space::TransferOp;
 
 /// Reserved field: the Luau source.
 pub const SOURCE: &str = "$source";
@@ -66,6 +68,9 @@ pub enum ScriptError {
     /// A workflow run is not in a state that allows the request.
     #[error("workflow: {0}")]
     Workflow(String),
+    /// A transfer policy refused the operation.
+    #[error("{0}")]
+    Policy(String),
 }
 
 /// Hex SHA-256 over source and manifest: what a grant is bound to.
@@ -721,11 +726,15 @@ impl Host {
                 let actor = actor_c.clone();
                 async move {
                     let space = space_arg(space.as_deref(), own)?;
-                    {
+                    let labels = {
                         let mut g = a.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
                         g.charge().map_err(to_lua)?;
                         g.may_write(space).map_err(to_lua)?;
-                    }
+                        g.labels.clone()
+                    };
+                    policy::check_labels(&store, &labels, TransferOp::Copy, &space.to_string())
+                        .await
+                        .map_err(|e| to_lua(ScriptError::Policy(e)))?;
                     let doc = doc_from_lua(&spec, space)?;
                     let rec = store
                         .space(space)
@@ -752,11 +761,15 @@ impl Host {
                     let actor = actor_u.clone();
                     async move {
                         let space = space_arg(space.as_deref(), own)?;
-                        {
+                        let labels = {
                             let mut g = a.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
                             g.charge().map_err(to_lua)?;
                             g.may_write(space).map_err(to_lua)?;
-                        }
+                            g.labels.clone()
+                        };
+                        policy::check_labels(&store, &labels, TransferOp::Copy, &space.to_string())
+                            .await
+                            .map_err(|e| to_lua(ScriptError::Policy(e)))?;
                         let id = id_arg(&id)?;
                         let edit = edit_from_lua(&spec)?;
                         let rec = store
@@ -914,7 +927,7 @@ impl Host {
                                 "extensions are disabled in a preview".to_owned(),
                             )));
                         }
-                        {
+                        let labels = {
                             let mut g = a.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
                             g.charge().map_err(to_lua)?;
                             if !g.manifest.extensions.contains(&name) {
@@ -922,7 +935,18 @@ impl Host {
                                     "extension {name}"
                                 ))));
                             }
-                        }
+                            g.labels.clone()
+                        };
+                        // What the script read so far is about to leave the
+                        // core: every Space read must allow it.
+                        policy::check_labels(
+                            &store,
+                            &labels,
+                            TransferOp::External,
+                            &format!("extension:{name}"),
+                        )
+                        .await
+                        .map_err(|e| to_lua(ScriptError::Policy(e)))?;
                         let rec =
                             store
                                 .extension(&name)

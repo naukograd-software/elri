@@ -15,6 +15,28 @@ service SpaceService {
     /* Local Spaces: how long deleted Objects stay recoverable before the
        core purges them. Server Spaces take the server's setting. */
     rpc SetRetention(SetRetentionRequest) returns (SetRetentionResponse);
+    /* The transfer rules of a Space: an Object of the Space, so every
+       device sees the same rules. Only an Owner or Admin may set them. */
+    rpc GetTransferPolicy(GetTransferPolicyRequest) returns (GetTransferPolicyResponse);
+    rpc SetTransferPolicy(SetTransferPolicyRequest) returns (SetTransferPolicyResponse);
+}
+
+message GetTransferPolicyRequest {
+    string space_id = 1;
+}
+
+message GetTransferPolicyResponse {
+    TransferPolicy policy = 1;
+}
+
+message SetTransferPolicyRequest {
+    string space_id = 1;
+    /* Replaces the rules. */
+    repeated TransferRule rules = 2;
+}
+
+message SetTransferPolicyResponse {
+    TransferPolicy policy = 1;
 }
 
 message SetRetentionRequest {

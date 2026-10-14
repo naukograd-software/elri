@@ -14,7 +14,7 @@ use prost::Message as _;
 use ws_proto::{Code, Request, Response, Server, Status};
 
 use super::{invalid, parse_id, Services};
-use crate::model::{now_ms, string_value, SpaceId};
+use crate::model::{now_ms, string_value, ObjectId, SpaceId};
 use crate::store::{Edit, StoreError};
 use crate::transfer::{self, TransferError};
 
@@ -29,6 +29,26 @@ impl From<TransferError> for Status {
             TransferError::Model(m) => StoreError::from(m).into(),
             TransferError::Bundle(_) => Status::new(Code::InvalidArgument, e.to_string()),
             TransferError::Exists(_) => Status::new(Code::AlreadyExists, e.to_string()),
+        }
+    }
+}
+
+/// A transfer policy's answer as a status: a denial is final, a request
+/// for confirmation names what to confirm.
+async fn policy_gate(
+    store: &crate::store::Store,
+    from: SpaceId,
+    op: elri_proto::elri::v1::space::TransferOp,
+    dest: &str,
+    confirmed: bool,
+) -> Result<(), Status> {
+    match crate::policy::check(store, from, op, dest, confirmed).await? {
+        Ok(()) => Ok(()),
+        Err(e @ crate::policy::PolicyError::Denied { .. }) => {
+            Err(Status::new(Code::PermissionDenied, e.to_string()))
+        }
+        Err(e @ crate::policy::PolicyError::Ask { .. }) => {
+            Err(Status::new(Code::FailedPrecondition, e.to_string()))
         }
     }
 }
@@ -81,6 +101,14 @@ impl TransferServiceHandler for Services {
         for id in &req.msg.ids {
             ids.push(parse_id(id, "ids")?);
         }
+        policy_gate(
+            &self.store,
+            space_id,
+            elri_proto::elri::v1::space::TransferOp::Export,
+            "",
+            req.msg.confirm,
+        )
+        .await?;
         let space = self.store.space(space_id).await?;
         let bundle = transfer::export(&space, &ids, req.msg.with_dependencies).await?;
         Ok(Response::new(ExportObjectsResponse {
@@ -98,6 +126,19 @@ impl TransferServiceHandler for Services {
             .map_err(|e| TransferError::Bundle(e.to_string()))?;
         if bundle.objects.is_empty() {
             return Err(invalid("the bundle is empty"));
+        }
+        // The origin's rules follow its data: an import is a copy from it.
+        if let Ok(from) = ObjectId::parse(&bundle.exported_from) {
+            if from != dest {
+                policy_gate(
+                    &self.store,
+                    from,
+                    elri_proto::elri::v1::space::TransferOp::Copy,
+                    &dest.to_string(),
+                    req.msg.confirm,
+                )
+                .await?;
+            }
         }
         let res = self
             .import_bundle(dest, &bundle, req.msg.keep_ids, true)
@@ -130,6 +171,14 @@ impl TransferServiceHandler for Services {
         for id in &req.msg.ids {
             ids.push(parse_id(id, "ids")?);
         }
+        policy_gate(
+            &self.store,
+            source,
+            elri_proto::elri::v1::space::TransferOp::Copy,
+            &dest.to_string(),
+            req.msg.confirm,
+        )
+        .await?;
         let from = self.store.space(source).await?;
         let bundle = transfer::export(&from, &ids, false).await?;
         let res = self.import_bundle(dest, &bundle, true, false).await?;

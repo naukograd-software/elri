@@ -27,7 +27,10 @@ use elri_proto::elri::v1::remote::{
     AddMemberRequest, ConnectRequest, CreateRemoteSpaceRequest, GetStatusRequest, JoinSpaceRequest,
     ListRemoteSpacesRequest,
 };
-use elri_proto::elri::v1::space::Role;
+use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
+use elri_proto::elri::v1::space::{
+    Role, SetTransferPolicyRequest, TransferOp, TransferOutcome, TransferRule,
+};
 use elri_server::{Config as ServerConfig, Server};
 use ws_proto::{Client, ClientConfig, Request};
 
@@ -56,6 +59,7 @@ struct Device {
     changes: ChangeServiceClient,
     attachments: AttachmentServiceClient,
     defs: DefinitionServiceClient,
+    spaces: SpaceServiceClient,
 }
 
 impl Device {
@@ -75,7 +79,8 @@ impl Device {
             remote: RemoteServiceClient::new(conn.clone()),
             changes: ChangeServiceClient::new(conn.clone()),
             attachments: AttachmentServiceClient::new(conn.clone()),
-            defs: DefinitionServiceClient::new(conn),
+            defs: DefinitionServiceClient::new(conn.clone()),
+            spaces: SpaceServiceClient::new(conn),
         }
     }
 
@@ -619,6 +624,66 @@ async fn changes_flow_between_devices_through_the_server() {
         },
     )
     .await;
+    // A transfer policy is an owner's or admin's to set: Bob's is rejected,
+    // Alice's lands on Bob's device.
+    let bobs_policy = b
+        .spaces
+        .set_transfer_policy(b.authed(SetTransferPolicyRequest {
+            space_id: space.id.clone(),
+            rules: vec![TransferRule {
+                op: TransferOp::Export.into(),
+                destination: String::new(),
+                outcome: TransferOutcome::Deny.into(),
+            }],
+        }))
+        .await
+        .expect("local write succeeds")
+        .msg
+        .policy
+        .expect("policy");
+    eventually("bob's policy to be rejected by the server", || async {
+        b.objects
+            .list_objects(b.authed(ListObjectsRequest {
+                space_id: space.id.clone(),
+                kind: ObjectKind::TransferPolicy.into(),
+                ..Default::default()
+            }))
+            .await
+            .is_ok_and(|r| r.msg.objects.is_empty())
+    })
+    .await;
+    assert_eq!(bobs_policy.rules.len(), 1);
+    let alices_policy = a
+        .spaces
+        .set_transfer_policy(a.authed(SetTransferPolicyRequest {
+            space_id: space.id.clone(),
+            rules: vec![TransferRule {
+                op: TransferOp::Export.into(),
+                destination: String::new(),
+                outcome: TransferOutcome::Ask.into(),
+            }],
+        }))
+        .await
+        .expect("owner sets policy")
+        .msg
+        .policy
+        .expect("policy");
+    eventually("alice's policy to reach bob", || async {
+        b.spaces
+            .get_transfer_policy(
+                b.authed(elri_proto::elri::v1::space::GetTransferPolicyRequest {
+                    space_id: space.id.clone(),
+                }),
+            )
+            .await
+            .is_ok_and(|r| {
+                r.msg.policy.is_some_and(|p| {
+                    p.updated_at_ms == alices_policy.updated_at_ms && p.rules.len() == 1
+                })
+            })
+    })
+    .await;
+
     let strict = a
         .defs
         .create_constraint(a.authed(CreateConstraintRequest {

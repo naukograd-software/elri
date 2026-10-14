@@ -176,6 +176,8 @@ pub enum ObjectKind {
     Constraint = 13,
     /// A reusable interface subtree with parameters. 
     Component = 14,
+    /// The transfer rules of a Space; one per Space, set by its managers. 
+    TransferPolicy = 15,
 }
 impl ObjectKind {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -199,6 +201,7 @@ impl ObjectKind {
             Self::Context => "OBJECT_KIND_CONTEXT",
             Self::Constraint => "OBJECT_KIND_CONSTRAINT",
             Self::Component => "OBJECT_KIND_COMPONENT",
+            Self::TransferPolicy => "OBJECT_KIND_TRANSFER_POLICY",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -219,6 +222,7 @@ impl ObjectKind {
             "OBJECT_KIND_CONTEXT" => Some(Self::Context),
             "OBJECT_KIND_CONSTRAINT" => Some(Self::Constraint),
             "OBJECT_KIND_COMPONENT" => Some(Self::Component),
+            "OBJECT_KIND_TRANSFER_POLICY" => Some(Self::TransferPolicy),
             _ => None,
         }
     }

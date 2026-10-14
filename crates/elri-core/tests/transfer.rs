@@ -195,6 +195,7 @@ async fn export_import_rewrites_references_and_move_keeps_ids() {
         .export_objects(authed(
             &endpoint,
             ExportObjectsRequest {
+                confirm: false,
                 space_id: src.clone(),
                 ids: vec![layer.id.clone(), rel.id.clone()],
                 with_dependencies: true,
@@ -209,6 +210,7 @@ async fn export_import_rewrites_references_and_move_keeps_ids() {
         .import_objects(authed(
             &endpoint,
             ImportObjectsRequest {
+                confirm: false,
                 space_id: dst.clone(),
                 bundle: exported.bundle.clone(),
                 keep_ids: false,
@@ -268,6 +270,7 @@ async fn export_import_rewrites_references_and_move_keeps_ids() {
         .import_objects(authed(
             &endpoint,
             ImportObjectsRequest {
+                confirm: false,
                 space_id: dst.clone(),
                 bundle: exported.bundle.clone(),
                 keep_ids: true,
@@ -281,6 +284,7 @@ async fn export_import_rewrites_references_and_move_keeps_ids() {
         .import_objects(authed(
             &endpoint,
             ImportObjectsRequest {
+                confirm: false,
                 space_id: dst.clone(),
                 bundle: exported.bundle.clone(),
                 keep_ids: true,
@@ -296,6 +300,7 @@ async fn export_import_rewrites_references_and_move_keeps_ids() {
         .move_objects(authed(
             &endpoint,
             MoveObjectsRequest {
+                confirm: false,
                 source_space_id: src.clone(),
                 dest_space_id: third.clone(),
                 ids: vec![block.id.clone()],

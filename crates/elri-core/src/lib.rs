@@ -22,6 +22,7 @@ pub mod device;
 pub mod extension;
 pub mod hostops;
 pub mod model;
+pub mod policy;
 pub mod remote;
 pub mod rules;
 pub mod script;

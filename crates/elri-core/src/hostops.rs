@@ -57,6 +57,17 @@ impl Session {
         Ok(())
     }
 
+    /// Every Space read so far must allow copying into `space`.
+    async fn may_copy_to(&self, space: SpaceId) -> Result<(), String> {
+        crate::policy::check_labels(
+            &self.store,
+            &self.labels,
+            elri_proto::elri::v1::space::TransferOp::Copy,
+            &space.to_string(),
+        )
+        .await
+    }
+
     /// Runs one operation. The request is `{"op": ..., ...}`; the result
     /// is `{"ok": ...}` or `{"error": "..."}`.
     pub async fn call(&mut self, req: &Json) -> Json {
@@ -163,6 +174,7 @@ impl Session {
             "create" => {
                 let space = self.space_of(req)?;
                 self.may_write(space)?;
+                self.may_copy_to(space).await?;
                 let doc = doc_from_json(req, space)?;
                 let rec = self
                     .store
@@ -177,6 +189,7 @@ impl Session {
             "update" => {
                 let space = self.space_of(req)?;
                 self.may_write(space)?;
+                self.may_copy_to(space).await?;
                 let set = fields_from_json(req.get("fields"))?;
                 let remove: Vec<String> = strings(req.get("remove_fields"));
                 let add_types: Vec<String> = strings(req.get("add_types"));

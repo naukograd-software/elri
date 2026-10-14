@@ -100,6 +100,7 @@ pub fn is_managed(kind: ObjectKind) -> bool {
                 | ObjectKind::Context
                 | ObjectKind::Constraint
                 | ObjectKind::Component
+                | ObjectKind::TransferPolicy
         )
 }
 
@@ -250,6 +251,8 @@ pub mod reserved {
     pub const UNIQUE: &str = "$unique";
     /// Constraints: refuse writes instead of reporting.
     pub const STRICT: &str = "$strict";
+    /// Transfer policies: the rules as JSON.
+    pub const RULES: &str = "$rules";
 }
 
 const REF_TAG: &str = "$ref";

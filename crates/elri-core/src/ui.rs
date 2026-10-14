@@ -27,6 +27,8 @@ pub const CATALOG_FIELD: &str = "$catalog";
 pub const CATALOG_VERSION: i32 = 1;
 /// Deepest nesting of components inside components.
 pub const MAX_COMPONENT_DEPTH: usize = 4;
+/// Most nodes an expanded tree may hold, placements included.
+pub const MAX_EXPANDED_NODES: usize = 2000;
 
 /// Node types the renderer draws.
 pub const CATALOG: &[&str] = &[

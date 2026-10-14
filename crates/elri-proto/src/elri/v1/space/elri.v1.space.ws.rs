@@ -25,6 +25,14 @@ pub mod space_service_ws {
         route: "/elri.v1.space.SpaceService/SetRetention",
         kind: StreamKind::Unary,
     };
+    pub const GET_TRANSFER_POLICY: MethodSpec = MethodSpec {
+        route: "/elri.v1.space.SpaceService/GetTransferPolicy",
+        kind: StreamKind::Unary,
+    };
+    pub const SET_TRANSFER_POLICY: MethodSpec = MethodSpec {
+        route: "/elri.v1.space.SpaceService/SetTransferPolicy",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `SpaceService` service. Implement with `async fn`.
     pub trait SpaceServiceHandler: Send + Sync + 'static {
         fn list_spaces(
@@ -47,6 +55,20 @@ pub mod space_service_ws {
             req: Request<super::SetRetentionRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::SetRetentionResponse>, Status>,
+        > + Send;
+        ///  The transfer rules of a Space: an Object of the Space, so every
+        /// device sees the same rules. Only an Owner or Admin may set them.
+        fn get_transfer_policy(
+            &self,
+            req: Request<super::GetTransferPolicyRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::GetTransferPolicyResponse>, Status>,
+        > + Send;
+        fn set_transfer_policy(
+            &self,
+            req: Request<super::SetTransferPolicyRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::SetTransferPolicyResponse>, Status>,
         > + Send;
     }
     /// Registers `handler` on `server` for every `SpaceService` method.
@@ -91,6 +113,28 @@ pub mod space_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    GET_TRANSFER_POLICY.route,
+                    move |req: Request<super::GetTransferPolicyRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.get_transfer_policy(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    SET_TRANSFER_POLICY.route,
+                    move |req: Request<super::SetTransferPolicyRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.set_transfer_policy(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `SpaceService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -125,6 +169,20 @@ pub mod space_service_ws {
             req: impl Into<Request<super::SetRetentionRequest>>,
         ) -> Result<Response<super::SetRetentionResponse>, Status> {
             self.conn.invoke_unary(SET_RETENTION, req.into()).await
+        }
+        ///  The transfer rules of a Space: an Object of the Space, so every
+        /// device sees the same rules. Only an Owner or Admin may set them.
+        pub async fn get_transfer_policy(
+            &self,
+            req: impl Into<Request<super::GetTransferPolicyRequest>>,
+        ) -> Result<Response<super::GetTransferPolicyResponse>, Status> {
+            self.conn.invoke_unary(GET_TRANSFER_POLICY, req.into()).await
+        }
+        pub async fn set_transfer_policy(
+            &self,
+            req: impl Into<Request<super::SetTransferPolicyRequest>>,
+        ) -> Result<Response<super::SetTransferPolicyResponse>, Status> {
+            self.conn.invoke_unary(SET_TRANSFER_POLICY, req.into()).await
         }
     }
 }

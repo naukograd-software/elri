@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/transfer/transfer.proto.
  */
 export const file_elri_v1_transfer_transfer: GenFile = /*@__PURE__*/
-  fileDesc("Ch9lbHJpL3YxL3RyYW5zZmVyL3RyYW5zZmVyLnByb3RvEhBlbHJpLnYxLnRyYW5zZmVyIisKCE5vZGVMaXN0Eh8KBW5vZGVzGAEgAygLMhAuZWxyaS52MS51aS5Ob2RlIvoBCgZCdW5kbGUSFQoNZXhwb3J0ZWRfZnJvbRgBIAEoCRIWCg5leHBvcnRlZF9hdF9tcxgCIAEoAxInCgdvYmplY3RzGAMgAygLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0EkUKD2ludGVyZmFjZV9ub2RlcxgEIAMoCzIsLmVscmkudjEudHJhbnNmZXIuQnVuZGxlLkludGVyZmFjZU5vZGVzRW50cnkaUQoTSW50ZXJmYWNlTm9kZXNFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5lbHJpLnYxLnRyYW5zZmVyLk5vZGVMaXN0OgI4ASJQChRFeHBvcnRPYmplY3RzUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRILCgNpZHMYAiADKAkSGQoRd2l0aF9kZXBlbmRlbmNpZXMYAyABKAgiNgoVRXhwb3J0T2JqZWN0c1Jlc3BvbnNlEg4KBmJ1bmRsZRgBIAEoDBINCgVjb3VudBgCIAEoBSJKChRJbXBvcnRPYmplY3RzUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIOCgZidW5kbGUYAiABKAwSEAoIa2VlcF9pZHMYAyABKAgiqwEKFUltcG9ydE9iamVjdHNSZXNwb25zZRI9CgNpZHMYASADKAsyMC5lbHJpLnYxLnRyYW5zZmVyLkltcG9ydE9iamVjdHNSZXNwb25zZS5JZHNFbnRyeRInCgdvYmplY3RzGAIgAygLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0GioKCElkc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiUQoSTW92ZU9iamVjdHNSZXF1ZXN0EhcKD3NvdXJjZV9zcGFjZV9pZBgBIAEoCRIVCg1kZXN0X3NwYWNlX2lkGAIgASgJEgsKA2lkcxgDIAMoCSI+ChNNb3ZlT2JqZWN0c1Jlc3BvbnNlEicKB29iamVjdHMYASADKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QysQIKD1RyYW5zZmVyU2VydmljZRJgCg1FeHBvcnRPYmplY3RzEiYuZWxyaS52MS50cmFuc2Zlci5FeHBvcnRPYmplY3RzUmVxdWVzdBonLmVscmkudjEudHJhbnNmZXIuRXhwb3J0T2JqZWN0c1Jlc3BvbnNlEmAKDUltcG9ydE9iamVjdHMSJi5lbHJpLnYxLnRyYW5zZmVyLkltcG9ydE9iamVjdHNSZXF1ZXN0GicuZWxyaS52MS50cmFuc2Zlci5JbXBvcnRPYmplY3RzUmVzcG9uc2USWgoLTW92ZU9iamVjdHMSJC5lbHJpLnYxLnRyYW5zZmVyLk1vdmVPYmplY3RzUmVxdWVzdBolLmVscmkudjEudHJhbnNmZXIuTW92ZU9iamVjdHNSZXNwb25zZWIGcHJvdG8z", [file_elri_v1_object_domain, file_elri_v1_ui_domain]);
+  fileDesc("Ch9lbHJpL3YxL3RyYW5zZmVyL3RyYW5zZmVyLnByb3RvEhBlbHJpLnYxLnRyYW5zZmVyIisKCE5vZGVMaXN0Eh8KBW5vZGVzGAEgAygLMhAuZWxyaS52MS51aS5Ob2RlIvoBCgZCdW5kbGUSFQoNZXhwb3J0ZWRfZnJvbRgBIAEoCRIWCg5leHBvcnRlZF9hdF9tcxgCIAEoAxInCgdvYmplY3RzGAMgAygLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0EkUKD2ludGVyZmFjZV9ub2RlcxgEIAMoCzIsLmVscmkudjEudHJhbnNmZXIuQnVuZGxlLkludGVyZmFjZU5vZGVzRW50cnkaUQoTSW50ZXJmYWNlTm9kZXNFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5lbHJpLnYxLnRyYW5zZmVyLk5vZGVMaXN0OgI4ASJhChRFeHBvcnRPYmplY3RzUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRILCgNpZHMYAiADKAkSGQoRd2l0aF9kZXBlbmRlbmNpZXMYAyABKAgSDwoHY29uZmlybRgEIAEoCCI2ChVFeHBvcnRPYmplY3RzUmVzcG9uc2USDgoGYnVuZGxlGAEgASgMEg0KBWNvdW50GAIgASgFIlsKFEltcG9ydE9iamVjdHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEg4KBmJ1bmRsZRgCIAEoDBIQCghrZWVwX2lkcxgDIAEoCBIPCgdjb25maXJtGAQgASgIIqsBChVJbXBvcnRPYmplY3RzUmVzcG9uc2USPQoDaWRzGAEgAygLMjAuZWxyaS52MS50cmFuc2Zlci5JbXBvcnRPYmplY3RzUmVzcG9uc2UuSWRzRW50cnkSJwoHb2JqZWN0cxgCIAMoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdBoqCghJZHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBImIKEk1vdmVPYmplY3RzUmVxdWVzdBIXCg9zb3VyY2Vfc3BhY2VfaWQYASABKAkSFQoNZGVzdF9zcGFjZV9pZBgCIAEoCRILCgNpZHMYAyADKAkSDwoHY29uZmlybRgEIAEoCCI+ChNNb3ZlT2JqZWN0c1Jlc3BvbnNlEicKB29iamVjdHMYASADKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QysQIKD1RyYW5zZmVyU2VydmljZRJgCg1FeHBvcnRPYmplY3RzEiYuZWxyaS52MS50cmFuc2Zlci5FeHBvcnRPYmplY3RzUmVxdWVzdBonLmVscmkudjEudHJhbnNmZXIuRXhwb3J0T2JqZWN0c1Jlc3BvbnNlEmAKDUltcG9ydE9iamVjdHMSJi5lbHJpLnYxLnRyYW5zZmVyLkltcG9ydE9iamVjdHNSZXF1ZXN0GicuZWxyaS52MS50cmFuc2Zlci5JbXBvcnRPYmplY3RzUmVzcG9uc2USWgoLTW92ZU9iamVjdHMSJC5lbHJpLnYxLnRyYW5zZmVyLk1vdmVPYmplY3RzUmVxdWVzdBolLmVscmkudjEudHJhbnNmZXIuTW92ZU9iamVjdHNSZXNwb25zZWIGcHJvdG8z", [file_elri_v1_object_domain, file_elri_v1_ui_domain]);
 
 /**
  * @generated from message elri.v1.transfer.NodeList
@@ -129,6 +129,13 @@ export type ExportObjectsRequest = Message<"elri.v1.transfer.ExportObjectsReques
    * @generated from field: bool with_dependencies = 3;
    */
   withDependencies: boolean;
+
+  /**
+   * The user confirmed, for a transfer policy that asks. 
+   *
+   * @generated from field: bool confirm = 4;
+   */
+  confirm: boolean;
 };
 
 /**
@@ -152,6 +159,13 @@ export type ExportObjectsRequestJson = {
    * @generated from field: bool with_dependencies = 3;
    */
   withDependencies?: boolean;
+
+  /**
+   * The user confirmed, for a transfer policy that asks. 
+   *
+   * @generated from field: bool confirm = 4;
+   */
+  confirm?: boolean;
 };
 
 /**
@@ -223,6 +237,14 @@ export type ImportObjectsRequest = Message<"elri.v1.transfer.ImportObjectsReques
    * @generated from field: bool keep_ids = 3;
    */
   keepIds: boolean;
+
+  /**
+   * The user confirmed, for a transfer policy of the origin Space that
+   * asks. 
+   *
+   * @generated from field: bool confirm = 4;
+   */
+  confirm: boolean;
 };
 
 /**
@@ -246,6 +268,14 @@ export type ImportObjectsRequestJson = {
    * @generated from field: bool keep_ids = 3;
    */
   keepIds?: boolean;
+
+  /**
+   * The user confirmed, for a transfer policy of the origin Space that
+   * asks. 
+   *
+   * @generated from field: bool confirm = 4;
+   */
+  confirm?: boolean;
 };
 
 /**
@@ -314,6 +344,13 @@ export type MoveObjectsRequest = Message<"elri.v1.transfer.MoveObjectsRequest"> 
    * @generated from field: repeated string ids = 3;
    */
   ids: string[];
+
+  /**
+   * The user confirmed, for a transfer policy of the source that asks. 
+   *
+   * @generated from field: bool confirm = 4;
+   */
+  confirm: boolean;
 };
 
 /**
@@ -334,6 +371,13 @@ export type MoveObjectsRequestJson = {
    * @generated from field: repeated string ids = 3;
    */
   ids?: string[];
+
+  /**
+   * The user confirmed, for a transfer policy of the source that asks. 
+   *
+   * @generated from field: bool confirm = 4;
+   */
+  confirm?: boolean;
 };
 
 /**

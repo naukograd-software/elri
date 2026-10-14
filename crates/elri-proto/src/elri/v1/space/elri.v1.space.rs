@@ -18,6 +18,29 @@ pub struct Space {
     #[prost(int32, tag = "6")]
     pub retention_days: i32,
 }
+/// One rule of a Space's transfer policy. The rule naming the destination
+/// wins over the rule for any destination; among equals the later wins;
+/// without a rule the operation is allowed. 
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct TransferRule {
+    #[prost(enumeration = "TransferOp", tag = "1")]
+    pub op: i32,
+    /// A Space id, `extension:<name>`, or empty for any destination. 
+    #[prost(string, tag = "2")]
+    pub destination: ::prost::alloc::string::String,
+    #[prost(enumeration = "TransferOutcome", tag = "3")]
+    pub outcome: i32,
+}
+/// The transfer rules of a Space: what may leave it, and where. 
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct TransferPolicy {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag = "2")]
+    pub rules: ::prost::alloc::vec::Vec<TransferRule>,
+    #[prost(int64, tag = "3")]
+    pub updated_at_ms: i64,
+}
 /// Role of the current user in a Space. 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -85,6 +108,102 @@ impl Authority {
             _ => None,
         }
     }
+}
+/// An operation a transfer rule governs. 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum TransferOp {
+    Unspecified = 0,
+    /// Writing what was read from this Space into another Space: a script
+    /// or handler that read here and writes there, an import of a bundle
+    /// exported from here, a move. 
+    Copy = 1,
+    /// Exporting a bundle from this Space. 
+    Export = 2,
+    /// Passing what was read from this Space to code outside the core: an
+    /// extension function. 
+    External = 3,
+}
+impl TransferOp {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "TRANSFER_OP_UNSPECIFIED",
+            Self::Copy => "TRANSFER_OP_COPY",
+            Self::Export => "TRANSFER_OP_EXPORT",
+            Self::External => "TRANSFER_OP_EXTERNAL",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "TRANSFER_OP_UNSPECIFIED" => Some(Self::Unspecified),
+            "TRANSFER_OP_COPY" => Some(Self::Copy),
+            "TRANSFER_OP_EXPORT" => Some(Self::Export),
+            "TRANSFER_OP_EXTERNAL" => Some(Self::External),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum TransferOutcome {
+    Unspecified = 0,
+    Allow = 1,
+    /// The user must confirm each time; code cannot. 
+    Ask = 2,
+    /// Mandatory: no confirmation overrides it. 
+    Deny = 3,
+}
+impl TransferOutcome {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "TRANSFER_OUTCOME_UNSPECIFIED",
+            Self::Allow => "TRANSFER_OUTCOME_ALLOW",
+            Self::Ask => "TRANSFER_OUTCOME_ASK",
+            Self::Deny => "TRANSFER_OUTCOME_DENY",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "TRANSFER_OUTCOME_UNSPECIFIED" => Some(Self::Unspecified),
+            "TRANSFER_OUTCOME_ALLOW" => Some(Self::Allow),
+            "TRANSFER_OUTCOME_ASK" => Some(Self::Ask),
+            "TRANSFER_OUTCOME_DENY" => Some(Self::Deny),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetTransferPolicyRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetTransferPolicyResponse {
+    #[prost(message, optional, tag = "1")]
+    pub policy: ::core::option::Option<TransferPolicy>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SetTransferPolicyRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    /// Replaces the rules. 
+    #[prost(message, repeated, tag = "2")]
+    pub rules: ::prost::alloc::vec::Vec<TransferRule>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SetTransferPolicyResponse {
+    #[prost(message, optional, tag = "1")]
+    pub policy: ::core::option::Option<TransferPolicy>,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SetRetentionRequest {

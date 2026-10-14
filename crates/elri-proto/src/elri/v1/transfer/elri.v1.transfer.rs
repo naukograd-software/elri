@@ -28,6 +28,9 @@ pub struct ExportObjectsRequest {
     /// definitions, participants, blocks, targets, scripts. 
     #[prost(bool, tag = "3")]
     pub with_dependencies: bool,
+    /// The user confirmed, for a transfer policy that asks. 
+    #[prost(bool, tag = "4")]
+    pub confirm: bool,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ExportObjectsResponse {
@@ -47,6 +50,10 @@ pub struct ImportObjectsRequest {
     /// is already in the Space. For restoring definitions by identity. 
     #[prost(bool, tag = "3")]
     pub keep_ids: bool,
+    /// The user confirmed, for a transfer policy of the origin Space that
+    /// asks. 
+    #[prost(bool, tag = "4")]
+    pub confirm: bool,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ImportObjectsResponse {
@@ -64,6 +71,9 @@ pub struct MoveObjectsRequest {
     pub dest_space_id: ::prost::alloc::string::String,
     #[prost(string, repeated, tag = "3")]
     pub ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// The user confirmed, for a transfer policy of the source that asks. 
+    #[prost(bool, tag = "4")]
+    pub confirm: bool,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MoveObjectsResponse {

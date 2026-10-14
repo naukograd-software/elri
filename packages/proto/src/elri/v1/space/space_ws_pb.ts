@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse, SetRetentionRequest, SetRetentionResponse } from "./space_pb.ts";
-import { CreateSpaceRequestSchema, CreateSpaceResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, SetRetentionRequestSchema, SetRetentionResponseSchema } from "./space_pb.ts";
+import type { CreateSpaceRequest, CreateSpaceResponse, GetTransferPolicyRequest, GetTransferPolicyResponse, ListSpacesRequest, ListSpacesResponse, SetRetentionRequest, SetRetentionResponse, SetTransferPolicyRequest, SetTransferPolicyResponse } from "./space_pb.ts";
+import { CreateSpaceRequestSchema, CreateSpaceResponseSchema, GetTransferPolicyRequestSchema, GetTransferPolicyResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, SetRetentionRequestSchema, SetRetentionResponseSchema, SetTransferPolicyRequestSchema, SetTransferPolicyResponseSchema } from "./space_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -43,6 +43,22 @@ const SpaceService_SetRetention: MethodInfo<SetRetentionRequest, SetRetentionRes
   output: SetRetentionResponseSchema,
 };
 
+const SpaceService_GetTransferPolicy: MethodInfo<GetTransferPolicyRequest, GetTransferPolicyResponse> = {
+  typeName: "elri.v1.space.SpaceService",
+  name: "GetTransferPolicy",
+  kind: "unary",
+  input: GetTransferPolicyRequestSchema,
+  output: GetTransferPolicyResponseSchema,
+};
+
+const SpaceService_SetTransferPolicy: MethodInfo<SetTransferPolicyRequest, SetTransferPolicyResponse> = {
+  typeName: "elri.v1.space.SpaceService",
+  name: "SetTransferPolicy",
+  kind: "unary",
+  input: SetTransferPolicyRequestSchema,
+  output: SetTransferPolicyResponseSchema,
+};
+
 /**
  *
  * Spaces known to this core: local-only Spaces and server Spaces selected for
@@ -79,6 +95,25 @@ export class SpaceServiceClient {
    */
   async setRetention(req: SetRetentionRequest, options?: CallOptions): Promise<SetRetentionResponse> {
     const res = await this.transport.unary(SpaceService_SetRetention, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * The transfer rules of a Space: an Object of the Space, so every
+   * device sees the same rules. Only an Owner or Admin may set them. 
+   *
+   * @generated from rpc elri.v1.space.SpaceService.GetTransferPolicy
+   */
+  async getTransferPolicy(req: GetTransferPolicyRequest, options?: CallOptions): Promise<GetTransferPolicyResponse> {
+    const res = await this.transport.unary(SpaceService_GetTransferPolicy, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * @generated from rpc elri.v1.space.SpaceService.SetTransferPolicy
+   */
+  async setTransferPolicy(req: SetTransferPolicyRequest, options?: CallOptions): Promise<SetTransferPolicyResponse> {
+    const res = await this.transport.unary(SpaceService_SetTransferPolicy, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

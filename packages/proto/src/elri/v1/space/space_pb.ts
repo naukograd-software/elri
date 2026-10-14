@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Space, SpaceJson } from "./domain_pb.ts";
+import type { Space, SpaceJson, TransferPolicy, TransferPolicyJson, TransferRule, TransferRuleJson } from "./domain_pb.ts";
 import { file_elri_v1_space_domain } from "./domain_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,129 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/space/space.proto.
  */
 export const file_elri_v1_space_space: GenFile = /*@__PURE__*/
-  fileDesc("ChllbHJpL3YxL3NwYWNlL3NwYWNlLnByb3RvEg1lbHJpLnYxLnNwYWNlIjUKE1NldFJldGVudGlvblJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDAoEZGF5cxgCIAEoBSIkChRTZXRSZXRlbnRpb25SZXNwb25zZRIMCgRkYXlzGAEgASgFIhMKEUxpc3RTcGFjZXNSZXF1ZXN0IjoKEkxpc3RTcGFjZXNSZXNwb25zZRIkCgZzcGFjZXMYASADKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIiIKEkNyZWF0ZVNwYWNlUmVxdWVzdBIMCgRuYW1lGAEgASgJIjoKE0NyZWF0ZVNwYWNlUmVzcG9uc2USIwoFc3BhY2UYASABKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlMpACCgxTcGFjZVNlcnZpY2USUQoKTGlzdFNwYWNlcxIgLmVscmkudjEuc3BhY2UuTGlzdFNwYWNlc1JlcXVlc3QaIS5lbHJpLnYxLnNwYWNlLkxpc3RTcGFjZXNSZXNwb25zZRJUCgtDcmVhdGVTcGFjZRIhLmVscmkudjEuc3BhY2UuQ3JlYXRlU3BhY2VSZXF1ZXN0GiIuZWxyaS52MS5zcGFjZS5DcmVhdGVTcGFjZVJlc3BvbnNlElcKDFNldFJldGVudGlvbhIiLmVscmkudjEuc3BhY2UuU2V0UmV0ZW50aW9uUmVxdWVzdBojLmVscmkudjEuc3BhY2UuU2V0UmV0ZW50aW9uUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_space_domain]);
+  fileDesc("ChllbHJpL3YxL3NwYWNlL3NwYWNlLnByb3RvEg1lbHJpLnYxLnNwYWNlIiwKGEdldFRyYW5zZmVyUG9saWN5UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCSJKChlHZXRUcmFuc2ZlclBvbGljeVJlc3BvbnNlEi0KBnBvbGljeRgBIAEoCzIdLmVscmkudjEuc3BhY2UuVHJhbnNmZXJQb2xpY3kiWAoYU2V0VHJhbnNmZXJQb2xpY3lSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEioKBXJ1bGVzGAIgAygLMhsuZWxyaS52MS5zcGFjZS5UcmFuc2ZlclJ1bGUiSgoZU2V0VHJhbnNmZXJQb2xpY3lSZXNwb25zZRItCgZwb2xpY3kYASABKAsyHS5lbHJpLnYxLnNwYWNlLlRyYW5zZmVyUG9saWN5IjUKE1NldFJldGVudGlvblJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSDAoEZGF5cxgCIAEoBSIkChRTZXRSZXRlbnRpb25SZXNwb25zZRIMCgRkYXlzGAEgASgFIhMKEUxpc3RTcGFjZXNSZXF1ZXN0IjoKEkxpc3RTcGFjZXNSZXNwb25zZRIkCgZzcGFjZXMYASADKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlIiIKEkNyZWF0ZVNwYWNlUmVxdWVzdBIMCgRuYW1lGAEgASgJIjoKE0NyZWF0ZVNwYWNlUmVzcG9uc2USIwoFc3BhY2UYASABKAsyFC5lbHJpLnYxLnNwYWNlLlNwYWNlMuADCgxTcGFjZVNlcnZpY2USUQoKTGlzdFNwYWNlcxIgLmVscmkudjEuc3BhY2UuTGlzdFNwYWNlc1JlcXVlc3QaIS5lbHJpLnYxLnNwYWNlLkxpc3RTcGFjZXNSZXNwb25zZRJUCgtDcmVhdGVTcGFjZRIhLmVscmkudjEuc3BhY2UuQ3JlYXRlU3BhY2VSZXF1ZXN0GiIuZWxyaS52MS5zcGFjZS5DcmVhdGVTcGFjZVJlc3BvbnNlElcKDFNldFJldGVudGlvbhIiLmVscmkudjEuc3BhY2UuU2V0UmV0ZW50aW9uUmVxdWVzdBojLmVscmkudjEuc3BhY2UuU2V0UmV0ZW50aW9uUmVzcG9uc2USZgoRR2V0VHJhbnNmZXJQb2xpY3kSJy5lbHJpLnYxLnNwYWNlLkdldFRyYW5zZmVyUG9saWN5UmVxdWVzdBooLmVscmkudjEuc3BhY2UuR2V0VHJhbnNmZXJQb2xpY3lSZXNwb25zZRJmChFTZXRUcmFuc2ZlclBvbGljeRInLmVscmkudjEuc3BhY2UuU2V0VHJhbnNmZXJQb2xpY3lSZXF1ZXN0GiguZWxyaS52MS5zcGFjZS5TZXRUcmFuc2ZlclBvbGljeVJlc3BvbnNlYgZwcm90bzM", [file_elri_v1_space_domain]);
+
+/**
+ * @generated from message elri.v1.space.GetTransferPolicyRequest
+ */
+export type GetTransferPolicyRequest = Message<"elri.v1.space.GetTransferPolicyRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+};
+
+/**
+ * @generated from message elri.v1.space.GetTransferPolicyRequest
+ */
+export type GetTransferPolicyRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+};
+
+/**
+ * Describes the message elri.v1.space.GetTransferPolicyRequest.
+ * Use `create(GetTransferPolicyRequestSchema)` to create a new message.
+ */
+export const GetTransferPolicyRequestSchema: GenMessage<GetTransferPolicyRequest, {jsonType: GetTransferPolicyRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_space_space, 0);
+
+/**
+ * @generated from message elri.v1.space.GetTransferPolicyResponse
+ */
+export type GetTransferPolicyResponse = Message<"elri.v1.space.GetTransferPolicyResponse"> & {
+  /**
+   * @generated from field: elri.v1.space.TransferPolicy policy = 1;
+   */
+  policy?: TransferPolicy | undefined;
+};
+
+/**
+ * @generated from message elri.v1.space.GetTransferPolicyResponse
+ */
+export type GetTransferPolicyResponseJson = {
+  /**
+   * @generated from field: elri.v1.space.TransferPolicy policy = 1;
+   */
+  policy?: TransferPolicyJson;
+};
+
+/**
+ * Describes the message elri.v1.space.GetTransferPolicyResponse.
+ * Use `create(GetTransferPolicyResponseSchema)` to create a new message.
+ */
+export const GetTransferPolicyResponseSchema: GenMessage<GetTransferPolicyResponse, {jsonType: GetTransferPolicyResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_space_space, 1);
+
+/**
+ * @generated from message elri.v1.space.SetTransferPolicyRequest
+ */
+export type SetTransferPolicyRequest = Message<"elri.v1.space.SetTransferPolicyRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * Replaces the rules. 
+   *
+   * @generated from field: repeated elri.v1.space.TransferRule rules = 2;
+   */
+  rules: TransferRule[];
+};
+
+/**
+ * @generated from message elri.v1.space.SetTransferPolicyRequest
+ */
+export type SetTransferPolicyRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * Replaces the rules. 
+   *
+   * @generated from field: repeated elri.v1.space.TransferRule rules = 2;
+   */
+  rules?: TransferRuleJson[];
+};
+
+/**
+ * Describes the message elri.v1.space.SetTransferPolicyRequest.
+ * Use `create(SetTransferPolicyRequestSchema)` to create a new message.
+ */
+export const SetTransferPolicyRequestSchema: GenMessage<SetTransferPolicyRequest, {jsonType: SetTransferPolicyRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_space_space, 2);
+
+/**
+ * @generated from message elri.v1.space.SetTransferPolicyResponse
+ */
+export type SetTransferPolicyResponse = Message<"elri.v1.space.SetTransferPolicyResponse"> & {
+  /**
+   * @generated from field: elri.v1.space.TransferPolicy policy = 1;
+   */
+  policy?: TransferPolicy | undefined;
+};
+
+/**
+ * @generated from message elri.v1.space.SetTransferPolicyResponse
+ */
+export type SetTransferPolicyResponseJson = {
+  /**
+   * @generated from field: elri.v1.space.TransferPolicy policy = 1;
+   */
+  policy?: TransferPolicyJson;
+};
+
+/**
+ * Describes the message elri.v1.space.SetTransferPolicyResponse.
+ * Use `create(SetTransferPolicyResponseSchema)` to create a new message.
+ */
+export const SetTransferPolicyResponseSchema: GenMessage<SetTransferPolicyResponse, {jsonType: SetTransferPolicyResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_space_space, 3);
 
 /**
  * @generated from message elri.v1.space.SetRetentionRequest
@@ -53,7 +175,7 @@ export type SetRetentionRequestJson = {
  * Use `create(SetRetentionRequestSchema)` to create a new message.
  */
 export const SetRetentionRequestSchema: GenMessage<SetRetentionRequest, {jsonType: SetRetentionRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_space_space, 0);
+  messageDesc(file_elri_v1_space_space, 4);
 
 /**
  * @generated from message elri.v1.space.SetRetentionResponse
@@ -80,7 +202,7 @@ export type SetRetentionResponseJson = {
  * Use `create(SetRetentionResponseSchema)` to create a new message.
  */
 export const SetRetentionResponseSchema: GenMessage<SetRetentionResponse, {jsonType: SetRetentionResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_space_space, 1);
+  messageDesc(file_elri_v1_space_space, 5);
 
 /**
  * @generated from message elri.v1.space.ListSpacesRequest
@@ -99,7 +221,7 @@ export type ListSpacesRequestJson = {
  * Use `create(ListSpacesRequestSchema)` to create a new message.
  */
 export const ListSpacesRequestSchema: GenMessage<ListSpacesRequest, {jsonType: ListSpacesRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_space_space, 2);
+  messageDesc(file_elri_v1_space_space, 6);
 
 /**
  * @generated from message elri.v1.space.ListSpacesResponse
@@ -126,7 +248,7 @@ export type ListSpacesResponseJson = {
  * Use `create(ListSpacesResponseSchema)` to create a new message.
  */
 export const ListSpacesResponseSchema: GenMessage<ListSpacesResponse, {jsonType: ListSpacesResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_space_space, 3);
+  messageDesc(file_elri_v1_space_space, 7);
 
 /**
  * @generated from message elri.v1.space.CreateSpaceRequest
@@ -153,7 +275,7 @@ export type CreateSpaceRequestJson = {
  * Use `create(CreateSpaceRequestSchema)` to create a new message.
  */
 export const CreateSpaceRequestSchema: GenMessage<CreateSpaceRequest, {jsonType: CreateSpaceRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_space_space, 4);
+  messageDesc(file_elri_v1_space_space, 8);
 
 /**
  * @generated from message elri.v1.space.CreateSpaceResponse
@@ -180,7 +302,7 @@ export type CreateSpaceResponseJson = {
  * Use `create(CreateSpaceResponseSchema)` to create a new message.
  */
 export const CreateSpaceResponseSchema: GenMessage<CreateSpaceResponse, {jsonType: CreateSpaceResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_space_space, 5);
+  messageDesc(file_elri_v1_space_space, 9);
 
 /**
  *
@@ -218,6 +340,25 @@ export const SpaceService: GenService<{
     methodKind: "unary";
     input: typeof SetRetentionRequestSchema;
     output: typeof SetRetentionResponseSchema;
+  },
+  /**
+   * The transfer rules of a Space: an Object of the Space, so every
+   * device sees the same rules. Only an Owner or Admin may set them. 
+   *
+   * @generated from rpc elri.v1.space.SpaceService.GetTransferPolicy
+   */
+  getTransferPolicy: {
+    methodKind: "unary";
+    input: typeof GetTransferPolicyRequestSchema;
+    output: typeof GetTransferPolicyResponseSchema;
+  },
+  /**
+   * @generated from rpc elri.v1.space.SpaceService.SetTransferPolicy
+   */
+  setTransferPolicy: {
+    methodKind: "unary";
+    input: typeof SetTransferPolicyRequestSchema;
+    output: typeof SetTransferPolicyResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_space_space, 0);
