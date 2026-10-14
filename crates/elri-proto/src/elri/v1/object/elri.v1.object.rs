@@ -146,6 +146,36 @@ pub struct Object {
     #[prost(message, repeated, tag = "12")]
     pub placements: ::prost::alloc::vec::Vec<Placement>,
 }
+///
+/// A hypothesis: a Layer an agent proposed over an Object. It carries who
+/// proposed it, what the agent was, what it read, and why; a review by a
+/// person is recorded apart and never replaces the author. Only the agent
+/// that proposed it may revise it; a person reviews it.
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct Hypothesis {
+    /// The actor that proposed it: `script:<id>` or `rule:<id>/script:<id>`. 
+    #[prost(string, tag = "1")]
+    pub agent: ::prost::alloc::string::String,
+    /// Model identification the agent gave, if any. 
+    #[prost(string, tag = "2")]
+    pub model: ::prost::alloc::string::String,
+    /// Object ids the proposal rests on. 
+    #[prost(string, repeated, tag = "3")]
+    pub sources: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// The agent's stated reason. 
+    #[prost(string, tag = "4")]
+    pub basis: ::prost::alloc::string::String,
+    #[prost(enumeration = "HypothesisStatus", tag = "5")]
+    pub status: i32,
+    /// `user` once reviewed. 
+    #[prost(string, tag = "6")]
+    pub reviewed_by: ::prost::alloc::string::String,
+    #[prost(int64, tag = "7")]
+    pub reviewed_at_ms: i64,
+    /// The reviewer's note. 
+    #[prost(string, tag = "8")]
+    pub note: ::prost::alloc::string::String,
+}
 /// What an Object is. Every kind shares the same document shape. 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -226,6 +256,85 @@ impl ObjectKind {
             _ => None,
         }
     }
+}
+/// Where an AI hypothesis stands. 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum HypothesisStatus {
+    Unspecified = 0,
+    Proposed = 1,
+    /// A person confirmed it; the agent stays its author. 
+    Confirmed = 2,
+    /// A person rejected it; the Layer is deleted and purged with the
+    /// Space's retention. 
+    Rejected = 3,
+}
+impl HypothesisStatus {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "HYPOTHESIS_STATUS_UNSPECIFIED",
+            Self::Proposed => "HYPOTHESIS_STATUS_PROPOSED",
+            Self::Confirmed => "HYPOTHESIS_STATUS_CONFIRMED",
+            Self::Rejected => "HYPOTHESIS_STATUS_REJECTED",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "HYPOTHESIS_STATUS_UNSPECIFIED" => Some(Self::Unspecified),
+            "HYPOTHESIS_STATUS_PROPOSED" => Some(Self::Proposed),
+            "HYPOTHESIS_STATUS_CONFIRMED" => Some(Self::Confirmed),
+            "HYPOTHESIS_STATUS_REJECTED" => Some(Self::Rejected),
+            _ => None,
+        }
+    }
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ListHypothesesRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    /// Only hypotheses over this Object, if set. 
+    #[prost(string, tag = "2")]
+    pub target_id: ::prost::alloc::string::String,
+    /// Only this status, if set; rejected ones are deleted Layers. 
+    #[prost(enumeration = "HypothesisStatus", tag = "3")]
+    pub status: i32,
+    /// 0 = server default. 
+    #[prost(int32, tag = "4")]
+    pub limit: i32,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct HypothesisLayer {
+    #[prost(message, optional, tag = "1")]
+    pub layer: ::core::option::Option<Object>,
+    #[prost(message, optional, tag = "2")]
+    pub hypothesis: ::core::option::Option<Hypothesis>,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ListHypothesesResponse {
+    #[prost(message, repeated, tag = "1")]
+    pub hypotheses: ::prost::alloc::vec::Vec<HypothesisLayer>,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ReviewHypothesisRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub id: ::prost::alloc::string::String,
+    /// CONFIRMED or REJECTED. 
+    #[prost(enumeration = "HypothesisStatus", tag = "3")]
+    pub status: i32,
+    #[prost(string, tag = "4")]
+    pub note: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ReviewHypothesisResponse {
+    #[prost(message, optional, tag = "1")]
+    pub hypothesis: ::core::option::Option<HypothesisLayer>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CreateObjectRequest {

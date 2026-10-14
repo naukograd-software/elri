@@ -27,6 +27,42 @@ service ObjectService {
     */
     rpc Commit(CommitRequest) returns (CommitResponse);
     rpc ListObjects(ListObjectsRequest) returns (ListObjectsResponse);
+    /* Hypotheses: Layers agents proposed, with their provenance. */
+    rpc ListHypotheses(ListHypothesesRequest) returns (ListHypothesesResponse);
+    /* A person confirms or rejects a hypothesis. Rejecting deletes the
+       Layer; the agent that proposed it stays on record either way. */
+    rpc ReviewHypothesis(ReviewHypothesisRequest) returns (ReviewHypothesisResponse);
+}
+
+message ListHypothesesRequest {
+    string space_id = 1;
+    /* Only hypotheses over this Object, if set. */
+    string target_id = 2;
+    /* Only this status, if set; rejected ones are deleted Layers. */
+    HypothesisStatus status = 3;
+    /* 0 = server default. */
+    int32 limit = 4;
+}
+
+message HypothesisLayer {
+    Object layer = 1;
+    Hypothesis hypothesis = 2;
+}
+
+message ListHypothesesResponse {
+    repeated HypothesisLayer hypotheses = 1;
+}
+
+message ReviewHypothesisRequest {
+    string space_id = 1;
+    string id = 2;
+    /* CONFIRMED or REJECTED. */
+    HypothesisStatus status = 3;
+    string note = 4;
+}
+
+message ReviewHypothesisResponse {
+    HypothesisLayer hypothesis = 1;
 }
 
 message CreateObjectRequest {

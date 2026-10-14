@@ -735,7 +735,7 @@ impl Host {
                     policy::check_labels(&store, &labels, TransferOp::Copy, &space.to_string())
                         .await
                         .map_err(|e| to_lua(ScriptError::Policy(e)))?;
-                    let doc = doc_from_lua(&spec, space)?;
+                    let doc = doc_from_lua(&spec, space, &actor)?;
                     let rec = store
                         .space(space)
                         .await
@@ -772,13 +772,11 @@ impl Host {
                             .map_err(|e| to_lua(ScriptError::Policy(e)))?;
                         let id = id_arg(&id)?;
                         let edit = edit_from_lua(&spec)?;
-                        let rec = store
-                            .space(space)
-                            .await
-                            .map_err(to_lua)?
-                            .update_as(id, edit, &actor)
-                            .await
-                            .map_err(to_lua)?;
+                        let target = store.space(space).await.map_err(to_lua)?;
+                        let current = target.get(id).await.map_err(to_lua)?;
+                        crate::hypothesis::may_revise(&current, &actor)
+                            .map_err(|e| to_lua(ScriptError::Denied(e)))?;
+                        let rec = target.update_as(id, edit, &actor).await.map_err(to_lua)?;
                         object_to_lua(&lua, &rec)
                     }
                 },
@@ -803,10 +801,11 @@ impl Host {
                         g.may_write(space).map_err(to_lua)?;
                     }
                     let id = id_arg(&id)?;
-                    store
-                        .space(space)
-                        .await
-                        .map_err(to_lua)?
+                    let target = store.space(space).await.map_err(to_lua)?;
+                    let current = target.get(id).await.map_err(to_lua)?;
+                    crate::hypothesis::may_revise(&current, &actor)
+                        .map_err(|e| to_lua(ScriptError::Denied(e)))?;
+                    target
                         .update_as(id, |d| d.mark_deleted(now_ms()), &actor)
                         .await
                         .map_err(to_lua)?;
@@ -1251,6 +1250,11 @@ fn fields_from_lua(t: Option<Table>) -> mlua::Result<HashMap<String, Value>> {
     if let Some(t) = t {
         for pair in t.pairs::<String, LuaValue>() {
             let (k, v) = pair?;
+            if crate::model::is_reserved_field(&k) {
+                return Err(mlua::Error::runtime(format!(
+                    "field {k}: reserved ids are written by the core"
+                )));
+            }
             if let Some(v) = value_from_lua(v)? {
                 out.insert(k, v);
             }
@@ -1259,8 +1263,23 @@ fn fields_from_lua(t: Option<Table>) -> mlua::Result<HashMap<String, Value>> {
     Ok(out)
 }
 
-fn doc_from_lua(spec: &Table, space: SpaceId) -> mlua::Result<ObjectDoc> {
+fn doc_from_lua(spec: &Table, space: SpaceId, actor: &str) -> mlua::Result<ObjectDoc> {
     let kind = kind_from_lua(spec.get::<Option<String>>("kind")?.as_deref())?;
+    let proposal = match spec.get::<Option<Table>>("hypothesis")? {
+        Some(h) => {
+            let p = crate::hypothesis::Proposal {
+                model: h.get::<Option<String>>("model")?.unwrap_or_default(),
+                sources: h.get::<Option<Vec<String>>>("sources")?.unwrap_or_default(),
+                basis: h.get::<Option<String>>("basis")?.unwrap_or_default(),
+            };
+            crate::hypothesis::check(&p).map_err(mlua::Error::runtime)?;
+            if kind != ObjectKind::Layer {
+                return Err(mlua::Error::runtime("a hypothesis is a layer"));
+            }
+            Some(p)
+        }
+        None => None,
+    };
     let now = now_ms();
     let doc = match (kind, spec.get::<Option<String>>("target")?) {
         (ObjectKind::Layer, Some(target)) => {
@@ -1295,6 +1314,10 @@ fn doc_from_lua(spec: &Table, space: SpaceId) -> mlua::Result<ObjectDoc> {
             })
             .map_err(|e| to_lua(ScriptError::from(StoreError::from(e))))?;
         }
+    }
+    if let Some(p) = &proposal {
+        crate::hypothesis::write(&doc, actor, p)
+            .map_err(|e| to_lua(ScriptError::from(StoreError::from(e))))?;
     }
     doc.touch(now)
         .map_err(|e| to_lua(ScriptError::from(StoreError::from(e))))?;

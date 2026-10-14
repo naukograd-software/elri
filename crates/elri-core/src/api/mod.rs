@@ -71,6 +71,10 @@ use crate::model::{
 use crate::remote::{Remote, RemoteError};
 use crate::store::{Edit, ObjectFilter, SpaceStore, Store, StoreError};
 use crate::BuildInfo;
+use elri_proto::elri::v1::object::{
+    HypothesisLayer, HypothesisStatus, ListHypothesesRequest, ListHypothesesResponse,
+    ReviewHypothesisRequest, ReviewHypothesisResponse,
+};
 
 /// Everything the handlers need.
 pub struct Services {
@@ -210,6 +214,11 @@ fn check_fields(fields: &std::collections::HashMap<String, Value>) -> Result<(),
     for (id, v) in fields {
         if id.is_empty() {
             return Err(invalid("field id must not be empty"));
+        }
+        if crate::model::is_reserved_field(id) {
+            return Err(invalid(format!(
+                "field {id}: reserved ids are written by the core"
+            )));
         }
         match &v.value {
             None => return Err(invalid(format!("field {id}: value is empty"))),
@@ -639,6 +648,91 @@ impl ObjectServiceHandler for Services {
             }
         }
         Ok(Response::new(PurgeObjectResponse {}))
+    }
+
+    async fn list_hypotheses(
+        &self,
+        req: Request<ListHypothesesRequest>,
+    ) -> Result<Response<ListHypothesesResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        let target = if m.target_id.is_empty() {
+            None
+        } else {
+            Some(parse_id(&m.target_id, "target_id")?)
+        };
+        let wanted = HypothesisStatus::try_from(m.status)
+            .ok()
+            .filter(|s| *s != HypothesisStatus::Unspecified);
+        let limit = usize::try_from(m.limit).unwrap_or(0);
+        let limit = if limit == 0 { 200 } else { limit.min(2000) };
+        let layers = self
+            .store
+            .space(space_id)
+            .await?
+            .list(&ObjectFilter {
+                kind: Some(ObjectKind::Layer),
+                target,
+                // Rejected hypotheses are deleted Layers.
+                include_deleted: wanted == Some(HypothesisStatus::Rejected),
+                limit: 2000,
+                ..ObjectFilter::default()
+            })
+            .await?;
+        let hypotheses = layers
+            .into_iter()
+            .filter_map(|layer| {
+                let h = crate::hypothesis::hypothesis_of(&layer)?;
+                if wanted.is_some_and(|w| h.status() != w) {
+                    return None;
+                }
+                Some(HypothesisLayer {
+                    layer: Some(layer),
+                    hypothesis: Some(h),
+                })
+            })
+            .take(limit)
+            .collect();
+        Ok(Response::new(ListHypothesesResponse { hypotheses }))
+    }
+
+    async fn review_hypothesis(
+        &self,
+        req: Request<ReviewHypothesisRequest>,
+    ) -> Result<Response<ReviewHypothesisResponse>, Status> {
+        let m = &req.msg;
+        let space_id = parse_id(&m.space_id, "space_id")?;
+        let id = parse_id(&m.id, "id")?;
+        let status = match m.status() {
+            HypothesisStatus::Confirmed => HypothesisStatus::Confirmed,
+            HypothesisStatus::Rejected => HypothesisStatus::Rejected,
+            _ => return Err(invalid("status must be confirmed or rejected")),
+        };
+        if m.note.len() > crate::hypothesis::TEXT_LIMIT {
+            return Err(invalid("note too long"));
+        }
+        let space = self.store.space(space_id).await?;
+        let current = space.get(id).await?;
+        if crate::hypothesis::hypothesis_of(&current).is_none() {
+            return Err(Status::new(Code::NotFound, "not a hypothesis"));
+        }
+        let note = m.note.clone();
+        let layer = space
+            .update(id, move |doc| {
+                crate::hypothesis::review(doc, status, &note)?;
+                if status == HypothesisStatus::Rejected {
+                    doc.mark_deleted(now_ms())?;
+                }
+                Ok(())
+            })
+            .await?;
+        let hypothesis = crate::hypothesis::hypothesis_of(&layer);
+        Ok(Response::new(ReviewHypothesisResponse {
+            hypothesis: Some(HypothesisLayer {
+                layer: Some(layer),
+                hypothesis,
+            }),
+        }))
     }
 
     async fn list_objects(

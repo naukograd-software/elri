@@ -140,3 +140,37 @@ message Object {
     /* Entities only: placed blocks, parents before children, siblings in order. */
     repeated Placement placements = 12;
 }
+
+/* Where an AI hypothesis stands. */
+enum HypothesisStatus {
+    HYPOTHESIS_STATUS_UNSPECIFIED = 0;
+    HYPOTHESIS_STATUS_PROPOSED = 1;
+    /* A person confirmed it; the agent stays its author. */
+    HYPOTHESIS_STATUS_CONFIRMED = 2;
+    /* A person rejected it; the Layer is deleted and purged with the
+       Space's retention. */
+    HYPOTHESIS_STATUS_REJECTED = 3;
+}
+
+/*
+A hypothesis: a Layer an agent proposed over an Object. It carries who
+proposed it, what the agent was, what it read, and why; a review by a
+person is recorded apart and never replaces the author. Only the agent
+that proposed it may revise it; a person reviews it.
+*/
+message Hypothesis {
+    /* The actor that proposed it: `script:<id>` or `rule:<id>/script:<id>`. */
+    string agent = 1;
+    /* Model identification the agent gave, if any. */
+    string model = 2;
+    /* Object ids the proposal rests on. */
+    repeated string sources = 3;
+    /* The agent's stated reason. */
+    string basis = 4;
+    HypothesisStatus status = 5;
+    /* `user` once reviewed. */
+    string reviewed_by = 6;
+    int64 reviewed_at_ms = 7;
+    /* The reviewer's note. */
+    string note = 8;
+}

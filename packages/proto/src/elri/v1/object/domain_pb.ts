@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/object/domain.proto.
  */
 export const file_elri_v1_object_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0IjEKCVZhbHVlTGlzdBIkCgVpdGVtcxgBIAMoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlIkMKBE1hcmsSDQoFc3RhcnQYASABKAUSCwoDZW5kGAIgASgFEgsKA2tleRgDIAEoCRISCgp2YWx1ZV9qc29uGAQgASgJIj0KCFJpY2hUZXh0EgwKBHRleHQYASABKAkSIwoFbWFya3MYAiADKAsyFC5lbHJpLnYxLm9iamVjdC5NYXJrIokBCghWYWx1ZU1hcBI2CgdlbnRyaWVzGAEgAygLMiUuZWxyaS52MS5vYmplY3QuVmFsdWVNYXAuRW50cmllc0VudHJ5GkUKDEVudHJpZXNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5lbHJpLnYxLm9iamVjdC5WYWx1ZToCOAEigwIKBVZhbHVlEg4KBGJvb2wYASABKAhIABINCgNpbnQYAiABKANIABIQCgZkb3VibGUYAyABKAFIABIQCgZzdHJpbmcYBCABKAlIABIRCgd0aW1lX21zGAUgASgDSAASDQoDcmVmGAYgASgJSAASDgoEdGV4dBgHIAEoCUgAEikKBGxpc3QYCCABKAsyGS5lbHJpLnYxLm9iamVjdC5WYWx1ZUxpc3RIABInCgNtYXAYCSABKAsyGC5lbHJpLnYxLm9iamVjdC5WYWx1ZU1hcEgAEigKBHJpY2gYCiABKAsyGC5lbHJpLnYxLm9iamVjdC5SaWNoVGV4dEgAQgcKBXZhbHVlIj8KC1BhcnRpY2lwYW50EgwKBHNsb3QYASABKAkSEQoJb2JqZWN0X2lkGAIgASgJEg8KB3JvbGVfaWQYAyABKAkiSwoJUGxhY2VtZW50EgoKAmlkGAEgASgJEhEKCXBhcmVudF9pZBgCIAEoCRINCgVpbmRleBgDIAEoBRIQCghibG9ja19pZBgEIAEoCSLxAwoGT2JqZWN0EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEigKBGtpbmQYAyABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAQgAygJEjIKBmZpZWxkcxgFIAMoCzIiLmVscmkudjEub2JqZWN0Lk9iamVjdC5GaWVsZHNFbnRyeRIVCg1jcmVhdGVkX2F0X21zGAYgASgDEhUKDXVwZGF0ZWRfYXRfbXMYByABKAMSGgoNZGVsZXRlZF9hdF9tcxgIIAEoA0gAiAEBEjEKDHBhcnRpY2lwYW50cxgJIAMoCzIbLmVscmkudjEub2JqZWN0LlBhcnRpY2lwYW50EhYKCXRhcmdldF9pZBgKIAEoCUgBiAEBEjIKC3R5cGVfZmllbGRzGAsgAygLMh0uZWxyaS52MS5kZWZpbml0aW9uLlR5cGVGaWVsZBItCgpwbGFjZW1lbnRzGAwgAygLMhkuZWxyaS52MS5vYmplY3QuUGxhY2VtZW50GkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4AUIQCg5fZGVsZXRlZF9hdF9tc0IMCgpfdGFyZ2V0X2lkKrQDCgpPYmplY3RLaW5kEhsKF09CSkVDVF9LSU5EX1VOU1BFQ0lGSUVEEAASFgoST0JKRUNUX0tJTkRfRU5USVRZEAESGAoUT0JKRUNUX0tJTkRfUkVMQVRJT04QAhIVChFPQkpFQ1RfS0lORF9MQVlFUhADEhkKFU9CSkVDVF9LSU5EX0ZJRUxEX0RFRhAEEhgKFE9CSkVDVF9LSU5EX1RZUEVfREVGEAUSGAoUT0JKRUNUX0tJTkRfUk9MRV9ERUYQBhIaChZPQkpFQ1RfS0lORF9BVFRBQ0hNRU5UEAcSFgoST0JKRUNUX0tJTkRfU0NSSVBUEAgSFAoQT0JKRUNUX0tJTkRfUlVMRRAJEhkKFU9CSkVDVF9LSU5EX0lOVEVSRkFDRRAKEhsKF09CSkVDVF9LSU5EX1BVQkxJQ0FUSU9OEAsSFwoTT0JKRUNUX0tJTkRfQ09OVEVYVBAMEhoKFk9CSkVDVF9LSU5EX0NPTlNUUkFJTlQQDRIZChVPQkpFQ1RfS0lORF9DT01QT05FTlQQDhIfChtPQkpFQ1RfS0lORF9UUkFOU0ZFUl9QT0xJQ1kQD2IGcHJvdG8z", [file_elri_v1_definition_domain]);
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9kb21haW4ucHJvdG8SDmVscmkudjEub2JqZWN0IjEKCVZhbHVlTGlzdBIkCgVpdGVtcxgBIAMoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlIkMKBE1hcmsSDQoFc3RhcnQYASABKAUSCwoDZW5kGAIgASgFEgsKA2tleRgDIAEoCRISCgp2YWx1ZV9qc29uGAQgASgJIj0KCFJpY2hUZXh0EgwKBHRleHQYASABKAkSIwoFbWFya3MYAiADKAsyFC5lbHJpLnYxLm9iamVjdC5NYXJrIokBCghWYWx1ZU1hcBI2CgdlbnRyaWVzGAEgAygLMiUuZWxyaS52MS5vYmplY3QuVmFsdWVNYXAuRW50cmllc0VudHJ5GkUKDEVudHJpZXNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5lbHJpLnYxLm9iamVjdC5WYWx1ZToCOAEigwIKBVZhbHVlEg4KBGJvb2wYASABKAhIABINCgNpbnQYAiABKANIABIQCgZkb3VibGUYAyABKAFIABIQCgZzdHJpbmcYBCABKAlIABIRCgd0aW1lX21zGAUgASgDSAASDQoDcmVmGAYgASgJSAASDgoEdGV4dBgHIAEoCUgAEikKBGxpc3QYCCABKAsyGS5lbHJpLnYxLm9iamVjdC5WYWx1ZUxpc3RIABInCgNtYXAYCSABKAsyGC5lbHJpLnYxLm9iamVjdC5WYWx1ZU1hcEgAEigKBHJpY2gYCiABKAsyGC5lbHJpLnYxLm9iamVjdC5SaWNoVGV4dEgAQgcKBXZhbHVlIj8KC1BhcnRpY2lwYW50EgwKBHNsb3QYASABKAkSEQoJb2JqZWN0X2lkGAIgASgJEg8KB3JvbGVfaWQYAyABKAkiSwoJUGxhY2VtZW50EgoKAmlkGAEgASgJEhEKCXBhcmVudF9pZBgCIAEoCRINCgVpbmRleBgDIAEoBRIQCghibG9ja19pZBgEIAEoCSLxAwoGT2JqZWN0EgoKAmlkGAEgASgJEhAKCHNwYWNlX2lkGAIgASgJEigKBGtpbmQYAyABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAQgAygJEjIKBmZpZWxkcxgFIAMoCzIiLmVscmkudjEub2JqZWN0Lk9iamVjdC5GaWVsZHNFbnRyeRIVCg1jcmVhdGVkX2F0X21zGAYgASgDEhUKDXVwZGF0ZWRfYXRfbXMYByABKAMSGgoNZGVsZXRlZF9hdF9tcxgIIAEoA0gAiAEBEjEKDHBhcnRpY2lwYW50cxgJIAMoCzIbLmVscmkudjEub2JqZWN0LlBhcnRpY2lwYW50EhYKCXRhcmdldF9pZBgKIAEoCUgBiAEBEjIKC3R5cGVfZmllbGRzGAsgAygLMh0uZWxyaS52MS5kZWZpbml0aW9uLlR5cGVGaWVsZBItCgpwbGFjZW1lbnRzGAwgAygLMhkuZWxyaS52MS5vYmplY3QuUGxhY2VtZW50GkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4AUIQCg5fZGVsZXRlZF9hdF9tc0IMCgpfdGFyZ2V0X2lkIrcBCgpIeXBvdGhlc2lzEg0KBWFnZW50GAEgASgJEg0KBW1vZGVsGAIgASgJEg8KB3NvdXJjZXMYAyADKAkSDQoFYmFzaXMYBCABKAkSMAoGc3RhdHVzGAUgASgOMiAuZWxyaS52MS5vYmplY3QuSHlwb3RoZXNpc1N0YXR1cxITCgtyZXZpZXdlZF9ieRgGIAEoCRIWCg5yZXZpZXdlZF9hdF9tcxgHIAEoAxIMCgRub3RlGAggASgJKrQDCgpPYmplY3RLaW5kEhsKF09CSkVDVF9LSU5EX1VOU1BFQ0lGSUVEEAASFgoST0JKRUNUX0tJTkRfRU5USVRZEAESGAoUT0JKRUNUX0tJTkRfUkVMQVRJT04QAhIVChFPQkpFQ1RfS0lORF9MQVlFUhADEhkKFU9CSkVDVF9LSU5EX0ZJRUxEX0RFRhAEEhgKFE9CSkVDVF9LSU5EX1RZUEVfREVGEAUSGAoUT0JKRUNUX0tJTkRfUk9MRV9ERUYQBhIaChZPQkpFQ1RfS0lORF9BVFRBQ0hNRU5UEAcSFgoST0JKRUNUX0tJTkRfU0NSSVBUEAgSFAoQT0JKRUNUX0tJTkRfUlVMRRAJEhkKFU9CSkVDVF9LSU5EX0lOVEVSRkFDRRAKEhsKF09CSkVDVF9LSU5EX1BVQkxJQ0FUSU9OEAsSFwoTT0JKRUNUX0tJTkRfQ09OVEVYVBAMEhoKFk9CSkVDVF9LSU5EX0NPTlNUUkFJTlQQDRIZChVPQkpFQ1RfS0lORF9DT01QT05FTlQQDhIfChtPQkpFQ1RfS0lORF9UUkFOU0ZFUl9QT0xJQ1kQDyqWAQoQSHlwb3RoZXNpc1N0YXR1cxIhCh1IWVBPVEhFU0lTX1NUQVRVU19VTlNQRUNJRklFRBAAEh4KGkhZUE9USEVTSVNfU1RBVFVTX1BST1BPU0VEEAESHwobSFlQT1RIRVNJU19TVEFUVVNfQ09ORklSTUVEEAISHgoaSFlQT1RIRVNJU19TVEFUVVNfUkVKRUNURUQQA2IGcHJvdG8z", [file_elri_v1_definition_domain]);
 
 /**
  * Items of a list value; scalars only. 
@@ -668,6 +668,139 @@ export const ObjectSchema: GenMessage<Object$, {jsonType: ObjectJson}> = /*@__PU
   messageDesc(file_elri_v1_object_domain, 7);
 
 /**
+ *
+ * A hypothesis: a Layer an agent proposed over an Object. It carries who
+ * proposed it, what the agent was, what it read, and why; a review by a
+ * person is recorded apart and never replaces the author. Only the agent
+ * that proposed it may revise it; a person reviews it.
+ *
+ * @generated from message elri.v1.object.Hypothesis
+ */
+export type Hypothesis = Message<"elri.v1.object.Hypothesis"> & {
+  /**
+   * The actor that proposed it: `script:<id>` or `rule:<id>/script:<id>`. 
+   *
+   * @generated from field: string agent = 1;
+   */
+  agent: string;
+
+  /**
+   * Model identification the agent gave, if any. 
+   *
+   * @generated from field: string model = 2;
+   */
+  model: string;
+
+  /**
+   * Object ids the proposal rests on. 
+   *
+   * @generated from field: repeated string sources = 3;
+   */
+  sources: string[];
+
+  /**
+   * The agent's stated reason. 
+   *
+   * @generated from field: string basis = 4;
+   */
+  basis: string;
+
+  /**
+   * @generated from field: elri.v1.object.HypothesisStatus status = 5;
+   */
+  status: HypothesisStatus;
+
+  /**
+   * `user` once reviewed. 
+   *
+   * @generated from field: string reviewed_by = 6;
+   */
+  reviewedBy: string;
+
+  /**
+   * @generated from field: int64 reviewed_at_ms = 7;
+   */
+  reviewedAtMs: bigint;
+
+  /**
+   * The reviewer's note. 
+   *
+   * @generated from field: string note = 8;
+   */
+  note: string;
+};
+
+/**
+ *
+ * A hypothesis: a Layer an agent proposed over an Object. It carries who
+ * proposed it, what the agent was, what it read, and why; a review by a
+ * person is recorded apart and never replaces the author. Only the agent
+ * that proposed it may revise it; a person reviews it.
+ *
+ * @generated from message elri.v1.object.Hypothesis
+ */
+export type HypothesisJson = {
+  /**
+   * The actor that proposed it: `script:<id>` or `rule:<id>/script:<id>`. 
+   *
+   * @generated from field: string agent = 1;
+   */
+  agent?: string;
+
+  /**
+   * Model identification the agent gave, if any. 
+   *
+   * @generated from field: string model = 2;
+   */
+  model?: string;
+
+  /**
+   * Object ids the proposal rests on. 
+   *
+   * @generated from field: repeated string sources = 3;
+   */
+  sources?: string[];
+
+  /**
+   * The agent's stated reason. 
+   *
+   * @generated from field: string basis = 4;
+   */
+  basis?: string;
+
+  /**
+   * @generated from field: elri.v1.object.HypothesisStatus status = 5;
+   */
+  status?: HypothesisStatusJson;
+
+  /**
+   * `user` once reviewed. 
+   *
+   * @generated from field: string reviewed_by = 6;
+   */
+  reviewedBy?: string;
+
+  /**
+   * @generated from field: int64 reviewed_at_ms = 7;
+   */
+  reviewedAtMs?: string;
+
+  /**
+   * The reviewer's note. 
+   *
+   * @generated from field: string note = 8;
+   */
+  note?: string;
+};
+
+/**
+ * Describes the message elri.v1.object.Hypothesis.
+ * Use `create(HypothesisSchema)` to create a new message.
+ */
+export const HypothesisSchema: GenMessage<Hypothesis, {jsonType: HypothesisJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_domain, 8);
+
+/**
  * What an Object is. Every kind shares the same document shape. 
  *
  * @generated from enum elri.v1.object.ObjectKind
@@ -790,4 +923,49 @@ export type ObjectKindJson = "OBJECT_KIND_UNSPECIFIED" | "OBJECT_KIND_ENTITY" | 
  */
 export const ObjectKindSchema: GenEnum<ObjectKind, ObjectKindJson> = /*@__PURE__*/
   enumDesc(file_elri_v1_object_domain, 0);
+
+/**
+ * Where an AI hypothesis stands. 
+ *
+ * @generated from enum elri.v1.object.HypothesisStatus
+ */
+export enum HypothesisStatus {
+  /**
+   * @generated from enum value: HYPOTHESIS_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: HYPOTHESIS_STATUS_PROPOSED = 1;
+   */
+  PROPOSED = 1,
+
+  /**
+   * A person confirmed it; the agent stays its author. 
+   *
+   * @generated from enum value: HYPOTHESIS_STATUS_CONFIRMED = 2;
+   */
+  CONFIRMED = 2,
+
+  /**
+   * A person rejected it; the Layer is deleted and purged with the
+   * Space's retention. 
+   *
+   * @generated from enum value: HYPOTHESIS_STATUS_REJECTED = 3;
+   */
+  REJECTED = 3,
+}
+
+/**
+ * Where an AI hypothesis stands. 
+ *
+ * @generated from enum elri.v1.object.HypothesisStatus
+ */
+export type HypothesisStatusJson = "HYPOTHESIS_STATUS_UNSPECIFIED" | "HYPOTHESIS_STATUS_PROPOSED" | "HYPOTHESIS_STATUS_CONFIRMED" | "HYPOTHESIS_STATUS_REJECTED";
+
+/**
+ * Describes the enum elri.v1.object.HypothesisStatus.
+ */
+export const HypothesisStatusSchema: GenEnum<HypothesisStatus, HypothesisStatusJson> = /*@__PURE__*/
+  enumDesc(file_elri_v1_object_domain, 1);
 

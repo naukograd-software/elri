@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
-import type { Object$, ObjectJson, ObjectKind, ObjectKindJson, Participant, ParticipantJson, Placement, PlacementJson, Value, ValueJson } from "./domain_pb.ts";
+import type { Hypothesis, HypothesisJson, HypothesisStatus, HypothesisStatusJson, Object$, ObjectJson, ObjectKind, ObjectKindJson, Participant, ParticipantJson, Placement, PlacementJson, Value, ValueJson } from "./domain_pb.ts";
 import { file_elri_v1_object_domain } from "./domain_pb.ts";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -12,7 +12,228 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/object/object.proto.
  */
 export const file_elri_v1_object_object: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9vYmplY3QucHJvdG8SDmVscmkudjEub2JqZWN0Iq0CChNDcmVhdGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAMgAygJEj8KBmZpZWxkcxgEIAMoCzIvLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QuRmllbGRzRW50cnkSMQoMcGFydGljaXBhbnRzGAUgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSEQoJdGFyZ2V0X2lkGAYgASgJGkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRDcmVhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMAoQR2V0T2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI7ChFHZXRPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QipgMKE1VwZGF0ZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSRgoKc2V0X2ZpZWxkcxgDIAMoCzIyLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QuU2V0RmllbGRzRW50cnkSFQoNcmVtb3ZlX2ZpZWxkcxgEIAMoCRIRCglhZGRfdHlwZXMYBSADKAkSFAoMcmVtb3ZlX3R5cGVzGAYgAygJEjUKEHNldF9wYXJ0aWNpcGFudHMYByADKAsyGy5lbHJpLnYxLm9iamVjdC5QYXJ0aWNpcGFudBIbChNyZW1vdmVfcGFydGljaXBhbnRzGAggAygJEjEKDnNldF9wbGFjZW1lbnRzGAkgAygLMhkuZWxyaS52MS5vYmplY3QuUGxhY2VtZW50EhkKEXJlbW92ZV9wbGFjZW1lbnRzGAogAygJGkcKDlNldEZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRVcGRhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMwoTRGVsZXRlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIWChREZWxldGVPYmplY3RSZXNwb25zZSIyChJQdXJnZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkiFQoTUHVyZ2VPYmplY3RSZXNwb25zZSK1AQoFV3JpdGUSNQoGY3JlYXRlGAEgASgLMiMuZWxyaS52MS5vYmplY3QuQ3JlYXRlT2JqZWN0UmVxdWVzdEgAEjUKBnVwZGF0ZRgCIAEoCzIjLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3RIABI1CgZkZWxldGUYAyABKAsyIy5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXF1ZXN0SABCBwoFd3JpdGUiNgoNQ29tbWl0UmVxdWVzdBIlCgZ3cml0ZXMYASADKAsyFS5lbHJpLnYxLm9iamVjdC5Xcml0ZSJMCg5Db21taXRSZXNwb25zZRIRCgljaGFuZ2VfaWQYASABKAkSJwoHb2JqZWN0cxgCIAMoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdCLUAQoSTGlzdE9iamVjdHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg8KB3R5cGVfaWQYAyABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAQgASgIEg0KBWxpbWl0GAUgASgFEh0KFXBhcnRpY2lwYW50X29iamVjdF9pZBgGIAEoCRIRCgl0YXJnZXRfaWQYByABKAkSFwoPcGxhY2VkX2Jsb2NrX2lkGAggASgJIj4KE0xpc3RPYmplY3RzUmVzcG9uc2USJwoHb2JqZWN0cxgBIAMoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdDLrBAoNT2JqZWN0U2VydmljZRJZCgxDcmVhdGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5DcmVhdGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuQ3JlYXRlT2JqZWN0UmVzcG9uc2USUAoJR2V0T2JqZWN0EiAuZWxyaS52MS5vYmplY3QuR2V0T2JqZWN0UmVxdWVzdBohLmVscmkudjEub2JqZWN0LkdldE9iamVjdFJlc3BvbnNlElkKDFVwZGF0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5VcGRhdGVPYmplY3RSZXNwb25zZRJZCgxEZWxldGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuRGVsZXRlT2JqZWN0UmVzcG9uc2USVgoLUHVyZ2VPYmplY3QSIi5lbHJpLnYxLm9iamVjdC5QdXJnZU9iamVjdFJlcXVlc3QaIy5lbHJpLnYxLm9iamVjdC5QdXJnZU9iamVjdFJlc3BvbnNlEkcKBkNvbW1pdBIdLmVscmkudjEub2JqZWN0LkNvbW1pdFJlcXVlc3QaHi5lbHJpLnYxLm9iamVjdC5Db21taXRSZXNwb25zZRJWCgtMaXN0T2JqZWN0cxIiLmVscmkudjEub2JqZWN0Lkxpc3RPYmplY3RzUmVxdWVzdBojLmVscmkudjEub2JqZWN0Lkxpc3RPYmplY3RzUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9vYmplY3QucHJvdG8SDmVscmkudjEub2JqZWN0In0KFUxpc3RIeXBvdGhlc2VzUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIRCgl0YXJnZXRfaWQYAiABKAkSMAoGc3RhdHVzGAMgASgOMiAuZWxyaS52MS5vYmplY3QuSHlwb3RoZXNpc1N0YXR1cxINCgVsaW1pdBgEIAEoBSJoCg9IeXBvdGhlc2lzTGF5ZXISJQoFbGF5ZXIYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QSLgoKaHlwb3RoZXNpcxgCIAEoCzIaLmVscmkudjEub2JqZWN0Lkh5cG90aGVzaXMiTQoWTGlzdEh5cG90aGVzZXNSZXNwb25zZRIzCgpoeXBvdGhlc2VzGAEgAygLMh8uZWxyaS52MS5vYmplY3QuSHlwb3RoZXNpc0xheWVyIncKF1Jldmlld0h5cG90aGVzaXNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJEjAKBnN0YXR1cxgDIAEoDjIgLmVscmkudjEub2JqZWN0Lkh5cG90aGVzaXNTdGF0dXMSDAoEbm90ZRgEIAEoCSJPChhSZXZpZXdIeXBvdGhlc2lzUmVzcG9uc2USMwoKaHlwb3RoZXNpcxgBIAEoCzIfLmVscmkudjEub2JqZWN0Lkh5cG90aGVzaXNMYXllciKtAgoTQ3JlYXRlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIoCgRraW5kGAIgASgOMhouZWxyaS52MS5vYmplY3QuT2JqZWN0S2luZBINCgV0eXBlcxgDIAMoCRI/CgZmaWVsZHMYBCADKAsyLy5lbHJpLnYxLm9iamVjdC5DcmVhdGVPYmplY3RSZXF1ZXN0LkZpZWxkc0VudHJ5EjEKDHBhcnRpY2lwYW50cxgFIAMoCzIbLmVscmkudjEub2JqZWN0LlBhcnRpY2lwYW50EhEKCXRhcmdldF9pZBgGIAEoCRpECgtGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5lbHJpLnYxLm9iamVjdC5WYWx1ZToCOAEiPgoUQ3JlYXRlT2JqZWN0UmVzcG9uc2USJgoGb2JqZWN0GAEgASgLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0IjAKEEdldE9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkiOwoRR2V0T2JqZWN0UmVzcG9uc2USJgoGb2JqZWN0GAEgASgLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0IqYDChNVcGRhdGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJEkYKCnNldF9maWVsZHMYAyADKAsyMi5lbHJpLnYxLm9iamVjdC5VcGRhdGVPYmplY3RSZXF1ZXN0LlNldEZpZWxkc0VudHJ5EhUKDXJlbW92ZV9maWVsZHMYBCADKAkSEQoJYWRkX3R5cGVzGAUgAygJEhQKDHJlbW92ZV90eXBlcxgGIAMoCRI1ChBzZXRfcGFydGljaXBhbnRzGAcgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSGwoTcmVtb3ZlX3BhcnRpY2lwYW50cxgIIAMoCRIxCg5zZXRfcGxhY2VtZW50cxgJIAMoCzIZLmVscmkudjEub2JqZWN0LlBsYWNlbWVudBIZChFyZW1vdmVfcGxhY2VtZW50cxgKIAMoCRpHCg5TZXRGaWVsZHNFbnRyeRILCgNrZXkYASABKAkSJAoFdmFsdWUYAiABKAsyFS5lbHJpLnYxLm9iamVjdC5WYWx1ZToCOAEiPgoUVXBkYXRlT2JqZWN0UmVzcG9uc2USJgoGb2JqZWN0GAEgASgLMhYuZWxyaS52MS5vYmplY3QuT2JqZWN0IjMKE0RlbGV0ZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkiFgoURGVsZXRlT2JqZWN0UmVzcG9uc2UiMgoSUHVyZ2VPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEgoKAmlkGAIgASgJIhUKE1B1cmdlT2JqZWN0UmVzcG9uc2UitQEKBVdyaXRlEjUKBmNyZWF0ZRgBIAEoCzIjLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3RIABI1CgZ1cGRhdGUYAiABKAsyIy5lbHJpLnYxLm9iamVjdC5VcGRhdGVPYmplY3RSZXF1ZXN0SAASNQoGZGVsZXRlGAMgASgLMiMuZWxyaS52MS5vYmplY3QuRGVsZXRlT2JqZWN0UmVxdWVzdEgAQgcKBXdyaXRlIjYKDUNvbW1pdFJlcXVlc3QSJQoGd3JpdGVzGAEgAygLMhUuZWxyaS52MS5vYmplY3QuV3JpdGUiTAoOQ29tbWl0UmVzcG9uc2USEQoJY2hhbmdlX2lkGAEgASgJEicKB29iamVjdHMYAiADKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3Qi1AEKEkxpc3RPYmplY3RzUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIoCgRraW5kGAIgASgOMhouZWxyaS52MS5vYmplY3QuT2JqZWN0S2luZBIPCgd0eXBlX2lkGAMgASgJEhcKD2luY2x1ZGVfZGVsZXRlZBgEIAEoCBINCgVsaW1pdBgFIAEoBRIdChVwYXJ0aWNpcGFudF9vYmplY3RfaWQYBiABKAkSEQoJdGFyZ2V0X2lkGAcgASgJEhcKD3BsYWNlZF9ibG9ja19pZBgIIAEoCSI+ChNMaXN0T2JqZWN0c1Jlc3BvbnNlEicKB29iamVjdHMYASADKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QyswYKDU9iamVjdFNlcnZpY2USWQoMQ3JlYXRlT2JqZWN0EiMuZWxyaS52MS5vYmplY3QuQ3JlYXRlT2JqZWN0UmVxdWVzdBokLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlc3BvbnNlElAKCUdldE9iamVjdBIgLmVscmkudjEub2JqZWN0LkdldE9iamVjdFJlcXVlc3QaIS5lbHJpLnYxLm9iamVjdC5HZXRPYmplY3RSZXNwb25zZRJZCgxVcGRhdGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5VcGRhdGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuVXBkYXRlT2JqZWN0UmVzcG9uc2USWQoMRGVsZXRlT2JqZWN0EiMuZWxyaS52MS5vYmplY3QuRGVsZXRlT2JqZWN0UmVxdWVzdBokLmVscmkudjEub2JqZWN0LkRlbGV0ZU9iamVjdFJlc3BvbnNlElYKC1B1cmdlT2JqZWN0EiIuZWxyaS52MS5vYmplY3QuUHVyZ2VPYmplY3RSZXF1ZXN0GiMuZWxyaS52MS5vYmplY3QuUHVyZ2VPYmplY3RSZXNwb25zZRJHCgZDb21taXQSHS5lbHJpLnYxLm9iamVjdC5Db21taXRSZXF1ZXN0Gh4uZWxyaS52MS5vYmplY3QuQ29tbWl0UmVzcG9uc2USVgoLTGlzdE9iamVjdHMSIi5lbHJpLnYxLm9iamVjdC5MaXN0T2JqZWN0c1JlcXVlc3QaIy5lbHJpLnYxLm9iamVjdC5MaXN0T2JqZWN0c1Jlc3BvbnNlEl8KDkxpc3RIeXBvdGhlc2VzEiUuZWxyaS52MS5vYmplY3QuTGlzdEh5cG90aGVzZXNSZXF1ZXN0GiYuZWxyaS52MS5vYmplY3QuTGlzdEh5cG90aGVzZXNSZXNwb25zZRJlChBSZXZpZXdIeXBvdGhlc2lzEicuZWxyaS52MS5vYmplY3QuUmV2aWV3SHlwb3RoZXNpc1JlcXVlc3QaKC5lbHJpLnYxLm9iamVjdC5SZXZpZXdIeXBvdGhlc2lzUmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_object_domain]);
+
+/**
+ * @generated from message elri.v1.object.ListHypothesesRequest
+ */
+export type ListHypothesesRequest = Message<"elri.v1.object.ListHypothesesRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * Only hypotheses over this Object, if set. 
+   *
+   * @generated from field: string target_id = 2;
+   */
+  targetId: string;
+
+  /**
+   * Only this status, if set; rejected ones are deleted Layers. 
+   *
+   * @generated from field: elri.v1.object.HypothesisStatus status = 3;
+   */
+  status: HypothesisStatus;
+
+  /**
+   * 0 = server default. 
+   *
+   * @generated from field: int32 limit = 4;
+   */
+  limit: number;
+};
+
+/**
+ * @generated from message elri.v1.object.ListHypothesesRequest
+ */
+export type ListHypothesesRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * Only hypotheses over this Object, if set. 
+   *
+   * @generated from field: string target_id = 2;
+   */
+  targetId?: string;
+
+  /**
+   * Only this status, if set; rejected ones are deleted Layers. 
+   *
+   * @generated from field: elri.v1.object.HypothesisStatus status = 3;
+   */
+  status?: HypothesisStatusJson;
+
+  /**
+   * 0 = server default. 
+   *
+   * @generated from field: int32 limit = 4;
+   */
+  limit?: number;
+};
+
+/**
+ * Describes the message elri.v1.object.ListHypothesesRequest.
+ * Use `create(ListHypothesesRequestSchema)` to create a new message.
+ */
+export const ListHypothesesRequestSchema: GenMessage<ListHypothesesRequest, {jsonType: ListHypothesesRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_object, 0);
+
+/**
+ * @generated from message elri.v1.object.HypothesisLayer
+ */
+export type HypothesisLayer = Message<"elri.v1.object.HypothesisLayer"> & {
+  /**
+   * @generated from field: elri.v1.object.Object layer = 1;
+   */
+  layer?: Object$ | undefined;
+
+  /**
+   * @generated from field: elri.v1.object.Hypothesis hypothesis = 2;
+   */
+  hypothesis?: Hypothesis | undefined;
+};
+
+/**
+ * @generated from message elri.v1.object.HypothesisLayer
+ */
+export type HypothesisLayerJson = {
+  /**
+   * @generated from field: elri.v1.object.Object layer = 1;
+   */
+  layer?: ObjectJson;
+
+  /**
+   * @generated from field: elri.v1.object.Hypothesis hypothesis = 2;
+   */
+  hypothesis?: HypothesisJson;
+};
+
+/**
+ * Describes the message elri.v1.object.HypothesisLayer.
+ * Use `create(HypothesisLayerSchema)` to create a new message.
+ */
+export const HypothesisLayerSchema: GenMessage<HypothesisLayer, {jsonType: HypothesisLayerJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_object, 1);
+
+/**
+ * @generated from message elri.v1.object.ListHypothesesResponse
+ */
+export type ListHypothesesResponse = Message<"elri.v1.object.ListHypothesesResponse"> & {
+  /**
+   * @generated from field: repeated elri.v1.object.HypothesisLayer hypotheses = 1;
+   */
+  hypotheses: HypothesisLayer[];
+};
+
+/**
+ * @generated from message elri.v1.object.ListHypothesesResponse
+ */
+export type ListHypothesesResponseJson = {
+  /**
+   * @generated from field: repeated elri.v1.object.HypothesisLayer hypotheses = 1;
+   */
+  hypotheses?: HypothesisLayerJson[];
+};
+
+/**
+ * Describes the message elri.v1.object.ListHypothesesResponse.
+ * Use `create(ListHypothesesResponseSchema)` to create a new message.
+ */
+export const ListHypothesesResponseSchema: GenMessage<ListHypothesesResponse, {jsonType: ListHypothesesResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_object, 2);
+
+/**
+ * @generated from message elri.v1.object.ReviewHypothesisRequest
+ */
+export type ReviewHypothesisRequest = Message<"elri.v1.object.ReviewHypothesisRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id: string;
+
+  /**
+   * CONFIRMED or REJECTED. 
+   *
+   * @generated from field: elri.v1.object.HypothesisStatus status = 3;
+   */
+  status: HypothesisStatus;
+
+  /**
+   * @generated from field: string note = 4;
+   */
+  note: string;
+};
+
+/**
+ * @generated from message elri.v1.object.ReviewHypothesisRequest
+ */
+export type ReviewHypothesisRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id?: string;
+
+  /**
+   * CONFIRMED or REJECTED. 
+   *
+   * @generated from field: elri.v1.object.HypothesisStatus status = 3;
+   */
+  status?: HypothesisStatusJson;
+
+  /**
+   * @generated from field: string note = 4;
+   */
+  note?: string;
+};
+
+/**
+ * Describes the message elri.v1.object.ReviewHypothesisRequest.
+ * Use `create(ReviewHypothesisRequestSchema)` to create a new message.
+ */
+export const ReviewHypothesisRequestSchema: GenMessage<ReviewHypothesisRequest, {jsonType: ReviewHypothesisRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_object, 3);
+
+/**
+ * @generated from message elri.v1.object.ReviewHypothesisResponse
+ */
+export type ReviewHypothesisResponse = Message<"elri.v1.object.ReviewHypothesisResponse"> & {
+  /**
+   * @generated from field: elri.v1.object.HypothesisLayer hypothesis = 1;
+   */
+  hypothesis?: HypothesisLayer | undefined;
+};
+
+/**
+ * @generated from message elri.v1.object.ReviewHypothesisResponse
+ */
+export type ReviewHypothesisResponseJson = {
+  /**
+   * @generated from field: elri.v1.object.HypothesisLayer hypothesis = 1;
+   */
+  hypothesis?: HypothesisLayerJson;
+};
+
+/**
+ * Describes the message elri.v1.object.ReviewHypothesisResponse.
+ * Use `create(ReviewHypothesisResponseSchema)` to create a new message.
+ */
+export const ReviewHypothesisResponseSchema: GenMessage<ReviewHypothesisResponse, {jsonType: ReviewHypothesisResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_object, 4);
 
 /**
  * @generated from message elri.v1.object.CreateObjectRequest
@@ -97,7 +318,7 @@ export type CreateObjectRequestJson = {
  * Use `create(CreateObjectRequestSchema)` to create a new message.
  */
 export const CreateObjectRequestSchema: GenMessage<CreateObjectRequest, {jsonType: CreateObjectRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 0);
+  messageDesc(file_elri_v1_object_object, 5);
 
 /**
  * @generated from message elri.v1.object.CreateObjectResponse
@@ -124,7 +345,7 @@ export type CreateObjectResponseJson = {
  * Use `create(CreateObjectResponseSchema)` to create a new message.
  */
 export const CreateObjectResponseSchema: GenMessage<CreateObjectResponse, {jsonType: CreateObjectResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 1);
+  messageDesc(file_elri_v1_object_object, 6);
 
 /**
  * @generated from message elri.v1.object.GetObjectRequest
@@ -161,7 +382,7 @@ export type GetObjectRequestJson = {
  * Use `create(GetObjectRequestSchema)` to create a new message.
  */
 export const GetObjectRequestSchema: GenMessage<GetObjectRequest, {jsonType: GetObjectRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 2);
+  messageDesc(file_elri_v1_object_object, 7);
 
 /**
  * @generated from message elri.v1.object.GetObjectResponse
@@ -188,7 +409,7 @@ export type GetObjectResponseJson = {
  * Use `create(GetObjectResponseSchema)` to create a new message.
  */
 export const GetObjectResponseSchema: GenMessage<GetObjectResponse, {jsonType: GetObjectResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 3);
+  messageDesc(file_elri_v1_object_object, 8);
 
 /**
  * @generated from message elri.v1.object.UpdateObjectRequest
@@ -325,7 +546,7 @@ export type UpdateObjectRequestJson = {
  * Use `create(UpdateObjectRequestSchema)` to create a new message.
  */
 export const UpdateObjectRequestSchema: GenMessage<UpdateObjectRequest, {jsonType: UpdateObjectRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 4);
+  messageDesc(file_elri_v1_object_object, 9);
 
 /**
  * @generated from message elri.v1.object.UpdateObjectResponse
@@ -352,7 +573,7 @@ export type UpdateObjectResponseJson = {
  * Use `create(UpdateObjectResponseSchema)` to create a new message.
  */
 export const UpdateObjectResponseSchema: GenMessage<UpdateObjectResponse, {jsonType: UpdateObjectResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 5);
+  messageDesc(file_elri_v1_object_object, 10);
 
 /**
  * @generated from message elri.v1.object.DeleteObjectRequest
@@ -389,7 +610,7 @@ export type DeleteObjectRequestJson = {
  * Use `create(DeleteObjectRequestSchema)` to create a new message.
  */
 export const DeleteObjectRequestSchema: GenMessage<DeleteObjectRequest, {jsonType: DeleteObjectRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 6);
+  messageDesc(file_elri_v1_object_object, 11);
 
 /**
  * @generated from message elri.v1.object.DeleteObjectResponse
@@ -408,7 +629,7 @@ export type DeleteObjectResponseJson = {
  * Use `create(DeleteObjectResponseSchema)` to create a new message.
  */
 export const DeleteObjectResponseSchema: GenMessage<DeleteObjectResponse, {jsonType: DeleteObjectResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 7);
+  messageDesc(file_elri_v1_object_object, 12);
 
 /**
  * @generated from message elri.v1.object.PurgeObjectRequest
@@ -445,7 +666,7 @@ export type PurgeObjectRequestJson = {
  * Use `create(PurgeObjectRequestSchema)` to create a new message.
  */
 export const PurgeObjectRequestSchema: GenMessage<PurgeObjectRequest, {jsonType: PurgeObjectRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 8);
+  messageDesc(file_elri_v1_object_object, 13);
 
 /**
  * @generated from message elri.v1.object.PurgeObjectResponse
@@ -464,7 +685,7 @@ export type PurgeObjectResponseJson = {
  * Use `create(PurgeObjectResponseSchema)` to create a new message.
  */
 export const PurgeObjectResponseSchema: GenMessage<PurgeObjectResponse, {jsonType: PurgeObjectResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 9);
+  messageDesc(file_elri_v1_object_object, 14);
 
 /**
  * @generated from message elri.v1.object.Write
@@ -519,7 +740,7 @@ export type WriteJson = {
  * Use `create(WriteSchema)` to create a new message.
  */
 export const WriteSchema: GenMessage<Write, {jsonType: WriteJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 10);
+  messageDesc(file_elri_v1_object_object, 15);
 
 /**
  * @generated from message elri.v1.object.CommitRequest
@@ -546,7 +767,7 @@ export type CommitRequestJson = {
  * Use `create(CommitRequestSchema)` to create a new message.
  */
 export const CommitRequestSchema: GenMessage<CommitRequest, {jsonType: CommitRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 11);
+  messageDesc(file_elri_v1_object_object, 16);
 
 /**
  * @generated from message elri.v1.object.CommitResponse
@@ -587,7 +808,7 @@ export type CommitResponseJson = {
  * Use `create(CommitResponseSchema)` to create a new message.
  */
 export const CommitResponseSchema: GenMessage<CommitResponse, {jsonType: CommitResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 12);
+  messageDesc(file_elri_v1_object_object, 17);
 
 /**
  * @generated from message elri.v1.object.ListObjectsRequest
@@ -712,7 +933,7 @@ export type ListObjectsRequestJson = {
  * Use `create(ListObjectsRequestSchema)` to create a new message.
  */
 export const ListObjectsRequestSchema: GenMessage<ListObjectsRequest, {jsonType: ListObjectsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 13);
+  messageDesc(file_elri_v1_object_object, 18);
 
 /**
  * @generated from message elri.v1.object.ListObjectsResponse
@@ -739,7 +960,7 @@ export type ListObjectsResponseJson = {
  * Use `create(ListObjectsResponseSchema)` to create a new message.
  */
 export const ListObjectsResponseSchema: GenMessage<ListObjectsResponse, {jsonType: ListObjectsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 14);
+  messageDesc(file_elri_v1_object_object, 19);
 
 /**
  * Create, read, and change Objects of a Space. 
@@ -818,6 +1039,27 @@ export const ObjectService: GenService<{
     methodKind: "unary";
     input: typeof ListObjectsRequestSchema;
     output: typeof ListObjectsResponseSchema;
+  },
+  /**
+   * Hypotheses: Layers agents proposed, with their provenance. 
+   *
+   * @generated from rpc elri.v1.object.ObjectService.ListHypotheses
+   */
+  listHypotheses: {
+    methodKind: "unary";
+    input: typeof ListHypothesesRequestSchema;
+    output: typeof ListHypothesesResponseSchema;
+  },
+  /**
+   * A person confirms or rejects a hypothesis. Rejecting deletes the
+   * Layer; the agent that proposed it stays on record either way. 
+   *
+   * @generated from rpc elri.v1.object.ObjectService.ReviewHypothesis
+   */
+  reviewHypothesis: {
+    methodKind: "unary";
+    input: typeof ReviewHypothesisRequestSchema;
+    output: typeof ReviewHypothesisResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_object_object, 0);

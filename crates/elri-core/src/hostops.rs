@@ -57,6 +57,19 @@ impl Session {
         Ok(())
     }
 
+    /// A hypothesis is revised only by the agent that proposed it.
+    async fn may_revise(&self, space: SpaceId, id: ObjectId) -> Result<(), String> {
+        let current = self
+            .store
+            .space(space)
+            .await
+            .map_err(|e| e.to_string())?
+            .get(id)
+            .await
+            .map_err(|e| e.to_string())?;
+        crate::hypothesis::may_revise(&current, &self.actor)
+    }
+
     /// Every Space read so far must allow copying into `space`.
     async fn may_copy_to(&self, space: SpaceId) -> Result<(), String> {
         crate::policy::check_labels(
@@ -175,7 +188,7 @@ impl Session {
                 let space = self.space_of(req)?;
                 self.may_write(space)?;
                 self.may_copy_to(space).await?;
-                let doc = doc_from_json(req, space)?;
+                let doc = doc_from_json(req, space, &self.actor)?;
                 let rec = self
                     .store
                     .space(space)
@@ -190,6 +203,7 @@ impl Session {
                 let space = self.space_of(req)?;
                 self.may_write(space)?;
                 self.may_copy_to(space).await?;
+                self.may_revise(space, id(req)?).await?;
                 let set = fields_from_json(req.get("fields"))?;
                 let remove: Vec<String> = strings(req.get("remove_fields"));
                 let add_types: Vec<String> = strings(req.get("add_types"));
@@ -225,6 +239,7 @@ impl Session {
             "delete" => {
                 let space = self.space_of(req)?;
                 self.may_write(space)?;
+                self.may_revise(space, id(req)?).await?;
                 self.store
                     .space(space)
                     .await
@@ -437,6 +452,9 @@ fn fields_from_json(v: Option<&Json>) -> Result<HashMap<String, Value>, String> 
     let mut out = HashMap::new();
     if let Some(Json::Object(o)) = v {
         for (k, v) in o {
+            if crate::model::is_reserved_field(k) {
+                return Err(format!("field {k}: reserved ids are written by the core"));
+            }
             if let Some(v) = value_from_json(v)? {
                 out.insert(k.clone(), v);
             }
@@ -445,9 +463,33 @@ fn fields_from_json(v: Option<&Json>) -> Result<HashMap<String, Value>, String> 
     Ok(out)
 }
 
-/// A new document from `{"kind", "types", "fields", "target", "participants"}`.
-pub fn doc_from_json(spec: &Json, space: SpaceId) -> Result<ObjectDoc, String> {
+/// A proposal from `{"model", "sources", "basis"}`.
+pub fn proposal_from_json(v: &Json) -> Result<crate::hypothesis::Proposal, String> {
+    let p = crate::hypothesis::Proposal {
+        model: v
+            .get("model")
+            .and_then(Json::as_str)
+            .unwrap_or_default()
+            .to_owned(),
+        sources: strings(v.get("sources")),
+        basis: v
+            .get("basis")
+            .and_then(Json::as_str)
+            .unwrap_or_default()
+            .to_owned(),
+    };
+    crate::hypothesis::check(&p)?;
+    Ok(p)
+}
+
+/// A new document from `{"kind", "types", "fields", "target", "participants",
+/// "hypothesis"}`; a hypothesis is a Layer proposed by `actor`.
+pub fn doc_from_json(spec: &Json, space: SpaceId, actor: &str) -> Result<ObjectDoc, String> {
     let kind = kind_from_json(spec.get("kind").and_then(Json::as_str))?;
+    let proposal = spec.get("hypothesis").map(proposal_from_json).transpose()?;
+    if proposal.is_some() && kind != ObjectKind::Layer {
+        return Err("a hypothesis is a layer".to_owned());
+    }
     let now = now_ms();
     let doc = match (kind, spec.get("target").and_then(Json::as_str)) {
         (ObjectKind::Layer, Some(target)) => ObjectDoc::create_layer(
@@ -483,6 +525,9 @@ pub fn doc_from_json(spec: &Json, space: SpaceId) -> Result<ObjectDoc, String> {
             })
             .map_err(|e| e.to_string())?;
         }
+    }
+    if let Some(p) = &proposal {
+        crate::hypothesis::write(&doc, actor, p).map_err(|e| e.to_string())?;
     }
     doc.touch(now).map_err(|e| e.to_string())?;
     Ok(doc)

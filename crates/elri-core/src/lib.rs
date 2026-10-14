@@ -21,6 +21,7 @@ pub mod change;
 pub mod device;
 pub mod extension;
 pub mod hostops;
+pub mod hypothesis;
 pub mod model;
 pub mod policy;
 pub mod remote;

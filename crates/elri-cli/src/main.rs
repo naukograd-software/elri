@@ -34,8 +34,9 @@ use elri_proto::elri::v1::extension::{
 };
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
-    value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest, Object,
-    ObjectKind, Participant, Placement, PurgeObjectRequest, UpdateObjectRequest, Value, ValueList,
+    value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, HypothesisLayer,
+    HypothesisStatus, ListHypothesesRequest, ListObjectsRequest, Object, ObjectKind, Participant,
+    Placement, PurgeObjectRequest, ReviewHypothesisRequest, UpdateObjectRequest, Value, ValueList,
     ValueMap,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::RemoteServiceClient;
@@ -758,6 +759,28 @@ fn parse_kind(s: &str) -> Result<ObjectKind, String> {
     Ok(k)
 }
 
+fn parse_hypothesis_status(s: &str) -> Result<HypothesisStatus, String> {
+    match parse_enum("HYPOTHESIS_STATUS", s, HypothesisStatus::from_str_name)? {
+        HypothesisStatus::Unspecified => Err("status is required".to_owned()),
+        st => Ok(st),
+    }
+}
+
+fn hypothesis_json(h: &HypothesisLayer) -> serde_json::Value {
+    let hy = h.hypothesis.clone().unwrap_or_default();
+    json!({
+        "layer": h.layer.as_ref().map(object_json),
+        "agent": hy.agent,
+        "model": hy.model,
+        "sources": hy.sources,
+        "basis": hy.basis,
+        "status": hy.status().as_str_name().trim_start_matches("HYPOTHESIS_STATUS_").to_lowercase(),
+        "reviewed_by": hy.reviewed_by,
+        "reviewed_at_ms": hy.reviewed_at_ms,
+        "note": hy.note,
+    })
+}
+
 fn parse_role(s: &str) -> Result<Role, String> {
     match parse_enum("ROLE", s, Role::from_str_name)? {
         Role::Unspecified | Role::Owner => Err("role must be admin, editor, or viewer".to_owned()),
@@ -830,6 +853,28 @@ enum ObjectCmd {
         #[arg(long)]
         space: String,
         id: String,
+    },
+    /// Hypotheses: Layers agents proposed, with who, what, and why.
+    Hypotheses {
+        #[arg(long)]
+        space: String,
+        /// Only over this Object.
+        #[arg(long)]
+        target: Option<String>,
+        /// proposed, confirmed, or rejected.
+        #[arg(long, value_parser = parse_hypothesis_status)]
+        status: Option<HypothesisStatus>,
+    },
+    /// Confirm or reject a hypothesis; rejecting deletes the Layer.
+    Review {
+        #[arg(long)]
+        space: String,
+        id: String,
+        /// confirmed or rejected.
+        #[arg(value_parser = parse_hypothesis_status)]
+        status: HypothesisStatus,
+        #[arg(long, default_value = "")]
+        note: String,
     },
     /// Place a block Object inside a document Entity.
     Place {
@@ -2472,9 +2517,10 @@ async fn run_object(
             let objects: Vec<_> = res.msg.objects.iter().map(object_json).collect();
             Ok(json!(objects))
         }
-        cmd @ (ObjectCmd::Delete { .. } | ObjectCmd::Purge { .. }) => {
-            run_object_lifecycle(&client, endpoint, cmd).await
-        }
+        cmd @ (ObjectCmd::Delete { .. }
+        | ObjectCmd::Purge { .. }
+        | ObjectCmd::Hypotheses { .. }
+        | ObjectCmd::Review { .. }) => run_object_lifecycle(&client, endpoint, cmd).await,
         cmd @ (ObjectCmd::Place { .. } | ObjectCmd::Move { .. } | ObjectCmd::Unplace { .. }) => {
             run_placement(&client, endpoint, cmd).await
         }
@@ -2510,6 +2556,52 @@ async fn run_object_lifecycle(
                 ))
                 .await?;
             Ok(json!({ "purged": true }))
+        }
+        ObjectCmd::Hypotheses {
+            space,
+            target,
+            status,
+        } => {
+            let res = client
+                .list_hypotheses(authed(
+                    endpoint,
+                    ListHypothesesRequest {
+                        space_id: space,
+                        target_id: target.unwrap_or_default(),
+                        status: status.map_or(0, i32::from),
+                        limit: 0,
+                    },
+                ))
+                .await?;
+            Ok(json!(res
+                .msg
+                .hypotheses
+                .iter()
+                .map(hypothesis_json)
+                .collect::<Vec<_>>()))
+        }
+        ObjectCmd::Review {
+            space,
+            id,
+            status,
+            note,
+        } => {
+            let res = client
+                .review_hypothesis(authed(
+                    endpoint,
+                    ReviewHypothesisRequest {
+                        space_id: space,
+                        id,
+                        status: status.into(),
+                        note,
+                    },
+                ))
+                .await?;
+            Ok(res
+                .msg
+                .hypothesis
+                .as_ref()
+                .map_or(serde_json::Value::Null, hypothesis_json))
         }
         _ => bail!("not a lifecycle command"),
     }

@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CommitRequest, CommitResponse, CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest, DeleteObjectResponse, GetObjectRequest, GetObjectResponse, ListObjectsRequest, ListObjectsResponse, PurgeObjectRequest, PurgeObjectResponse, UpdateObjectRequest, UpdateObjectResponse } from "./object_pb.ts";
-import { CommitRequestSchema, CommitResponseSchema, CreateObjectRequestSchema, CreateObjectResponseSchema, DeleteObjectRequestSchema, DeleteObjectResponseSchema, GetObjectRequestSchema, GetObjectResponseSchema, ListObjectsRequestSchema, ListObjectsResponseSchema, PurgeObjectRequestSchema, PurgeObjectResponseSchema, UpdateObjectRequestSchema, UpdateObjectResponseSchema } from "./object_pb.ts";
+import type { CommitRequest, CommitResponse, CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest, DeleteObjectResponse, GetObjectRequest, GetObjectResponse, ListHypothesesRequest, ListHypothesesResponse, ListObjectsRequest, ListObjectsResponse, PurgeObjectRequest, PurgeObjectResponse, ReviewHypothesisRequest, ReviewHypothesisResponse, UpdateObjectRequest, UpdateObjectResponse } from "./object_pb.ts";
+import { CommitRequestSchema, CommitResponseSchema, CreateObjectRequestSchema, CreateObjectResponseSchema, DeleteObjectRequestSchema, DeleteObjectResponseSchema, GetObjectRequestSchema, GetObjectResponseSchema, ListHypothesesRequestSchema, ListHypothesesResponseSchema, ListObjectsRequestSchema, ListObjectsResponseSchema, PurgeObjectRequestSchema, PurgeObjectResponseSchema, ReviewHypothesisRequestSchema, ReviewHypothesisResponseSchema, UpdateObjectRequestSchema, UpdateObjectResponseSchema } from "./object_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -73,6 +73,22 @@ const ObjectService_ListObjects: MethodInfo<ListObjectsRequest, ListObjectsRespo
   kind: "unary",
   input: ListObjectsRequestSchema,
   output: ListObjectsResponseSchema,
+};
+
+const ObjectService_ListHypotheses: MethodInfo<ListHypothesesRequest, ListHypothesesResponse> = {
+  typeName: "elri.v1.object.ObjectService",
+  name: "ListHypotheses",
+  kind: "unary",
+  input: ListHypothesesRequestSchema,
+  output: ListHypothesesResponseSchema,
+};
+
+const ObjectService_ReviewHypothesis: MethodInfo<ReviewHypothesisRequest, ReviewHypothesisResponse> = {
+  typeName: "elri.v1.object.ObjectService",
+  name: "ReviewHypothesis",
+  kind: "unary",
+  input: ReviewHypothesisRequestSchema,
+  output: ReviewHypothesisResponseSchema,
 };
 
 /**
@@ -152,6 +168,27 @@ export class ObjectServiceClient {
    */
   async listObjects(req: ListObjectsRequest, options?: CallOptions): Promise<ListObjectsResponse> {
     const res = await this.transport.unary(ObjectService_ListObjects, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * Hypotheses: Layers agents proposed, with their provenance. 
+   *
+   * @generated from rpc elri.v1.object.ObjectService.ListHypotheses
+   */
+  async listHypotheses(req: ListHypothesesRequest, options?: CallOptions): Promise<ListHypothesesResponse> {
+    const res = await this.transport.unary(ObjectService_ListHypotheses, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   * A person confirms or rejects a hypothesis. Rejecting deletes the
+   * Layer; the agent that proposed it stays on record either way. 
+   *
+   * @generated from rpc elri.v1.object.ObjectService.ReviewHypothesis
+   */
+  async reviewHypothesis(req: ReviewHypothesisRequest, options?: CallOptions): Promise<ReviewHypothesisResponse> {
+    const res = await this.transport.unary(ObjectService_ReviewHypothesis, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

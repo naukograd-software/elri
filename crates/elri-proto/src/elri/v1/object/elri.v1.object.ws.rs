@@ -39,6 +39,14 @@ pub mod object_service_ws {
         route: "/elri.v1.object.ObjectService/ListObjects",
         kind: StreamKind::Unary,
     };
+    pub const LIST_HYPOTHESES: MethodSpec = MethodSpec {
+        route: "/elri.v1.object.ObjectService/ListHypotheses",
+        kind: StreamKind::Unary,
+    };
+    pub const REVIEW_HYPOTHESIS: MethodSpec = MethodSpec {
+        route: "/elri.v1.object.ObjectService/ReviewHypothesis",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `ObjectService` service. Implement with `async fn`.
     pub trait ObjectServiceHandler: Send + Sync + 'static {
         fn create_object(
@@ -94,6 +102,21 @@ pub mod object_service_ws {
             req: Request<super::ListObjectsRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::ListObjectsResponse>, Status>,
+        > + Send;
+        ///  Hypotheses: Layers agents proposed, with their provenance.
+        fn list_hypotheses(
+            &self,
+            req: Request<super::ListHypothesesRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::ListHypothesesResponse>, Status>,
+        > + Send;
+        ///  A person confirms or rejects a hypothesis. Rejecting deletes the
+        /// Layer; the agent that proposed it stays on record either way.
+        fn review_hypothesis(
+            &self,
+            req: Request<super::ReviewHypothesisRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::ReviewHypothesisResponse>, Status>,
         > + Send;
     }
     /// Registers `handler` on `server` for every `ObjectService` method.
@@ -185,6 +208,28 @@ pub mod object_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    LIST_HYPOTHESES.route,
+                    move |req: Request<super::ListHypothesesRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.list_hypotheses(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    REVIEW_HYPOTHESIS.route,
+                    move |req: Request<super::ReviewHypothesisRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.review_hypothesis(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `ObjectService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -252,6 +297,21 @@ pub mod object_service_ws {
             req: impl Into<Request<super::ListObjectsRequest>>,
         ) -> Result<Response<super::ListObjectsResponse>, Status> {
             self.conn.invoke_unary(LIST_OBJECTS, req.into()).await
+        }
+        ///  Hypotheses: Layers agents proposed, with their provenance.
+        pub async fn list_hypotheses(
+            &self,
+            req: impl Into<Request<super::ListHypothesesRequest>>,
+        ) -> Result<Response<super::ListHypothesesResponse>, Status> {
+            self.conn.invoke_unary(LIST_HYPOTHESES, req.into()).await
+        }
+        ///  A person confirms or rejects a hypothesis. Rejecting deletes the
+        /// Layer; the agent that proposed it stays on record either way.
+        pub async fn review_hypothesis(
+            &self,
+            req: impl Into<Request<super::ReviewHypothesisRequest>>,
+        ) -> Result<Response<super::ReviewHypothesisResponse>, Status> {
+            self.conn.invoke_unary(REVIEW_HYPOTHESIS, req.into()).await
         }
     }
 }

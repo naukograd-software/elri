@@ -253,6 +253,29 @@ pub mod reserved {
     pub const STRICT: &str = "$strict";
     /// Transfer policies: the rules as JSON.
     pub const RULES: &str = "$rules";
+    /// Hypotheses: marks a Layer an agent proposed.
+    pub const HYPOTHESIS: &str = "$hypothesis";
+    /// Hypotheses: the actor that proposed it.
+    pub const AGENT: &str = "$agent";
+    /// Hypotheses: model identification.
+    pub const MODEL: &str = "$model";
+    /// Hypotheses: source Object ids as JSON.
+    pub const SOURCES: &str = "$sources";
+    /// Hypotheses: the agent's reason.
+    pub const BASIS: &str = "$basis";
+    /// Hypotheses: `HypothesisStatus` code.
+    pub const STATUS: &str = "$status";
+    /// Hypotheses: who reviewed it.
+    pub const REVIEWED_BY: &str = "$reviewed_by";
+    /// Hypotheses: when it was reviewed.
+    pub const REVIEWED_AT: &str = "$reviewed_at";
+    /// Hypotheses: the reviewer's note.
+    pub const NOTE: &str = "$note";
+}
+
+/// Field ids the core writes itself: an ordinary write may not use them.
+pub fn is_reserved_field(id: &str) -> bool {
+    id.starts_with('$')
 }
 
 const REF_TAG: &str = "$ref";
