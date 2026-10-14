@@ -25,7 +25,8 @@ use elri_proto::elri::v1::object::object_service_ws::{
 use elri_proto::elri::v1::object::{
     CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest, DeleteObjectResponse,
     GetObjectRequest, GetObjectResponse, ListObjectsRequest, ListObjectsResponse, ObjectKind,
-    Participant, Placement, UpdateObjectRequest, UpdateObjectResponse, Value,
+    Participant, Placement, PurgeObjectRequest, PurgeObjectResponse, UpdateObjectRequest,
+    UpdateObjectResponse, Value,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::{
     register_remote_service_arc, RemoteServiceHandler,
@@ -44,7 +45,7 @@ use elri_proto::elri::v1::space::space_service_ws::{
     register_space_service_arc, SpaceServiceHandler,
 };
 use elri_proto::elri::v1::space::{
-    CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse,
+    Authority, CreateSpaceRequest, CreateSpaceResponse, ListSpacesRequest, ListSpacesResponse,
 };
 use ws_proto::server::{Handler, OriginPolicy};
 use ws_proto::{Code, Request, Response, Server, ServerConfig, Status};
@@ -122,9 +123,10 @@ impl From<StoreError> for Status {
             StoreError::SpaceNotFound(_)
             | StoreError::ObjectNotFound(_)
             | StoreError::ChangeNotFound(_) => Status::new(Code::NotFound, e.to_string()),
-            StoreError::NotRejected(_) | StoreError::Downloading { .. } => {
-                Status::new(Code::FailedPrecondition, e.to_string())
-            }
+            StoreError::NotRejected(_)
+            | StoreError::Downloading { .. }
+            | StoreError::NotDeleted(_)
+            | StoreError::Purged(_) => Status::new(Code::FailedPrecondition, e.to_string()),
             StoreError::Model(
                 ModelError::InvalidId(_)
                 | ModelError::EmptyValue(_)
@@ -433,6 +435,31 @@ impl ObjectServiceHandler for Services {
             .update(id, |doc| doc.mark_deleted(now_ms()))
             .await?;
         Ok(Response::new(DeleteObjectResponse {}))
+    }
+
+    async fn purge_object(
+        &self,
+        req: Request<PurgeObjectRequest>,
+    ) -> Result<Response<PurgeObjectResponse>, Status> {
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let id = parse_id(&req.msg.id, "id")?;
+        let authority = self
+            .store
+            .list_spaces()
+            .await?
+            .into_iter()
+            .find(|s| s.id == space_id.to_string())
+            .ok_or_else(|| Status::new(Code::NotFound, format!("space {space_id} not found")))?
+            .authority();
+        match authority {
+            Authority::Server => {
+                self.remote.purge_object(space_id, id).await?;
+            }
+            _ => {
+                self.store.space(space_id).await?.purge_object(id).await?;
+            }
+        }
+        Ok(Response::new(PurgeObjectResponse {}))
     }
 
     async fn list_objects(

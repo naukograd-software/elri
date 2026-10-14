@@ -12,6 +12,13 @@ service ObjectService {
     rpc UpdateObject(UpdateObjectRequest) returns (UpdateObjectResponse);
     /* Marks the Object deleted; it stays recoverable until purge. */
     rpc DeleteObject(DeleteObjectRequest) returns (DeleteObjectResponse);
+    /*
+    Erases a deleted Object for good: its document, projections, and the
+    payload of every Change part that touched it. A record of the id stays
+    so that it can never be recreated. A local Space purges at once; a
+    server Space asks the server, and the erasure arrives with the log.
+    */
+    rpc PurgeObject(PurgeObjectRequest) returns (PurgeObjectResponse);
     rpc ListObjects(ListObjectsRequest) returns (ListObjectsResponse);
 }
 
@@ -69,6 +76,13 @@ message DeleteObjectRequest {
 }
 
 message DeleteObjectResponse {}
+
+message PurgeObjectRequest {
+    string space_id = 1;
+    string id = 2;
+}
+
+message PurgeObjectResponse {}
 
 message ListObjectsRequest {
     string space_id = 1;

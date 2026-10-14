@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/object/object.proto.
  */
 export const file_elri_v1_object_object: GenFile = /*@__PURE__*/
-  fileDesc("ChtlbHJpL3YxL29iamVjdC9vYmplY3QucHJvdG8SDmVscmkudjEub2JqZWN0Iq0CChNDcmVhdGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAMgAygJEj8KBmZpZWxkcxgEIAMoCzIvLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QuRmllbGRzRW50cnkSMQoMcGFydGljaXBhbnRzGAUgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSEQoJdGFyZ2V0X2lkGAYgASgJGkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRDcmVhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMAoQR2V0T2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI7ChFHZXRPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QipgMKE1VwZGF0ZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSRgoKc2V0X2ZpZWxkcxgDIAMoCzIyLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QuU2V0RmllbGRzRW50cnkSFQoNcmVtb3ZlX2ZpZWxkcxgEIAMoCRIRCglhZGRfdHlwZXMYBSADKAkSFAoMcmVtb3ZlX3R5cGVzGAYgAygJEjUKEHNldF9wYXJ0aWNpcGFudHMYByADKAsyGy5lbHJpLnYxLm9iamVjdC5QYXJ0aWNpcGFudBIbChNyZW1vdmVfcGFydGljaXBhbnRzGAggAygJEjEKDnNldF9wbGFjZW1lbnRzGAkgAygLMhkuZWxyaS52MS5vYmplY3QuUGxhY2VtZW50EhkKEXJlbW92ZV9wbGFjZW1lbnRzGAogAygJGkcKDlNldEZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRVcGRhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMwoTRGVsZXRlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIWChREZWxldGVPYmplY3RSZXNwb25zZSLUAQoSTGlzdE9iamVjdHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg8KB3R5cGVfaWQYAyABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAQgASgIEg0KBWxpbWl0GAUgASgFEh0KFXBhcnRpY2lwYW50X29iamVjdF9pZBgGIAEoCRIRCgl0YXJnZXRfaWQYByABKAkSFwoPcGxhY2VkX2Jsb2NrX2lkGAggASgJIj4KE0xpc3RPYmplY3RzUmVzcG9uc2USJwoHb2JqZWN0cxgBIAMoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdDLKAwoNT2JqZWN0U2VydmljZRJZCgxDcmVhdGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5DcmVhdGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuQ3JlYXRlT2JqZWN0UmVzcG9uc2USUAoJR2V0T2JqZWN0EiAuZWxyaS52MS5vYmplY3QuR2V0T2JqZWN0UmVxdWVzdBohLmVscmkudjEub2JqZWN0LkdldE9iamVjdFJlc3BvbnNlElkKDFVwZGF0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5VcGRhdGVPYmplY3RSZXNwb25zZRJZCgxEZWxldGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuRGVsZXRlT2JqZWN0UmVzcG9uc2USVgoLTGlzdE9iamVjdHMSIi5lbHJpLnYxLm9iamVjdC5MaXN0T2JqZWN0c1JlcXVlc3QaIy5lbHJpLnYxLm9iamVjdC5MaXN0T2JqZWN0c1Jlc3BvbnNlYgZwcm90bzM", [file_elri_v1_object_domain]);
+  fileDesc("ChtlbHJpL3YxL29iamVjdC9vYmplY3QucHJvdG8SDmVscmkudjEub2JqZWN0Iq0CChNDcmVhdGVPYmplY3RSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg0KBXR5cGVzGAMgAygJEj8KBmZpZWxkcxgEIAMoCzIvLmVscmkudjEub2JqZWN0LkNyZWF0ZU9iamVjdFJlcXVlc3QuRmllbGRzRW50cnkSMQoMcGFydGljaXBhbnRzGAUgAygLMhsuZWxyaS52MS5vYmplY3QuUGFydGljaXBhbnQSEQoJdGFyZ2V0X2lkGAYgASgJGkQKC0ZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRDcmVhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMAoQR2V0T2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSI7ChFHZXRPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QipgMKE1VwZGF0ZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkSRgoKc2V0X2ZpZWxkcxgDIAMoCzIyLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QuU2V0RmllbGRzRW50cnkSFQoNcmVtb3ZlX2ZpZWxkcxgEIAMoCRIRCglhZGRfdHlwZXMYBSADKAkSFAoMcmVtb3ZlX3R5cGVzGAYgAygJEjUKEHNldF9wYXJ0aWNpcGFudHMYByADKAsyGy5lbHJpLnYxLm9iamVjdC5QYXJ0aWNpcGFudBIbChNyZW1vdmVfcGFydGljaXBhbnRzGAggAygJEjEKDnNldF9wbGFjZW1lbnRzGAkgAygLMhkuZWxyaS52MS5vYmplY3QuUGxhY2VtZW50EhkKEXJlbW92ZV9wbGFjZW1lbnRzGAogAygJGkcKDlNldEZpZWxkc0VudHJ5EgsKA2tleRgBIAEoCRIkCgV2YWx1ZRgCIAEoCzIVLmVscmkudjEub2JqZWN0LlZhbHVlOgI4ASI+ChRVcGRhdGVPYmplY3RSZXNwb25zZRImCgZvYmplY3QYASABKAsyFi5lbHJpLnYxLm9iamVjdC5PYmplY3QiMwoTRGVsZXRlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIKCgJpZBgCIAEoCSIWChREZWxldGVPYmplY3RSZXNwb25zZSIyChJQdXJnZU9iamVjdFJlcXVlc3QSEAoIc3BhY2VfaWQYASABKAkSCgoCaWQYAiABKAkiFQoTUHVyZ2VPYmplY3RSZXNwb25zZSLUAQoSTGlzdE9iamVjdHNSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEigKBGtpbmQYAiABKA4yGi5lbHJpLnYxLm9iamVjdC5PYmplY3RLaW5kEg8KB3R5cGVfaWQYAyABKAkSFwoPaW5jbHVkZV9kZWxldGVkGAQgASgIEg0KBWxpbWl0GAUgASgFEh0KFXBhcnRpY2lwYW50X29iamVjdF9pZBgGIAEoCRIRCgl0YXJnZXRfaWQYByABKAkSFwoPcGxhY2VkX2Jsb2NrX2lkGAggASgJIj4KE0xpc3RPYmplY3RzUmVzcG9uc2USJwoHb2JqZWN0cxgBIAMoCzIWLmVscmkudjEub2JqZWN0Lk9iamVjdDKiBAoNT2JqZWN0U2VydmljZRJZCgxDcmVhdGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5DcmVhdGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuQ3JlYXRlT2JqZWN0UmVzcG9uc2USUAoJR2V0T2JqZWN0EiAuZWxyaS52MS5vYmplY3QuR2V0T2JqZWN0UmVxdWVzdBohLmVscmkudjEub2JqZWN0LkdldE9iamVjdFJlc3BvbnNlElkKDFVwZGF0ZU9iamVjdBIjLmVscmkudjEub2JqZWN0LlVwZGF0ZU9iamVjdFJlcXVlc3QaJC5lbHJpLnYxLm9iamVjdC5VcGRhdGVPYmplY3RSZXNwb25zZRJZCgxEZWxldGVPYmplY3QSIy5lbHJpLnYxLm9iamVjdC5EZWxldGVPYmplY3RSZXF1ZXN0GiQuZWxyaS52MS5vYmplY3QuRGVsZXRlT2JqZWN0UmVzcG9uc2USVgoLUHVyZ2VPYmplY3QSIi5lbHJpLnYxLm9iamVjdC5QdXJnZU9iamVjdFJlcXVlc3QaIy5lbHJpLnYxLm9iamVjdC5QdXJnZU9iamVjdFJlc3BvbnNlElYKC0xpc3RPYmplY3RzEiIuZWxyaS52MS5vYmplY3QuTGlzdE9iamVjdHNSZXF1ZXN0GiMuZWxyaS52MS5vYmplY3QuTGlzdE9iamVjdHNSZXNwb25zZWIGcHJvdG8z", [file_elri_v1_object_domain]);
 
 /**
  * @generated from message elri.v1.object.CreateObjectRequest
@@ -411,6 +411,62 @@ export const DeleteObjectResponseSchema: GenMessage<DeleteObjectResponse, {jsonT
   messageDesc(file_elri_v1_object_object, 7);
 
 /**
+ * @generated from message elri.v1.object.PurgeObjectRequest
+ */
+export type PurgeObjectRequest = Message<"elri.v1.object.PurgeObjectRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id: string;
+};
+
+/**
+ * @generated from message elri.v1.object.PurgeObjectRequest
+ */
+export type PurgeObjectRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string id = 2;
+   */
+  id?: string;
+};
+
+/**
+ * Describes the message elri.v1.object.PurgeObjectRequest.
+ * Use `create(PurgeObjectRequestSchema)` to create a new message.
+ */
+export const PurgeObjectRequestSchema: GenMessage<PurgeObjectRequest, {jsonType: PurgeObjectRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_object, 8);
+
+/**
+ * @generated from message elri.v1.object.PurgeObjectResponse
+ */
+export type PurgeObjectResponse = Message<"elri.v1.object.PurgeObjectResponse"> & {
+};
+
+/**
+ * @generated from message elri.v1.object.PurgeObjectResponse
+ */
+export type PurgeObjectResponseJson = {
+};
+
+/**
+ * Describes the message elri.v1.object.PurgeObjectResponse.
+ * Use `create(PurgeObjectResponseSchema)` to create a new message.
+ */
+export const PurgeObjectResponseSchema: GenMessage<PurgeObjectResponse, {jsonType: PurgeObjectResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_object_object, 9);
+
+/**
  * @generated from message elri.v1.object.ListObjectsRequest
  */
 export type ListObjectsRequest = Message<"elri.v1.object.ListObjectsRequest"> & {
@@ -533,7 +589,7 @@ export type ListObjectsRequestJson = {
  * Use `create(ListObjectsRequestSchema)` to create a new message.
  */
 export const ListObjectsRequestSchema: GenMessage<ListObjectsRequest, {jsonType: ListObjectsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 8);
+  messageDesc(file_elri_v1_object_object, 10);
 
 /**
  * @generated from message elri.v1.object.ListObjectsResponse
@@ -560,7 +616,7 @@ export type ListObjectsResponseJson = {
  * Use `create(ListObjectsResponseSchema)` to create a new message.
  */
 export const ListObjectsResponseSchema: GenMessage<ListObjectsResponse, {jsonType: ListObjectsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_object_object, 9);
+  messageDesc(file_elri_v1_object_object, 11);
 
 /**
  * Create, read, and change Objects of a Space. 
@@ -603,6 +659,20 @@ export const ObjectService: GenService<{
     methodKind: "unary";
     input: typeof DeleteObjectRequestSchema;
     output: typeof DeleteObjectResponseSchema;
+  },
+  /**
+   *
+   * Erases a deleted Object for good: its document, projections, and the
+   * payload of every Change part that touched it. A record of the id stays
+   * so that it can never be recreated. A local Space purges at once; a
+   * server Space asks the server, and the erasure arrives with the log.
+   *
+   * @generated from rpc elri.v1.object.ObjectService.PurgeObject
+   */
+  purgeObject: {
+    methodKind: "unary";
+    input: typeof PurgeObjectRequestSchema;
+    output: typeof PurgeObjectResponseSchema;
   },
   /**
    * @generated from rpc elri.v1.object.ObjectService.ListObjects

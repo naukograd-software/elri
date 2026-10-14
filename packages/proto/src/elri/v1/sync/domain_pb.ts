@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/sync/domain.proto.
  */
 export const file_elri_v1_sync_domain: GenFile = /*@__PURE__*/
-  fileDesc("ChllbHJpL3YxL3N5bmMvZG9tYWluLnByb3RvEgxlbHJpLnYxLnN5bmMifAoEUGFydBIRCglvYmplY3RfaWQYASABKAkSKAoEa2luZBgCIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSFAoMZnJvbV92ZXJzaW9uGAMgASgMEhIKCnRvX3ZlcnNpb24YBCABKAwSDQoFYnl0ZXMYBSABKAwidQoIRW52ZWxvcGUSCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSEQoJZGV2aWNlX2lkGAMgASgJEhUKDWNyZWF0ZWRfYXRfbXMYBCABKAMSIQoFcGFydHMYBSADKAsyEi5lbHJpLnYxLnN5bmMuUGFydCJUCgVFbnRyeRILCgNzZXEYASABKAMSJgoGY2hhbmdlGAIgASgLMhYuZWxyaS52MS5zeW5jLkVudmVsb3BlEhYKDmFjY2VwdGVkX2F0X21zGAMgASgDYgZwcm90bzM", [file_elri_v1_object_domain]);
+  fileDesc("ChllbHJpL3YxL3N5bmMvZG9tYWluLnByb3RvEgxlbHJpLnYxLnN5bmMifAoEUGFydBIRCglvYmplY3RfaWQYASABKAkSKAoEa2luZBgCIAEoDjIaLmVscmkudjEub2JqZWN0Lk9iamVjdEtpbmQSFAoMZnJvbV92ZXJzaW9uGAMgASgMEhIKCnRvX3ZlcnNpb24YBCABKAwSDQoFYnl0ZXMYBSABKAwidQoIRW52ZWxvcGUSCgoCaWQYASABKAkSEAoIc3BhY2VfaWQYAiABKAkSEQoJZGV2aWNlX2lkGAMgASgJEhUKDWNyZWF0ZWRfYXRfbXMYBCABKAMSIQoFcGFydHMYBSADKAsyEi5lbHJpLnYxLnN5bmMuUGFydCJuCgVFbnRyeRILCgNzZXEYASABKAMSJgoGY2hhbmdlGAIgASgLMhYuZWxyaS52MS5zeW5jLkVudmVsb3BlEhYKDmFjY2VwdGVkX2F0X21zGAMgASgDEhgKEHB1cmdlZF9vYmplY3RfaWQYBCABKAliBnByb3RvMw", [file_elri_v1_object_domain]);
 
 /**
  * The operations a Change added to one document. 
@@ -173,7 +173,9 @@ export const EnvelopeSchema: GenMessage<Envelope, {jsonType: EnvelopeJson}> = /*
   messageDesc(file_elri_v1_sync_domain, 1);
 
 /**
- * An accepted Change with its position in the Space log. 
+ *
+ * One position in the Space log: an accepted Change, or the purge of an
+ * Object, in which case `change` is unset and `purged_object_id` names it.
  *
  * @generated from message elri.v1.sync.Entry
  */
@@ -192,10 +194,17 @@ export type Entry = Message<"elri.v1.sync.Entry"> & {
    * @generated from field: int64 accepted_at_ms = 3;
    */
   acceptedAtMs: bigint;
+
+  /**
+   * @generated from field: string purged_object_id = 4;
+   */
+  purgedObjectId: string;
 };
 
 /**
- * An accepted Change with its position in the Space log. 
+ *
+ * One position in the Space log: an accepted Change, or the purge of an
+ * Object, in which case `change` is unset and `purged_object_id` names it.
  *
  * @generated from message elri.v1.sync.Entry
  */
@@ -214,6 +223,11 @@ export type EntryJson = {
    * @generated from field: int64 accepted_at_ms = 3;
    */
   acceptedAtMs?: string;
+
+  /**
+   * @generated from field: string purged_object_id = 4;
+   */
+  purgedObjectId?: string;
 };
 
 /**

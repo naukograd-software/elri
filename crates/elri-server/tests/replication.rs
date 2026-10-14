@@ -11,8 +11,8 @@ use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
 use elri_proto::elri::v1::change::{ChangeStatus, ListChangesRequest};
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
-    value, CreateObjectRequest, GetObjectRequest, ListObjectsRequest, ObjectKind,
-    UpdateObjectRequest, Value,
+    value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest,
+    ObjectKind, PurgeObjectRequest, UpdateObjectRequest, Value,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::RemoteServiceClient;
 use elri_proto::elri::v1::remote::{
@@ -361,6 +361,42 @@ async fn changes_flow_between_devices_through_the_server() {
         .object
         .expect("object");
     assert_eq!(on_a.fields["title"], s("edited by bob"));
+
+    // Alice deletes and purges; Bob's copy is erased through the log. Bob,
+    // an editor, may not purge himself.
+    a.objects
+        .delete_object(a.authed(DeleteObjectRequest {
+            space_id: space.id.clone(),
+            id: created.id.clone(),
+        }))
+        .await
+        .expect("delete");
+    let denied = b
+        .objects
+        .purge_object(b.authed(PurgeObjectRequest {
+            space_id: space.id.clone(),
+            id: created.id.clone(),
+        }))
+        .await
+        .expect_err("editor cannot purge");
+    assert_eq!(denied.code, ws_proto::Code::PermissionDenied);
+    a.objects
+        .purge_object(a.authed(PurgeObjectRequest {
+            space_id: space.id.clone(),
+            id: created.id.clone(),
+        }))
+        .await
+        .expect("purge");
+    eventually("bob's copy to be erased", || async {
+        b.objects
+            .get_object(b.authed(GetObjectRequest {
+                space_id: space.id.clone(),
+                id: created.id.clone(),
+            }))
+            .await
+            .is_err_and(|e| e.code == ws_proto::Code::NotFound)
+    })
+    .await;
 
     server.shutdown();
 }

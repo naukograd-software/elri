@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest, DeleteObjectResponse, GetObjectRequest, GetObjectResponse, ListObjectsRequest, ListObjectsResponse, UpdateObjectRequest, UpdateObjectResponse } from "./object_pb.ts";
-import { CreateObjectRequestSchema, CreateObjectResponseSchema, DeleteObjectRequestSchema, DeleteObjectResponseSchema, GetObjectRequestSchema, GetObjectResponseSchema, ListObjectsRequestSchema, ListObjectsResponseSchema, UpdateObjectRequestSchema, UpdateObjectResponseSchema } from "./object_pb.ts";
+import type { CreateObjectRequest, CreateObjectResponse, DeleteObjectRequest, DeleteObjectResponse, GetObjectRequest, GetObjectResponse, ListObjectsRequest, ListObjectsResponse, PurgeObjectRequest, PurgeObjectResponse, UpdateObjectRequest, UpdateObjectResponse } from "./object_pb.ts";
+import { CreateObjectRequestSchema, CreateObjectResponseSchema, DeleteObjectRequestSchema, DeleteObjectResponseSchema, GetObjectRequestSchema, GetObjectResponseSchema, ListObjectsRequestSchema, ListObjectsResponseSchema, PurgeObjectRequestSchema, PurgeObjectResponseSchema, UpdateObjectRequestSchema, UpdateObjectResponseSchema } from "./object_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -49,6 +49,14 @@ const ObjectService_DeleteObject: MethodInfo<DeleteObjectRequest, DeleteObjectRe
   kind: "unary",
   input: DeleteObjectRequestSchema,
   output: DeleteObjectResponseSchema,
+};
+
+const ObjectService_PurgeObject: MethodInfo<PurgeObjectRequest, PurgeObjectResponse> = {
+  typeName: "elri.v1.object.ObjectService",
+  name: "PurgeObject",
+  kind: "unary",
+  input: PurgeObjectRequestSchema,
+  output: PurgeObjectResponseSchema,
 };
 
 const ObjectService_ListObjects: MethodInfo<ListObjectsRequest, ListObjectsResponse> = {
@@ -100,6 +108,20 @@ export class ObjectServiceClient {
    */
   async deleteObject(req: DeleteObjectRequest, options?: CallOptions): Promise<DeleteObjectResponse> {
     const res = await this.transport.unary(ObjectService_DeleteObject, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
+  }
+
+  /**
+   *
+   * Erases a deleted Object for good: its document, projections, and the
+   * payload of every Change part that touched it. A record of the id stays
+   * so that it can never be recreated. A local Space purges at once; a
+   * server Space asks the server, and the erasure arrives with the log.
+   *
+   * @generated from rpc elri.v1.object.ObjectService.PurgeObject
+   */
+  async purgeObject(req: PurgeObjectRequest, options?: CallOptions): Promise<PurgeObjectResponse> {
+    const res = await this.transport.unary(ObjectService_PurgeObject, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     return applyUnaryCallbacks(res, options);
   }
 

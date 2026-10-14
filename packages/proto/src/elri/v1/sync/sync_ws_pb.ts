@@ -3,8 +3,8 @@
 /* eslint-disable */
 
 import { applyUnaryCallbacks, iterateStream, MethodInfo, WsTransport } from "@gopherex/ws-proto-transport";
-import type { AddMemberRequest, AddMemberResponse, CreateSpaceRequest, CreateSpaceResponse, HelloRequest, HelloResponse, ListSpacesRequest, ListSpacesResponse, PullRequest, PullResponse, SubmitRequest, SubmitResponse, SubscribeEvent, SubscribeRequest } from "./sync_pb.ts";
-import { AddMemberRequestSchema, AddMemberResponseSchema, CreateSpaceRequestSchema, CreateSpaceResponseSchema, HelloRequestSchema, HelloResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, PullRequestSchema, PullResponseSchema, SubmitRequestSchema, SubmitResponseSchema, SubscribeEventSchema, SubscribeRequestSchema } from "./sync_pb.ts";
+import type { AddMemberRequest, AddMemberResponse, CreateSpaceRequest, CreateSpaceResponse, HelloRequest, HelloResponse, ListSpacesRequest, ListSpacesResponse, PullRequest, PullResponse, PurgeObjectRequest, PurgeObjectResponse, SubmitRequest, SubmitResponse, SubscribeEvent, SubscribeRequest } from "./sync_pb.ts";
+import { AddMemberRequestSchema, AddMemberResponseSchema, CreateSpaceRequestSchema, CreateSpaceResponseSchema, HelloRequestSchema, HelloResponseSchema, ListSpacesRequestSchema, ListSpacesResponseSchema, PullRequestSchema, PullResponseSchema, PurgeObjectRequestSchema, PurgeObjectResponseSchema, SubmitRequestSchema, SubmitResponseSchema, SubscribeEventSchema, SubscribeRequestSchema } from "./sync_pb.ts";
 
 export interface CallOptions {
   /** Request metadata sent as headers on the opening frame. */
@@ -73,6 +73,14 @@ const SyncService_Subscribe: MethodInfo<SubscribeRequest, SubscribeEvent> = {
   kind: "server_streaming",
   input: SubscribeRequestSchema,
   output: SubscribeEventSchema,
+};
+
+const SyncService_PurgeObject: MethodInfo<PurgeObjectRequest, PurgeObjectResponse> = {
+  typeName: "elri.v1.sync.SyncService",
+  name: "PurgeObject",
+  kind: "unary",
+  input: PurgeObjectRequestSchema,
+  output: PurgeObjectResponseSchema,
 };
 
 /**
@@ -154,6 +162,16 @@ export class SyncServiceClient {
   async *subscribe(req: SubscribeRequest, options?: CallOptions): AsyncIterable<SubscribeEvent> {
     const res = await this.transport.stream(SyncService_Subscribe, (async function* () { yield req; })(), { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
     yield* iterateStream(res, options);
+  }
+
+  /**
+   * Owner/Admin: erases a deleted Object for good; see ObjectService.PurgeObject. 
+   *
+   * @generated from rpc elri.v1.sync.SyncService.PurgeObject
+   */
+  async purgeObject(req: PurgeObjectRequest, options?: CallOptions): Promise<PurgeObjectResponse> {
+    const res = await this.transport.unary(SyncService_PurgeObject, req, { headers: options?.headers, signal: options?.signal, timeoutMs: options?.timeoutMs });
+    return applyUnaryCallbacks(res, options);
   }
 
 }

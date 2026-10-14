@@ -17,7 +17,7 @@ use elri_proto::elri::v1::events::{event, WatchRequest};
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{
     value, CreateObjectRequest, DeleteObjectRequest, GetObjectRequest, ListObjectsRequest, Object,
-    ObjectKind, Participant, Placement, UpdateObjectRequest, Value, ValueList,
+    ObjectKind, Participant, Placement, PurgeObjectRequest, UpdateObjectRequest, Value, ValueList,
 };
 use elri_proto::elri::v1::remote::remote_service_ws::RemoteServiceClient;
 use elri_proto::elri::v1::remote::{
@@ -234,6 +234,12 @@ enum ObjectCmd {
     },
     /// Delete an Object (recoverable until purge).
     Delete {
+        #[arg(long)]
+        space: String,
+        id: String,
+    },
+    /// Erase a deleted Object for good; its id can never be reused.
+    Purge {
         #[arg(long)]
         space: String,
         id: String,
@@ -588,6 +594,21 @@ async fn run_object(
             let objects: Vec<_> = res.msg.objects.iter().map(object_json).collect();
             Ok(json!(objects))
         }
+        cmd @ (ObjectCmd::Delete { .. } | ObjectCmd::Purge { .. }) => {
+            run_object_lifecycle(&client, endpoint, cmd).await
+        }
+        cmd @ (ObjectCmd::Place { .. } | ObjectCmd::Move { .. } | ObjectCmd::Unplace { .. }) => {
+            run_placement(&client, endpoint, cmd).await
+        }
+    }
+}
+
+async fn run_object_lifecycle(
+    client: &ObjectServiceClient,
+    endpoint: &Endpoint,
+    cmd: ObjectCmd,
+) -> Result<serde_json::Value> {
+    match cmd {
         ObjectCmd::Delete { space, id } => {
             client
                 .delete_object(authed(
@@ -600,9 +621,19 @@ async fn run_object(
                 .await?;
             Ok(json!({ "deleted": true }))
         }
-        cmd @ (ObjectCmd::Place { .. } | ObjectCmd::Move { .. } | ObjectCmd::Unplace { .. }) => {
-            run_placement(&client, endpoint, cmd).await
+        ObjectCmd::Purge { space, id } => {
+            client
+                .purge_object(authed(
+                    endpoint,
+                    PurgeObjectRequest {
+                        space_id: space,
+                        id,
+                    },
+                ))
+                .await?;
+            Ok(json!({ "purged": true }))
         }
+        _ => bail!("not a lifecycle command"),
     }
 }
 

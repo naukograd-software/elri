@@ -41,6 +41,10 @@ pub mod sync_service_ws {
         route: "/elri.v1.sync.SyncService/Subscribe",
         kind: StreamKind::ServerStream,
     };
+    pub const PURGE_OBJECT: MethodSpec = MethodSpec {
+        route: "/elri.v1.sync.SyncService/PurgeObject",
+        kind: StreamKind::Unary,
+    };
     /// Server API for the `SyncService` service. Implement with `async fn`.
     pub trait SyncServiceHandler: Send + Sync + 'static {
         ///  Identify the caller and negotiate the protocol.
@@ -92,6 +96,13 @@ pub mod sync_service_ws {
             req: Request<super::SubscribeRequest>,
             stream: SubscribeServerStream,
         ) -> impl ::core::future::Future<Output = Result<(), Status>> + Send;
+        ///  Owner/Admin: erases a deleted Object for good; see ObjectService.PurgeObject.
+        fn purge_object(
+            &self,
+            req: Request<super::PurgeObjectRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::PurgeObjectResponse>, Status>,
+        > + Send;
     }
     /// Typed server-side stream for `SyncService.Subscribe`.
     #[derive(Clone, Debug)]
@@ -225,6 +236,17 @@ pub mod sync_service_ws {
                     },
                 );
         }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
+                    PURGE_OBJECT.route,
+                    move |req: Request<super::PurgeObjectRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.purge_object(req).await }
+                    },
+                );
+        }
     }
     /// Typed client for the `SyncService` service over a `ws_proto::Client`.
     #[derive(Clone, Debug)]
@@ -297,6 +319,13 @@ pub mod sync_service_ws {
             Ok(SubscribeClientStream {
                 inner: conn,
             })
+        }
+        ///  Owner/Admin: erases a deleted Object for good; see ObjectService.PurgeObject.
+        pub async fn purge_object(
+            &self,
+            req: impl Into<Request<super::PurgeObjectRequest>>,
+        ) -> Result<Response<super::PurgeObjectResponse>, Status> {
+            self.conn.invoke_unary(PURGE_OBJECT, req.into()).await
         }
     }
     /// Typed client-side stream for `SyncService.Subscribe`.

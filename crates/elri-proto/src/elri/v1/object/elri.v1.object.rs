@@ -236,6 +236,16 @@ pub struct DeleteObjectRequest {
 pub struct DeleteObjectResponse {
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PurgeObjectRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub id: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PurgeObjectResponse {
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ListObjectsRequest {
     #[prost(string, tag = "1")]
     pub space_id: ::prost::alloc::string::String,

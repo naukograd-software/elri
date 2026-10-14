@@ -32,9 +32,9 @@ use crate::change::{accepted, rejected, Outcome, Reason};
 use crate::device::DeviceId;
 use crate::model::{field_def_kind, now_ms, ModelError, ObjectDoc, ObjectId, SpaceId};
 use models::{
-    ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, ObjectRow,
-    ObjectTypeRow, ParticipantRow, PlacementRow, RemoteRow, SpaceLogRow, SpaceRow, SyncStateRow,
-    TypeFieldRow,
+    ChangeDepRow, ChangePartRow, ChangeRow, DocRow, DocUpdateRow, FieldValueRow, GraveyardRow,
+    ObjectRow, ObjectTypeRow, ParticipantRow, PlacementRow, RemoteRow, SpaceLogRow, SpaceRow,
+    SyncStateRow, TypeFieldRow,
 };
 
 /// Updates folded into a fresh snapshot once this many accumulate per document.
@@ -74,6 +74,12 @@ pub enum StoreError {
         /// Sequence the download must reach.
         target: i64,
     },
+    /// The Object was purged; its identity cannot be used again.
+    #[error("object {0} was purged")]
+    Purged(ObjectId),
+    /// Purge needs a deleted Object.
+    #[error("object {0} is not deleted; delete it first")]
+    NotDeleted(ObjectId),
     /// No such Object in the Space.
     #[error("object {0} not found")]
     ObjectNotFound(ObjectId),
@@ -429,6 +435,7 @@ impl SpaceStore {
                 ParticipantRow,
                 TypeFieldRow,
                 PlacementRow,
+                GraveyardRow,
                 SpaceLogRow,
                 SyncStateRow
             ),
@@ -545,6 +552,9 @@ impl SpaceStore {
         let env = self.new_envelope(vec![part]);
         let mut db = self.db.lock().await;
         Self::writable(&mut db).await?;
+        if is_purged(&mut db, doc.id().uuid()).await? {
+            return Err(StoreError::Purged(doc.id()));
+        }
         let deps = dependencies(&mut db, &rec).await?;
         let mut tx = db.transaction().await?;
         write_change(&mut tx, &env, ChangeStatus::Local, None, "").await?;
@@ -1023,11 +1033,25 @@ impl SpaceStore {
             .await?;
         let mut out = Vec::with_capacity(entries.len());
         for e in &entries {
-            let Some(row) = ChangeRow::filter(ChangeRow::fields().id().eq(e.change_id))
-                .first()
-                .exec(&mut *db)
-                .await?
-            else {
+            if let Some(object) = e.purged_object_id {
+                out.push(Entry {
+                    seq: e.seq,
+                    change: None,
+                    accepted_at_ms: e.accepted_at,
+                    purged_object_id: object.to_string(),
+                });
+                continue;
+            }
+            let row = match e.change_id {
+                Some(change_id) => {
+                    ChangeRow::filter(ChangeRow::fields().id().eq(change_id))
+                        .first()
+                        .exec(&mut *db)
+                        .await?
+                }
+                None => None,
+            };
+            let Some(row) = row else {
                 return Err(StoreError::Corrupt {
                     table: "space_log",
                     what: "change missing",
@@ -1037,6 +1061,7 @@ impl SpaceStore {
                 seq: e.seq,
                 change: Some(read_envelope(&mut db, self.id, &row).await?),
                 accepted_at_ms: e.accepted_at,
+                purged_object_id: String::new(),
             });
         }
         Ok(out)
@@ -1072,6 +1097,12 @@ impl SpaceStore {
             let Ok(object_id) = ObjectId::parse(&part.object_id) else {
                 return Ok(rejected(Reason::Invalid, "object id"));
             };
+            if is_purged(&mut db, object_id.uuid()).await? {
+                return Ok(rejected(
+                    Reason::Purged,
+                    format!("object {object_id} was purged"),
+                ));
+            }
             let (doc, pending) = match load_doc(&mut db, object_id).await {
                 Ok((doc, pending)) => {
                     match doc.import(&part.bytes) {
@@ -1118,8 +1149,9 @@ impl SpaceStore {
         write_change(&mut tx, env, ChangeStatus::Accepted, Some(seq), "").await?;
         toasty::create!(SpaceLogRow {
             seq,
-            change_id,
+            change_id: Some(change_id),
             accepted_at: now_ms(),
+            purged_object_id: None,
         })
         .exec(&mut tx)
         .await?;
@@ -1155,6 +1187,12 @@ impl SpaceStore {
             write_change(&mut tx, env, ChangeStatus::Accepted, Some(seq), "").await?;
             for part in &env.parts {
                 let object_id = ObjectId::parse(&part.object_id)?;
+                // An erased payload means the authority purged the object
+                // after accepting this Change; the purge entry follows in
+                // the log.
+                if part.bytes.is_empty() || is_purged_tx(&mut tx, object_id.uuid()).await? {
+                    continue;
+                }
                 let (doc, pending) = match load_doc_tx(&mut tx, object_id).await {
                     Ok((doc, pending)) => {
                         if !doc.import(&part.bytes)? {
@@ -1178,32 +1216,157 @@ impl SpaceStore {
                 installed.push((object_id.uuid(), i64::from(rec.kind), true));
             }
         }
-        SpaceLogRow::filter_by_seq(seq)
-            .delete()
-            .exec(&mut tx)
-            .await?;
-        toasty::create!(SpaceLogRow {
-            seq,
-            change_id,
-            accepted_at: now_ms(),
-        })
-        .exec(&mut tx)
-        .await?;
-        SyncStateRow::filter_by_key("cursor".to_owned())
-            .delete()
-            .exec(&mut tx)
-            .await?;
-        toasty::create!(SyncStateRow {
-            key: "cursor".to_owned(),
-            value: seq,
-        })
-        .exec(&mut tx)
-        .await?;
+        write_log(&mut tx, seq, Some(change_id), None).await?;
+        write_state_tx(&mut tx, CURSOR, seq).await?;
         tx.commit().await?;
         self.emit_change(change_id, ChangeStatus::Accepted);
         self.emit_objects(&installed);
         Ok(())
     }
+
+    /// Authority side: erases a deleted Object for good and records the
+    /// purge in the Space log. Purging twice is a no-op.
+    pub async fn purge_object(&self, id: ObjectId) -> Result<i64, StoreError> {
+        let mut db = self.db.lock().await;
+        if let Some(seq) = purged_seq(&mut db, id.uuid()).await? {
+            return Ok(seq);
+        }
+        let Some(row) = ObjectRow::filter_by_object_id(id.uuid())
+            .first()
+            .exec(&mut *db)
+            .await?
+        else {
+            return Err(StoreError::ObjectNotFound(id));
+        };
+        if row.deleted_at.is_none() {
+            return Err(StoreError::NotDeleted(id));
+        }
+        let seq = last_seq(&mut db).await? + 1;
+        let mut tx = db.transaction().await?;
+        erase(&mut tx, id.uuid(), seq).await?;
+        write_log(&mut tx, seq, None, Some(id.uuid())).await?;
+        tx.commit().await?;
+        self.emit_objects(&[(id.uuid(), row.kind, false)]);
+        Ok(seq)
+    }
+
+    /// Replica side: installs a purge delivered from the authority at log
+    /// position `seq`.
+    pub async fn apply_purge(&self, seq: i64, id: ObjectId) -> Result<(), StoreError> {
+        let mut db = self.db.lock().await;
+        let kind = ObjectRow::filter_by_object_id(id.uuid())
+            .first()
+            .exec(&mut *db)
+            .await?
+            .map(|r| r.kind);
+        let mut tx = db.transaction().await?;
+        erase(&mut tx, id.uuid(), seq).await?;
+        write_log(&mut tx, seq, None, Some(id.uuid())).await?;
+        write_state_tx(&mut tx, CURSOR, seq).await?;
+        tx.commit().await?;
+        if let Some(kind) = kind {
+            self.emit_objects(&[(id.uuid(), kind, false)]);
+        }
+        Ok(())
+    }
+
+    /// Whether an Object was purged.
+    pub async fn is_purged(&self, id: ObjectId) -> Result<bool, StoreError> {
+        let mut db = self.db.lock().await;
+        is_purged(&mut db, id.uuid()).await
+    }
+}
+
+async fn is_purged(db: &mut Db, id: Uuid) -> Result<bool, StoreError> {
+    Ok(purged_seq(db, id).await?.is_some())
+}
+
+async fn purged_seq(db: &mut Db, id: Uuid) -> Result<Option<i64>, StoreError> {
+    Ok(GraveyardRow::filter_by_object_id(id)
+        .first()
+        .exec(&mut *db)
+        .await?
+        .map(|g| g.seq))
+}
+
+async fn is_purged_tx(tx: &mut toasty::Transaction<'_>, id: Uuid) -> Result<bool, StoreError> {
+    Ok(GraveyardRow::filter_by_object_id(id)
+        .first()
+        .exec(&mut *tx)
+        .await?
+        .is_some())
+}
+
+/// Removes everything managed for an Object except the record that it
+/// existed: document, update log, projections, and the payload of every
+/// Change part that touched it. The parts themselves stay, so the Changes'
+/// other objects keep their history.
+async fn erase(tx: &mut toasty::Transaction<'_>, id: Uuid, seq: i64) -> Result<(), StoreError> {
+    DocUpdateRow::filter(DocUpdateRow::fields().object_id().eq(id))
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    DocRow::filter_by_object_id(id)
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    delete_projections(tx, id).await?;
+    toasty::update!(ChangePartRow::filter(ChangePartRow::fields().object_id().eq(id)) {
+        bytes: Vec::new(),
+    })
+    .exec(&mut *tx)
+    .await?;
+    GraveyardRow::filter_by_object_id(id)
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    toasty::create!(GraveyardRow {
+        object_id: id,
+        purged_at: now_ms(),
+        seq,
+    })
+    .exec(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+async fn write_log(
+    tx: &mut toasty::Transaction<'_>,
+    seq: i64,
+    change_id: Option<Uuid>,
+    purged_object_id: Option<Uuid>,
+) -> Result<(), StoreError> {
+    SpaceLogRow::filter_by_seq(seq)
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    toasty::create!(SpaceLogRow {
+        seq,
+        change_id,
+        accepted_at: now_ms(),
+        purged_object_id,
+    })
+    .exec(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+async fn write_state_tx(
+    tx: &mut toasty::Transaction<'_>,
+    key: &str,
+    value: i64,
+) -> Result<(), StoreError> {
+    SyncStateRow::filter_by_key(key.to_owned())
+        .delete()
+        .exec(&mut *tx)
+        .await?;
+    toasty::create!(SyncStateRow {
+        key: key.to_owned(),
+        value,
+    })
+    .exec(&mut *tx)
+    .await?;
+    Ok(())
 }
 
 async fn change_row(db: &mut Db, id: Uuid) -> Result<ChangeRow, StoreError> {
@@ -1390,9 +1553,13 @@ async fn objects_of(db: &mut Db, changes: &[Uuid]) -> Result<Vec<(Uuid, i64)>, S
 /// removed from the live state; its parts stay with their Changes.
 /// Returns whether the document is live afterwards.
 async fn rebuild_doc(tx: &mut toasty::Transaction<'_>, object: Uuid) -> Result<bool, StoreError> {
+    if is_purged_tx(tx, object).await? {
+        return Ok(false);
+    }
     let rows = toasty::sql::query(
         "SELECT p.bytes FROM change_parts p JOIN changes c ON c.id = p.change_id \
-         WHERE p.object_id = ?1 AND c.status NOT IN (?2, ?3) ORDER BY c.seq ASC",
+         WHERE p.object_id = ?1 AND c.status NOT IN (?2, ?3) AND length(p.bytes) > 0 \
+         ORDER BY c.seq ASC",
     )
     .bind(uuid_param(object))
     .bind(Value::I64(status_code(ChangeStatus::Rejected)))

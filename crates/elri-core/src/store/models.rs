@@ -234,11 +234,27 @@ pub struct SpaceLogRow {
     /// Position in the Space log.
     #[key]
     pub seq: i64,
-    /// Accepted Change id.
+    /// Accepted Change id; none for a purge entry.
     #[unique]
-    pub change_id: Uuid,
+    pub change_id: Option<Uuid>,
     /// Acceptance instant, ms since epoch.
     pub accepted_at: i64,
+    /// Purge entries: the erased Object.
+    pub purged_object_id: Option<Uuid>,
+}
+
+/// Identities of purged Objects: the minimum kept so that a stale device
+/// can neither resurrect nor recreate one.
+#[derive(Debug, toasty::Model)]
+#[table = "graveyard"]
+pub struct GraveyardRow {
+    /// The erased Object.
+    #[key]
+    pub object_id: Uuid,
+    /// Erasure instant, ms since epoch.
+    pub purged_at: i64,
+    /// Log position of the purge; 0 for a purge not yet in a log.
+    pub seq: i64,
 }
 
 /// Small per-Space state: the highest server sequence installed locally.

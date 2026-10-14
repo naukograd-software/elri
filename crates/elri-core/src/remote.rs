@@ -10,7 +10,7 @@ use elri_proto::elri::v1::space::{Authority, Space as PbSpace};
 use elri_proto::elri::v1::sync::sync_service_ws::SyncServiceClient;
 use elri_proto::elri::v1::sync::{
     AddMemberRequest, CreateSpaceRequest, HelloRequest, ListSpacesRequest, PullRequest,
-    SubmitRequest, SubscribeRequest,
+    PurgeObjectRequest, SubmitRequest, SubscribeRequest,
 };
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -378,6 +378,28 @@ impl Remote {
         Ok(())
     }
 
+    /// Owner/Admin: asks the server to erase a deleted Object for good. The
+    /// erasure reaches this device with the log like any other entry.
+    pub async fn purge_object(
+        &self,
+        space_id: SpaceId,
+        object_id: ObjectId,
+    ) -> Result<i64, RemoteError> {
+        let (client, token) = self
+            .with_session(|s| (s.client.clone(), s.token.clone()))
+            .await?;
+        let res = SyncServiceClient::new(client)
+            .purge_object(authed(
+                &token,
+                PurgeObjectRequest {
+                    space_id: space_id.to_string(),
+                    object_id: object_id.to_string(),
+                },
+            ))
+            .await?;
+        Ok(res.msg.seq)
+    }
+
     /// Runs one replication round for `space_id` right now and waits for it
     /// to finish; for tests and explicit "sync now".
     pub async fn sync_now(&self, space_id: SpaceId) -> Result<(), RemoteError> {
@@ -506,11 +528,15 @@ async fn replicate_once(
             .await?
             .msg;
         for entry in &res.entries {
-            let env = entry
-                .change
-                .as_ref()
-                .ok_or(RemoteError::BadReply("entry without change"))?;
-            space.apply_accepted(entry.seq, env).await?;
+            if let Some(env) = entry.change.as_ref() {
+                space.apply_accepted(entry.seq, env).await?;
+            } else if !entry.purged_object_id.is_empty() {
+                let id = ObjectId::parse(&entry.purged_object_id)
+                    .map_err(|_| RemoteError::BadReply("purged object id"))?;
+                space.apply_purge(entry.seq, id).await?;
+            } else {
+                return Err(RemoteError::BadReply("entry without change or purge"));
+            }
         }
         if !res.has_more {
             break;

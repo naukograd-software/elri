@@ -32,7 +32,9 @@ pub struct Envelope {
     #[prost(message, repeated, tag = "5")]
     pub parts: ::prost::alloc::vec::Vec<Part>,
 }
-/// An accepted Change with its position in the Space log. 
+///
+/// One position in the Space log: an accepted Change, or the purge of an
+/// Object, in which case `change` is unset and `purged_object_id` names it.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Entry {
     #[prost(int64, tag = "1")]
@@ -41,6 +43,21 @@ pub struct Entry {
     pub change: ::core::option::Option<Envelope>,
     #[prost(int64, tag = "3")]
     pub accepted_at_ms: i64,
+    #[prost(string, tag = "4")]
+    pub purged_object_id: ::prost::alloc::string::String,
+}
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PurgeObjectRequest {
+    #[prost(string, tag = "1")]
+    pub space_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub object_id: ::prost::alloc::string::String,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct PurgeObjectResponse {
+    /// Log position of the purge. 
+    #[prost(int64, tag = "1")]
+    pub seq: i64,
 }
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct HelloRequest {
@@ -114,6 +131,8 @@ pub mod rejection {
         Invalid = 3,
         /// A protected path or a forged peer was touched. 
         Protected = 4,
+        /// An Object in the Change was purged; its identity cannot be reused. 
+        Purged = 5,
     }
     impl Reason {
         /// String value of the enum field names used in the ProtoBuf definition.
@@ -127,6 +146,7 @@ pub mod rejection {
                 Self::MissingPredecessors => "REASON_MISSING_PREDECESSORS",
                 Self::Invalid => "REASON_INVALID",
                 Self::Protected => "REASON_PROTECTED",
+                Self::Purged => "REASON_PURGED",
             }
         }
         /// Creates an enum from field names used in the ProtoBuf definition.
@@ -137,6 +157,7 @@ pub mod rejection {
                 "REASON_MISSING_PREDECESSORS" => Some(Self::MissingPredecessors),
                 "REASON_INVALID" => Some(Self::Invalid),
                 "REASON_PROTECTED" => Some(Self::Protected),
+                "REASON_PURGED" => Some(Self::Purged),
                 _ => None,
             }
         }

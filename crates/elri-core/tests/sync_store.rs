@@ -6,7 +6,7 @@
 use elri_core::change::{rejected, Outcome, Reason};
 use elri_core::device::DeviceId;
 use elri_core::model::{int_value, ref_value, string_value, ObjectDoc, ObjectId, SpaceId};
-use elri_core::store::{ObjectFilter, Store};
+use elri_core::store::{ObjectFilter, Store, StoreError};
 use elri_proto::elri::v1::change::ChangeStatus;
 use elri_proto::elri::v1::object::{value, ObjectKind, Value};
 use elri_proto::elri::v1::space::Authority;
@@ -511,4 +511,143 @@ async fn full_text_search_finds_live_text() {
         .await
         .expect("search")
         .is_empty());
+}
+
+#[tokio::test]
+async fn purge_erases_for_good_and_blocks_the_identity() {
+    let space_id = SpaceId::new();
+    let a = store("a6").await;
+    let server = store("server6").await;
+    let b = store("b6").await;
+    for s in [&a, &server, &b] {
+        s.register_space(space_id, "shared", Authority::Server)
+            .await
+            .expect("register");
+    }
+    let a_space = a.space(space_id).await.expect("a space");
+    let s_space = server.space(space_id).await.expect("server space");
+    let b_space = b.space(space_id).await.expect("b space");
+
+    // Two objects in one Change-sequence: X will be purged, Y survives.
+    let doc_x = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 1).expect("doc");
+    doc_x
+        .set_field("title", &string_value("secret"))
+        .expect("set");
+    doc_x.touch(2).expect("touch");
+    let doc_y = ObjectDoc::create(ObjectId::new(), space_id, ObjectKind::Entity, 1).expect("doc");
+    doc_y.set_field("to", &ref_value(doc_x.id())).expect("set");
+    doc_y.touch(2).expect("touch");
+    a_space.insert(&doc_x).await.expect("insert");
+    a_space.insert(&doc_y).await.expect("insert");
+    a_space
+        .update(doc_x.id(), |d| d.mark_deleted(3))
+        .await
+        .expect("delete");
+    for env in a_space.outbox(0).await.expect("outbox") {
+        let outcome = s_space.admit(&env).await.expect("admit");
+        a_space
+            .record_outcome(&env.id, &outcome)
+            .await
+            .expect("record");
+    }
+    for e in s_space.log_after(0, 0).await.expect("log") {
+        b_space
+            .apply_accepted(e.seq, e.change.as_ref().expect("change"))
+            .await
+            .expect("apply");
+    }
+    assert!(b_space
+        .get(doc_x.id())
+        .await
+        .expect("b has doc_x")
+        .deleted_at_ms
+        .is_some());
+
+    // Purge needs a deleted object; it then disappears from the authority.
+    assert!(matches!(
+        s_space.purge_object(doc_y.id()).await,
+        Err(StoreError::NotDeleted(_))
+    ));
+    let seq = s_space.purge_object(doc_x.id()).await.expect("purge");
+    assert_eq!(seq, 4);
+    assert_eq!(s_space.purge_object(doc_x.id()).await.expect("again"), 4);
+    assert!(matches!(
+        s_space.get(doc_x.id()).await,
+        Err(StoreError::ObjectNotFound(_))
+    ));
+    assert!(s_space.is_purged(doc_x.id()).await.expect("graveyard"));
+    assert_eq!(
+        s_space
+            .list(&ObjectFilter {
+                include_deleted: true,
+                ..ObjectFilter::default()
+            })
+            .await
+            .expect("list")
+            .len(),
+        1
+    );
+    assert!(s_space
+        .search("secret", None, 0)
+        .await
+        .expect("search")
+        .is_empty());
+    // Y keeps its history: the Change parts of other objects are intact.
+    assert_eq!(
+        s_space.get(doc_y.id()).await.expect("doc_y").fields["to"],
+        ref_value(doc_x.id())
+    );
+
+    // The purge travels with the log; the replica erases too.
+    let entries = s_space.log_after(3, 0).await.expect("log");
+    assert_eq!(entries.len(), 1);
+    assert!(entries[0].change.is_none());
+    assert_eq!(entries[0].purged_object_id, doc_x.id().to_string());
+    b_space
+        .apply_purge(entries[0].seq, doc_x.id())
+        .await
+        .expect("apply purge");
+    assert!(b_space.get(doc_x.id()).await.is_err());
+    assert_eq!(b_space.cursor().await.expect("cursor"), 4);
+    assert!(b_space.is_purged(doc_x.id()).await.expect("graveyard"));
+
+    // A device that synced before the purge still holds X and edits it:
+    // the authority refuses with the reason. A device syncing only after
+    // the purge gets the entries with erased payloads and never sees X.
+    let stale_edit = a_space
+        .update(doc_x.id(), |d| {
+            d.set_field("title", &string_value("resurrect"))
+        })
+        .await
+        .expect("stale edit");
+    assert_eq!(stale_edit.fields["title"], string_value("resurrect"));
+    let env = a_space.outbox(0).await.expect("outbox").remove(0);
+    match s_space.admit(&env).await.expect("admit") {
+        Outcome::Rejected(r) => assert_eq!(r.reason(), Reason::Purged),
+        Outcome::AcceptedSeq(_) => panic!("purged object accepted a write"),
+    }
+    let late = store("late6").await;
+    late.register_space(space_id, "shared", Authority::Server)
+        .await
+        .expect("register");
+    let late_space = late.space(space_id).await.expect("late space");
+    for e in s_space.log_after(0, 0).await.expect("log") {
+        match e.change.as_ref() {
+            Some(env) => late_space.apply_accepted(e.seq, env).await.expect("apply"),
+            None => late_space
+                .apply_purge(e.seq, ObjectId::parse(&e.purged_object_id).expect("id"))
+                .await
+                .expect("apply purge"),
+        }
+    }
+    assert!(late_space.get(doc_x.id()).await.is_err());
+    assert!(late_space.is_purged(doc_x.id()).await.expect("graveyard"));
+    late_space.get(doc_y.id()).await.expect("y arrived intact");
+    assert_eq!(late_space.cursor().await.expect("cursor"), 4);
+    let again = ObjectDoc::create(doc_x.id(), space_id, ObjectKind::Entity, 9).expect("doc");
+    again.touch(9).expect("touch");
+    assert!(matches!(
+        b_space.insert(&again).await,
+        Err(StoreError::Purged(_))
+    ));
 }

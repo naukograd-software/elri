@@ -27,6 +27,10 @@ pub mod object_service_ws {
         route: "/elri.v1.object.ObjectService/DeleteObject",
         kind: StreamKind::Unary,
     };
+    pub const PURGE_OBJECT: MethodSpec = MethodSpec {
+        route: "/elri.v1.object.ObjectService/PurgeObject",
+        kind: StreamKind::Unary,
+    };
     pub const LIST_OBJECTS: MethodSpec = MethodSpec {
         route: "/elri.v1.object.ObjectService/ListObjects",
         kind: StreamKind::Unary,
@@ -58,6 +62,17 @@ pub mod object_service_ws {
             req: Request<super::DeleteObjectRequest>,
         ) -> impl ::core::future::Future<
             Output = Result<Response<super::DeleteObjectResponse>, Status>,
+        > + Send;
+        ///
+        /// Erases a deleted Object for good: its document, projections, and the
+        /// payload of every Change part that touched it. A record of the id stays
+        /// so that it can never be recreated. A local Space purges at once; a
+        /// server Space asks the server, and the erasure arrives with the log.
+        fn purge_object(
+            &self,
+            req: Request<super::PurgeObjectRequest>,
+        ) -> impl ::core::future::Future<
+            Output = Result<Response<super::PurgeObjectResponse>, Status>,
         > + Send;
         fn list_objects(
             &self,
@@ -126,6 +141,17 @@ pub mod object_service_ws {
             let h = ::std::sync::Arc::clone(&handler);
             server
                 .register_unary(
+                    PURGE_OBJECT.route,
+                    move |req: Request<super::PurgeObjectRequest>| {
+                        let h = ::std::sync::Arc::clone(&h);
+                        async move { h.purge_object(req).await }
+                    },
+                );
+        }
+        {
+            let h = ::std::sync::Arc::clone(&handler);
+            server
+                .register_unary(
                     LIST_OBJECTS.route,
                     move |req: Request<super::ListObjectsRequest>| {
                         let h = ::std::sync::Arc::clone(&h);
@@ -172,6 +198,17 @@ pub mod object_service_ws {
             req: impl Into<Request<super::DeleteObjectRequest>>,
         ) -> Result<Response<super::DeleteObjectResponse>, Status> {
             self.conn.invoke_unary(DELETE_OBJECT, req.into()).await
+        }
+        ///
+        /// Erases a deleted Object for good: its document, projections, and the
+        /// payload of every Change part that touched it. A record of the id stays
+        /// so that it can never be recreated. A local Space purges at once; a
+        /// server Space asks the server, and the erasure arrives with the log.
+        pub async fn purge_object(
+            &self,
+            req: impl Into<Request<super::PurgeObjectRequest>>,
+        ) -> Result<Response<super::PurgeObjectResponse>, Status> {
+            self.conn.invoke_unary(PURGE_OBJECT, req.into()).await
         }
         pub async fn list_objects(
             &self,

@@ -26,9 +26,13 @@ message Envelope {
     repeated Part parts = 5;
 }
 
-/* An accepted Change with its position in the Space log. */
+/*
+One position in the Space log: an accepted Change, or the purge of an
+Object, in which case `change` is unset and `purged_object_id` names it.
+*/
 message Entry {
     int64 seq = 1;
     Envelope change = 2;
     int64 accepted_at_ms = 3;
+    string purged_object_id = 4;
 }

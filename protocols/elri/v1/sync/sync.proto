@@ -25,6 +25,18 @@ service SyncService {
     rpc Pull(PullRequest) returns (PullResponse);
     /* Announces new sequence numbers for the given Spaces. */
     rpc Subscribe(SubscribeRequest) returns (stream SubscribeEvent);
+    /* Owner/Admin: erases a deleted Object for good; see ObjectService.PurgeObject. */
+    rpc PurgeObject(PurgeObjectRequest) returns (PurgeObjectResponse);
+}
+
+message PurgeObjectRequest {
+    string space_id = 1;
+    string object_id = 2;
+}
+
+message PurgeObjectResponse {
+    /* Log position of the purge. */
+    int64 seq = 1;
 }
 
 message HelloRequest {
@@ -75,6 +87,8 @@ message Rejection {
         REASON_INVALID = 3;
         /* A protected path or a forged peer was touched. */
         REASON_PROTECTED = 4;
+        /* An Object in the Change was purged; its identity cannot be reused. */
+        REASON_PURGED = 5;
     }
     Reason reason = 1;
     string message = 2;

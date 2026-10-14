@@ -14,7 +14,75 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file elri/v1/sync/sync.proto.
  */
 export const file_elri_v1_sync_sync: GenFile = /*@__PURE__*/
-  fileDesc("ChdlbHJpL3YxL3N5bmMvc3luYy5wcm90bxIMZWxyaS52MS5zeW5jIjsKDEhlbGxvUmVxdWVzdBIRCglkZXZpY2VfaWQYASABKAkSGAoQcHJvdG9jb2xfdmVyc2lvbhgCIAEoDSJNCg1IZWxsb1Jlc3BvbnNlEg8KB3VzZXJfaWQYASABKAkSEQoJdXNlcl9uYW1lGAIgASgJEhgKEHByb3RvY29sX3ZlcnNpb24YAyABKA0iEwoRTGlzdFNwYWNlc1JlcXVlc3QiOgoSTGlzdFNwYWNlc1Jlc3BvbnNlEiQKBnNwYWNlcxgBIAMoCzIULmVscmkudjEuc3BhY2UuU3BhY2UiIgoSQ3JlYXRlU3BhY2VSZXF1ZXN0EgwKBG5hbWUYASABKAkiOgoTQ3JlYXRlU3BhY2VSZXNwb25zZRIjCgVzcGFjZRgBIAEoCzIULmVscmkudjEuc3BhY2UuU3BhY2UiWgoQQWRkTWVtYmVyUmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIRCgl1c2VyX25hbWUYAiABKAkSIQoEcm9sZRgDIAEoDjITLmVscmkudjEuc3BhY2UuUm9sZSITChFBZGRNZW1iZXJSZXNwb25zZSI3Cg1TdWJtaXRSZXF1ZXN0EiYKBmNoYW5nZRgBIAEoCzIWLmVscmkudjEuc3luYy5FbnZlbG9wZSLYAQoJUmVqZWN0aW9uEi4KBnJlYXNvbhgBIAEoDjIeLmVscmkudjEuc3luYy5SZWplY3Rpb24uUmVhc29uEg8KB21lc3NhZ2UYAiABKAkiiQEKBlJlYXNvbhIWChJSRUFTT05fVU5TUEVDSUZJRUQQABIcChhSRUFTT05fUEVSTUlTU0lPTl9ERU5JRUQQARIfChtSRUFTT05fTUlTU0lOR19QUkVERUNFU1NPUlMQAhISCg5SRUFTT05fSU5WQUxJRBADEhQKEFJFQVNPTl9QUk9URUNURUQQBCJgCg5TdWJtaXRSZXNwb25zZRIWCgxhY2NlcHRlZF9zZXEYASABKANIABIrCghyZWplY3RlZBgCIAEoCzIXLmVscmkudjEuc3luYy5SZWplY3Rpb25IAEIJCgdvdXRjb21lIkEKC1B1bGxSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCWFmdGVyX3NlcRgCIAEoAxINCgVsaW1pdBgDIAEoBSJGCgxQdWxsUmVzcG9uc2USJAoHZW50cmllcxgBIAMoCzITLmVscmkudjEuc3luYy5FbnRyeRIQCghoYXNfbW9yZRgCIAEoCCIlChBTdWJzY3JpYmVSZXF1ZXN0EhEKCXNwYWNlX2lkcxgBIAMoCSIvCg5TdWJzY3JpYmVFdmVudBIQCghzcGFjZV9pZBgBIAEoCRILCgNzZXEYAiABKAMykwQKC1N5bmNTZXJ2aWNlEkAKBUhlbGxvEhouZWxyaS52MS5zeW5jLkhlbGxvUmVxdWVzdBobLmVscmkudjEuc3luYy5IZWxsb1Jlc3BvbnNlEk8KCkxpc3RTcGFjZXMSHy5lbHJpLnYxLnN5bmMuTGlzdFNwYWNlc1JlcXVlc3QaIC5lbHJpLnYxLnN5bmMuTGlzdFNwYWNlc1Jlc3BvbnNlElIKC0NyZWF0ZVNwYWNlEiAuZWxyaS52MS5zeW5jLkNyZWF0ZVNwYWNlUmVxdWVzdBohLmVscmkudjEuc3luYy5DcmVhdGVTcGFjZVJlc3BvbnNlEkwKCUFkZE1lbWJlchIeLmVscmkudjEuc3luYy5BZGRNZW1iZXJSZXF1ZXN0Gh8uZWxyaS52MS5zeW5jLkFkZE1lbWJlclJlc3BvbnNlEkMKBlN1Ym1pdBIbLmVscmkudjEuc3luYy5TdWJtaXRSZXF1ZXN0GhwuZWxyaS52MS5zeW5jLlN1Ym1pdFJlc3BvbnNlEj0KBFB1bGwSGS5lbHJpLnYxLnN5bmMuUHVsbFJlcXVlc3QaGi5lbHJpLnYxLnN5bmMuUHVsbFJlc3BvbnNlEksKCVN1YnNjcmliZRIeLmVscmkudjEuc3luYy5TdWJzY3JpYmVSZXF1ZXN0GhwuZWxyaS52MS5zeW5jLlN1YnNjcmliZUV2ZW50MAFiBnByb3RvMw", [file_elri_v1_space_domain, file_elri_v1_sync_domain]);
+  fileDesc("ChdlbHJpL3YxL3N5bmMvc3luYy5wcm90bxIMZWxyaS52MS5zeW5jIjkKElB1cmdlT2JqZWN0UmVxdWVzdBIQCghzcGFjZV9pZBgBIAEoCRIRCglvYmplY3RfaWQYAiABKAkiIgoTUHVyZ2VPYmplY3RSZXNwb25zZRILCgNzZXEYASABKAMiOwoMSGVsbG9SZXF1ZXN0EhEKCWRldmljZV9pZBgBIAEoCRIYChBwcm90b2NvbF92ZXJzaW9uGAIgASgNIk0KDUhlbGxvUmVzcG9uc2USDwoHdXNlcl9pZBgBIAEoCRIRCgl1c2VyX25hbWUYAiABKAkSGAoQcHJvdG9jb2xfdmVyc2lvbhgDIAEoDSITChFMaXN0U3BhY2VzUmVxdWVzdCI6ChJMaXN0U3BhY2VzUmVzcG9uc2USJAoGc3BhY2VzGAEgAygLMhQuZWxyaS52MS5zcGFjZS5TcGFjZSIiChJDcmVhdGVTcGFjZVJlcXVlc3QSDAoEbmFtZRgBIAEoCSI6ChNDcmVhdGVTcGFjZVJlc3BvbnNlEiMKBXNwYWNlGAEgASgLMhQuZWxyaS52MS5zcGFjZS5TcGFjZSJaChBBZGRNZW1iZXJSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCXVzZXJfbmFtZRgCIAEoCRIhCgRyb2xlGAMgASgOMhMuZWxyaS52MS5zcGFjZS5Sb2xlIhMKEUFkZE1lbWJlclJlc3BvbnNlIjcKDVN1Ym1pdFJlcXVlc3QSJgoGY2hhbmdlGAEgASgLMhYuZWxyaS52MS5zeW5jLkVudmVsb3BlIusBCglSZWplY3Rpb24SLgoGcmVhc29uGAEgASgOMh4uZWxyaS52MS5zeW5jLlJlamVjdGlvbi5SZWFzb24SDwoHbWVzc2FnZRgCIAEoCSKcAQoGUmVhc29uEhYKElJFQVNPTl9VTlNQRUNJRklFRBAAEhwKGFJFQVNPTl9QRVJNSVNTSU9OX0RFTklFRBABEh8KG1JFQVNPTl9NSVNTSU5HX1BSRURFQ0VTU09SUxACEhIKDlJFQVNPTl9JTlZBTElEEAMSFAoQUkVBU09OX1BST1RFQ1RFRBAEEhEKDVJFQVNPTl9QVVJHRUQQBSJgCg5TdWJtaXRSZXNwb25zZRIWCgxhY2NlcHRlZF9zZXEYASABKANIABIrCghyZWplY3RlZBgCIAEoCzIXLmVscmkudjEuc3luYy5SZWplY3Rpb25IAEIJCgdvdXRjb21lIkEKC1B1bGxSZXF1ZXN0EhAKCHNwYWNlX2lkGAEgASgJEhEKCWFmdGVyX3NlcRgCIAEoAxINCgVsaW1pdBgDIAEoBSJGCgxQdWxsUmVzcG9uc2USJAoHZW50cmllcxgBIAMoCzITLmVscmkudjEuc3luYy5FbnRyeRIQCghoYXNfbW9yZRgCIAEoCCIlChBTdWJzY3JpYmVSZXF1ZXN0EhEKCXNwYWNlX2lkcxgBIAMoCSIvCg5TdWJzY3JpYmVFdmVudBIQCghzcGFjZV9pZBgBIAEoCRILCgNzZXEYAiABKAMy5wQKC1N5bmNTZXJ2aWNlEkAKBUhlbGxvEhouZWxyaS52MS5zeW5jLkhlbGxvUmVxdWVzdBobLmVscmkudjEuc3luYy5IZWxsb1Jlc3BvbnNlEk8KCkxpc3RTcGFjZXMSHy5lbHJpLnYxLnN5bmMuTGlzdFNwYWNlc1JlcXVlc3QaIC5lbHJpLnYxLnN5bmMuTGlzdFNwYWNlc1Jlc3BvbnNlElIKC0NyZWF0ZVNwYWNlEiAuZWxyaS52MS5zeW5jLkNyZWF0ZVNwYWNlUmVxdWVzdBohLmVscmkudjEuc3luYy5DcmVhdGVTcGFjZVJlc3BvbnNlEkwKCUFkZE1lbWJlchIeLmVscmkudjEuc3luYy5BZGRNZW1iZXJSZXF1ZXN0Gh8uZWxyaS52MS5zeW5jLkFkZE1lbWJlclJlc3BvbnNlEkMKBlN1Ym1pdBIbLmVscmkudjEuc3luYy5TdWJtaXRSZXF1ZXN0GhwuZWxyaS52MS5zeW5jLlN1Ym1pdFJlc3BvbnNlEj0KBFB1bGwSGS5lbHJpLnYxLnN5bmMuUHVsbFJlcXVlc3QaGi5lbHJpLnYxLnN5bmMuUHVsbFJlc3BvbnNlEksKCVN1YnNjcmliZRIeLmVscmkudjEuc3luYy5TdWJzY3JpYmVSZXF1ZXN0GhwuZWxyaS52MS5zeW5jLlN1YnNjcmliZUV2ZW50MAESUgoLUHVyZ2VPYmplY3QSIC5lbHJpLnYxLnN5bmMuUHVyZ2VPYmplY3RSZXF1ZXN0GiEuZWxyaS52MS5zeW5jLlB1cmdlT2JqZWN0UmVzcG9uc2ViBnByb3RvMw", [file_elri_v1_space_domain, file_elri_v1_sync_domain]);
+
+/**
+ * @generated from message elri.v1.sync.PurgeObjectRequest
+ */
+export type PurgeObjectRequest = Message<"elri.v1.sync.PurgeObjectRequest"> & {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId: string;
+
+  /**
+   * @generated from field: string object_id = 2;
+   */
+  objectId: string;
+};
+
+/**
+ * @generated from message elri.v1.sync.PurgeObjectRequest
+ */
+export type PurgeObjectRequestJson = {
+  /**
+   * @generated from field: string space_id = 1;
+   */
+  spaceId?: string;
+
+  /**
+   * @generated from field: string object_id = 2;
+   */
+  objectId?: string;
+};
+
+/**
+ * Describes the message elri.v1.sync.PurgeObjectRequest.
+ * Use `create(PurgeObjectRequestSchema)` to create a new message.
+ */
+export const PurgeObjectRequestSchema: GenMessage<PurgeObjectRequest, {jsonType: PurgeObjectRequestJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_sync_sync, 0);
+
+/**
+ * @generated from message elri.v1.sync.PurgeObjectResponse
+ */
+export type PurgeObjectResponse = Message<"elri.v1.sync.PurgeObjectResponse"> & {
+  /**
+   * Log position of the purge. 
+   *
+   * @generated from field: int64 seq = 1;
+   */
+  seq: bigint;
+};
+
+/**
+ * @generated from message elri.v1.sync.PurgeObjectResponse
+ */
+export type PurgeObjectResponseJson = {
+  /**
+   * Log position of the purge. 
+   *
+   * @generated from field: int64 seq = 1;
+   */
+  seq?: string;
+};
+
+/**
+ * Describes the message elri.v1.sync.PurgeObjectResponse.
+ * Use `create(PurgeObjectResponseSchema)` to create a new message.
+ */
+export const PurgeObjectResponseSchema: GenMessage<PurgeObjectResponse, {jsonType: PurgeObjectResponseJson}> = /*@__PURE__*/
+  messageDesc(file_elri_v1_sync_sync, 1);
 
 /**
  * @generated from message elri.v1.sync.HelloRequest
@@ -51,7 +119,7 @@ export type HelloRequestJson = {
  * Use `create(HelloRequestSchema)` to create a new message.
  */
 export const HelloRequestSchema: GenMessage<HelloRequest, {jsonType: HelloRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 0);
+  messageDesc(file_elri_v1_sync_sync, 2);
 
 /**
  * @generated from message elri.v1.sync.HelloResponse
@@ -98,7 +166,7 @@ export type HelloResponseJson = {
  * Use `create(HelloResponseSchema)` to create a new message.
  */
 export const HelloResponseSchema: GenMessage<HelloResponse, {jsonType: HelloResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 1);
+  messageDesc(file_elri_v1_sync_sync, 3);
 
 /**
  * @generated from message elri.v1.sync.ListSpacesRequest
@@ -117,7 +185,7 @@ export type ListSpacesRequestJson = {
  * Use `create(ListSpacesRequestSchema)` to create a new message.
  */
 export const ListSpacesRequestSchema: GenMessage<ListSpacesRequest, {jsonType: ListSpacesRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 2);
+  messageDesc(file_elri_v1_sync_sync, 4);
 
 /**
  * @generated from message elri.v1.sync.ListSpacesResponse
@@ -144,7 +212,7 @@ export type ListSpacesResponseJson = {
  * Use `create(ListSpacesResponseSchema)` to create a new message.
  */
 export const ListSpacesResponseSchema: GenMessage<ListSpacesResponse, {jsonType: ListSpacesResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 3);
+  messageDesc(file_elri_v1_sync_sync, 5);
 
 /**
  * @generated from message elri.v1.sync.CreateSpaceRequest
@@ -171,7 +239,7 @@ export type CreateSpaceRequestJson = {
  * Use `create(CreateSpaceRequestSchema)` to create a new message.
  */
 export const CreateSpaceRequestSchema: GenMessage<CreateSpaceRequest, {jsonType: CreateSpaceRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 4);
+  messageDesc(file_elri_v1_sync_sync, 6);
 
 /**
  * @generated from message elri.v1.sync.CreateSpaceResponse
@@ -198,7 +266,7 @@ export type CreateSpaceResponseJson = {
  * Use `create(CreateSpaceResponseSchema)` to create a new message.
  */
 export const CreateSpaceResponseSchema: GenMessage<CreateSpaceResponse, {jsonType: CreateSpaceResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 5);
+  messageDesc(file_elri_v1_sync_sync, 7);
 
 /**
  * @generated from message elri.v1.sync.AddMemberRequest
@@ -245,7 +313,7 @@ export type AddMemberRequestJson = {
  * Use `create(AddMemberRequestSchema)` to create a new message.
  */
 export const AddMemberRequestSchema: GenMessage<AddMemberRequest, {jsonType: AddMemberRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 6);
+  messageDesc(file_elri_v1_sync_sync, 8);
 
 /**
  * @generated from message elri.v1.sync.AddMemberResponse
@@ -264,7 +332,7 @@ export type AddMemberResponseJson = {
  * Use `create(AddMemberResponseSchema)` to create a new message.
  */
 export const AddMemberResponseSchema: GenMessage<AddMemberResponse, {jsonType: AddMemberResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 7);
+  messageDesc(file_elri_v1_sync_sync, 9);
 
 /**
  * @generated from message elri.v1.sync.SubmitRequest
@@ -291,7 +359,7 @@ export type SubmitRequestJson = {
  * Use `create(SubmitRequestSchema)` to create a new message.
  */
 export const SubmitRequestSchema: GenMessage<SubmitRequest, {jsonType: SubmitRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 8);
+  messageDesc(file_elri_v1_sync_sync, 10);
 
 /**
  * @generated from message elri.v1.sync.Rejection
@@ -328,7 +396,7 @@ export type RejectionJson = {
  * Use `create(RejectionSchema)` to create a new message.
  */
 export const RejectionSchema: GenMessage<Rejection, {jsonType: RejectionJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 9);
+  messageDesc(file_elri_v1_sync_sync, 11);
 
 /**
  * @generated from enum elri.v1.sync.Rejection.Reason
@@ -366,18 +434,25 @@ export enum Rejection_Reason {
    * @generated from enum value: REASON_PROTECTED = 4;
    */
   PROTECTED = 4,
+
+  /**
+   * An Object in the Change was purged; its identity cannot be reused. 
+   *
+   * @generated from enum value: REASON_PURGED = 5;
+   */
+  PURGED = 5,
 }
 
 /**
  * @generated from enum elri.v1.sync.Rejection.Reason
  */
-export type Rejection_ReasonJson = "REASON_UNSPECIFIED" | "REASON_PERMISSION_DENIED" | "REASON_MISSING_PREDECESSORS" | "REASON_INVALID" | "REASON_PROTECTED";
+export type Rejection_ReasonJson = "REASON_UNSPECIFIED" | "REASON_PERMISSION_DENIED" | "REASON_MISSING_PREDECESSORS" | "REASON_INVALID" | "REASON_PROTECTED" | "REASON_PURGED";
 
 /**
  * Describes the enum elri.v1.sync.Rejection.Reason.
  */
 export const Rejection_ReasonSchema: GenEnum<Rejection_Reason, Rejection_ReasonJson> = /*@__PURE__*/
-  enumDesc(file_elri_v1_sync_sync, 9, 0);
+  enumDesc(file_elri_v1_sync_sync, 11, 0);
 
 /**
  * @generated from message elri.v1.sync.SubmitResponse
@@ -421,7 +496,7 @@ export type SubmitResponseJson = {
  * Use `create(SubmitResponseSchema)` to create a new message.
  */
 export const SubmitResponseSchema: GenMessage<SubmitResponse, {jsonType: SubmitResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 10);
+  messageDesc(file_elri_v1_sync_sync, 12);
 
 /**
  * @generated from message elri.v1.sync.PullRequest
@@ -472,7 +547,7 @@ export type PullRequestJson = {
  * Use `create(PullRequestSchema)` to create a new message.
  */
 export const PullRequestSchema: GenMessage<PullRequest, {jsonType: PullRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 11);
+  messageDesc(file_elri_v1_sync_sync, 13);
 
 /**
  * @generated from message elri.v1.sync.PullResponse
@@ -509,7 +584,7 @@ export type PullResponseJson = {
  * Use `create(PullResponseSchema)` to create a new message.
  */
 export const PullResponseSchema: GenMessage<PullResponse, {jsonType: PullResponseJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 12);
+  messageDesc(file_elri_v1_sync_sync, 14);
 
 /**
  * @generated from message elri.v1.sync.SubscribeRequest
@@ -536,7 +611,7 @@ export type SubscribeRequestJson = {
  * Use `create(SubscribeRequestSchema)` to create a new message.
  */
 export const SubscribeRequestSchema: GenMessage<SubscribeRequest, {jsonType: SubscribeRequestJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 13);
+  messageDesc(file_elri_v1_sync_sync, 15);
 
 /**
  * @generated from message elri.v1.sync.SubscribeEvent
@@ -573,7 +648,7 @@ export type SubscribeEventJson = {
  * Use `create(SubscribeEventSchema)` to create a new message.
  */
 export const SubscribeEventSchema: GenMessage<SubscribeEvent, {jsonType: SubscribeEventJson}> = /*@__PURE__*/
-  messageDesc(file_elri_v1_sync_sync, 14);
+  messageDesc(file_elri_v1_sync_sync, 16);
 
 /**
  *
@@ -653,6 +728,16 @@ export const SyncService: GenService<{
     methodKind: "server_streaming";
     input: typeof SubscribeRequestSchema;
     output: typeof SubscribeEventSchema;
+  },
+  /**
+   * Owner/Admin: erases a deleted Object for good; see ObjectService.PurgeObject. 
+   *
+   * @generated from rpc elri.v1.sync.SyncService.PurgeObject
+   */
+  purgeObject: {
+    methodKind: "unary";
+    input: typeof PurgeObjectRequestSchema;
+    output: typeof PurgeObjectResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_elri_v1_sync_sync, 0);

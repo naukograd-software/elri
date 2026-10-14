@@ -24,8 +24,9 @@ use elri_proto::elri::v1::sync::sync_service_ws::{
 };
 use elri_proto::elri::v1::sync::{
     AddMemberRequest, AddMemberResponse, CreateSpaceRequest, CreateSpaceResponse, HelloRequest,
-    HelloResponse, ListSpacesRequest, ListSpacesResponse, PullRequest, PullResponse, SubmitRequest,
-    SubmitResponse, SubscribeEvent, SubscribeRequest,
+    HelloResponse, ListSpacesRequest, ListSpacesResponse, PullRequest, PullResponse,
+    PurgeObjectRequest, PurgeObjectResponse, SubmitRequest, SubmitResponse, SubscribeEvent,
+    SubscribeRequest,
 };
 use uuid::Uuid;
 use ws_proto::{Code, Metadata, Request, Response, Server, Status};
@@ -61,6 +62,7 @@ fn storage(e: elri_core::store::StoreError) -> Status {
     use elri_core::store::StoreError as E;
     match e {
         E::SpaceNotFound(_) | E::ObjectNotFound(_) => Status::new(Code::NotFound, e.to_string()),
+        E::NotDeleted(_) | E::Purged(_) => Status::new(Code::FailedPrecondition, e.to_string()),
         other => {
             tracing::error!(error = %other, "storage failure");
             Status::new(Code::Internal, "storage failure")
@@ -455,6 +457,32 @@ impl SyncServiceHandler for State {
         let has_more = entries.len() > limit;
         let entries = entries.into_iter().take(limit).collect();
         Ok(Response::new(PullResponse { entries, has_more }))
+    }
+
+    async fn purge_object(
+        &self,
+        req: Request<PurgeObjectRequest>,
+    ) -> Result<Response<PurgeObjectResponse>, Status> {
+        let user = self.user(&req.header).await?;
+        let space_id = parse_id(&req.msg.space_id, "space_id")?;
+        let object_id = parse_id(&req.msg.object_id, "object_id")?;
+        if !self.role(space_id, &user).await?.can_manage() {
+            return Err(Status::new(
+                Code::PermissionDenied,
+                "owner or admin required",
+            ));
+        }
+        let space = self
+            .spaces
+            .space(ObjectId::from_uuid(space_id))
+            .await
+            .map_err(storage)?;
+        let seq = space
+            .purge_object(ObjectId::from_uuid(object_id))
+            .await
+            .map_err(storage)?;
+        let _ = self.events.send((space_id, seq));
+        Ok(Response::new(PurgeObjectResponse { seq }))
     }
 
     async fn subscribe(
