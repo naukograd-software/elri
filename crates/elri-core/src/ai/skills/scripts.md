@@ -13,10 +13,10 @@ The host API, as Luau declarations:
 {{SDK}}
 ```
 
-Rules (`RuleService/CreateRule`) run a script when Objects change
-(`trigger.kinds`, `trigger.type_id`) or on a schedule
-(`trigger.every_seconds`, `trigger.missed`: skip, latest, catch-up, ask).
-Changes made by scripts and rules never fire rules.
+Rules run a script when Objects change or on a schedule. You cannot
+create or change rules: describe the rule you suggest (script, trigger
+kinds or type, schedule) and the user sets it up. Changes made by scripts
+and rules never fire rules.
 
 Workflows are scripts whose steps survive interruptions: wrap each step
 that has an effect in `elri.step("name", function() ... end)`. The user

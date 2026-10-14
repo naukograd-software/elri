@@ -79,6 +79,13 @@ const DENIED: &[&str] = &[
     "elri.v1.script.ScriptService/RunScript",
     "elri.v1.extension.ExtensionService/RemoveExtension",
     "elri.v1.extension.ExtensionService/GrantExtension",
+    // An extension runs under its own manifest, and what it returns names
+    // no Space the gate could check.
+    "elri.v1.extension.ExtensionService/CallExtension",
+    // A rule would run an already granted script on events or a schedule
+    // the user never consented to.
+    "elri.v1.script.RuleService/CreateRule",
+    "elri.v1.script.RuleService/UpdateRule",
     "elri.v1.workflow.WorkflowService/StartWorkflow",
     "elri.v1.workflow.WorkflowService/ResumeWorkflowRun",
     "elri.v1.workflow.WorkflowService/ResolveWorkflowStep",
@@ -301,15 +308,6 @@ impl Caller {
                 ));
             }
         }
-        if method == "elri.v1.extension.ExtensionService/CallExtension" {
-            let name = msg
-                .get_field_by_name("name")
-                .and_then(|v| v.as_str().map(str::to_owned))
-                .unwrap_or_default();
-            if !reach.extensions.contains(&name) {
-                return Err(format!("extension {name} is not in this agent's manifest"));
-            }
-        }
         if writes {
             for dest in &named {
                 copy_check(labels, dest).await?;
@@ -524,6 +522,8 @@ mod tests {
         assert!(!allowed("elri.v1.settings.SettingsService/UpdateSettings"));
         assert!(!allowed("elri.v1.ai.AiService/ListAccounts"));
         assert!(!allowed("elri.v1.events.EventService/Watch"));
+        assert!(!allowed("elri.v1.extension.ExtensionService/CallExtension"));
+        assert!(!allowed("elri.v1.script.RuleService/CreateRule"));
         assert!(!allowed("nonsense"));
         assert!(reads_only("elri.v1.object.ObjectService/ListObjects"));
         assert!(!reads_only("elri.v1.object.ObjectService/CreateObject"));

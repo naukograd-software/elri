@@ -194,7 +194,11 @@ impl AgentServiceHandler for Services {
         doc.touch(now_ms()).map_err(StoreError::from)?;
         let rec = self.store.space(space).await?.insert(&doc).await?;
         Ok(Response::new(CreateAgentResponse {
-            agent: Some(agent_of(&rec)),
+            agent: Some(
+                self.ai
+                    .with_effective_version(space, agent_of(&rec))
+                    .await?,
+            ),
         }))
     }
 
@@ -214,7 +218,11 @@ impl AgentServiceHandler for Services {
             .update(id, move |doc| write_agent(doc, &a))
             .await?;
         Ok(Response::new(UpdateAgentResponse {
-            agent: Some(agent_of(&rec)),
+            agent: Some(
+                self.ai
+                    .with_effective_version(space, agent_of(&rec))
+                    .await?,
+            ),
         }))
     }
 
@@ -223,12 +231,13 @@ impl AgentServiceHandler for Services {
         req: Request<ListAgentsRequest>,
     ) -> Result<Response<ListAgentsResponse>, Status> {
         let space = parse_id(&req.msg.space_id, "space_id")?;
-        let agents = self
+        let mut agents = Vec::new();
+        for o in self
             .of_kind(space, ObjectKind::Agent, req.msg.include_deleted)
             .await?
-            .iter()
-            .map(agent_of)
-            .collect();
+        {
+            agents.push(self.ai.with_effective_version(space, agent_of(&o)).await?);
+        }
         Ok(Response::new(ListAgentsResponse { agents }))
     }
 
@@ -242,7 +251,7 @@ impl AgentServiceHandler for Services {
         if o.kind() != ObjectKind::Agent {
             return Err(Status::new(Code::NotFound, "not an agent"));
         }
-        let a = agent_of(&o);
+        let a = self.ai.with_effective_version(space, agent_of(&o)).await?;
         if !req.msg.expected_version.is_empty() && req.msg.expected_version != a.version {
             return Err(Status::new(
                 Code::FailedPrecondition,

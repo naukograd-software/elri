@@ -419,6 +419,46 @@ fn store_refusal(e: impl std::fmt::Display) -> Refusal {
 }
 
 impl Ai {
+    /// The agent with its version covering what it is told as well as what
+    /// it may do: the texts of its prompts and skills are hashed in, so
+    /// editing one of them needs a new grant like editing the agent.
+    pub async fn with_effective_version(
+        &self,
+        space: SpaceId,
+        mut a: Agent,
+    ) -> Result<Agent, AiError> {
+        let store = self.store.space(space).await?;
+        let mut h = Sha256::new();
+        h.update(a.version.as_bytes());
+        for p in &a.prompt_ids {
+            h.update(b"\0p");
+            if let Ok(id) = ObjectId::parse(p) {
+                if let Ok(o) = store.get(id).await {
+                    if o.kind() == ObjectKind::Prompt && o.deleted_at_ms.is_none() {
+                        h.update(prompt_of(&o).body.as_bytes());
+                    }
+                }
+            }
+        }
+        for s in self.skills_for(space, &a).await? {
+            h.update(b"\0s");
+            h.update(s.id.as_bytes());
+            h.update(b"\0");
+            h.update(s.description.as_bytes());
+            h.update(b"\0");
+            h.update(s.body.as_bytes());
+        }
+        a.version = h
+            .finalize()
+            .iter()
+            .fold(String::with_capacity(64), |mut out, b| {
+                use std::fmt::Write as _;
+                let _ = write!(out, "{b:02x}");
+                out
+            });
+        Ok(a)
+    }
+
     /// Skills an agent may load: the ones it names, or every built-in one
     /// when it names none.
     async fn skills_for(&self, space: SpaceId, a: &Agent) -> Result<Vec<Skill>, AiError> {
@@ -568,7 +608,10 @@ impl Ai {
         if o.kind() != ObjectKind::Agent || o.deleted_at_ms.is_some() {
             return Err(refusal("invalid", "the conversation's agent is gone"));
         }
-        let agent = agent_of(&o);
+        let agent = self
+            .with_effective_version(space_id, agent_of(&o))
+            .await
+            .map_err(store_refusal)?;
         let ai = self
             .store
             .settings()

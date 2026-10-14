@@ -83,6 +83,7 @@ clap = { version = "4", features = ["derive", "env"] }
 tauri = "2.12.3"
 tauri-build = "2.7.2"
 tauri-plugin-single-instance = "2.5.3"
+tauri-plugin-opener = "2.7.2"
 
 [workspace.lints.rust]
 # `deny`, not `forbid`: the one allowed exception is loading native

@@ -20,6 +20,7 @@ tauri-build = { workspace = true, features = [] }
 [dependencies]
 elri-core = { workspace = true, default-features = false }
 tauri.workspace = true
+tauri-plugin-opener.workspace = true
 tokio = { workspace = true, features = ["rt-multi-thread"] }
 serde.workspace = true
 tracing.workspace = true

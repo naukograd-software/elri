@@ -31,6 +31,22 @@ fn core_endpoint(state: tauri::State<'_, CoreState>) -> Result<Endpoint, String>
         .ok_or_else(|| "core is not running".to_owned())
 }
 
+/// Opens the provider's sign-in page in the system browser. Only the
+/// provider's own HTTPS pages are opened, so the renderer cannot use this
+/// to launch anything else.
+#[tauri::command]
+#[allow(clippy::needless_pass_by_value)]
+fn open_sign_in(app: tauri::AppHandle, url: String) -> Result<(), String> {
+    use tauri_plugin_opener::OpenerExt as _;
+    let ok = url.starts_with("https://auth.openai.com/") && !url.contains(char::is_whitespace);
+    if !ok {
+        return Err("only the provider's sign-in page can be opened".to_owned());
+    }
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|e| e.to_string())
+}
+
 /// Entry point shared by the desktop binary and the Android library.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -50,7 +66,8 @@ pub fn run() {
     }));
     builder
         .manage(CoreState(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![core_endpoint])
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![core_endpoint, open_sign_in])
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let mut config = Config::new(
