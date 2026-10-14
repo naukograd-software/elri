@@ -4,7 +4,9 @@
 use std::sync::Mutex;
 
 use elri_core::{BuildInfo, Config, Core, Endpoint};
-use tauri::Manager;
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::TrayIconBuilder;
+use tauri::{Manager, WindowEvent};
 
 /// Core handle kept for the lifetime of the application.
 struct CoreState(Mutex<Option<Core>>);
@@ -47,7 +49,51 @@ pub fn run() {
             if let Ok(mut guard) = app.state::<CoreState>().0.lock() {
                 *guard = Some(core);
             }
+
+            // Desktop: closing the window hides it; the core keeps running
+            // until Quit is chosen from the tray.
+            #[cfg(desktop)]
+            {
+                let open = MenuItem::with_id(app, "open", "Open elri", true, None::<&str>)?;
+                let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+                let menu = Menu::with_items(app, &[&open, &quit])?;
+                let mut tray = TrayIconBuilder::new()
+                    .menu(&menu)
+                    .show_menu_on_left_click(true);
+                if let Some(icon) = app.default_window_icon() {
+                    tray = tray.icon(icon.clone());
+                }
+                tray.on_menu_event(|app, event| match event.id.as_ref() {
+                    "open" => {
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        if let Ok(mut guard) = app.state::<CoreState>().0.lock() {
+                            if let Some(core) = guard.take() {
+                                core.shutdown();
+                            }
+                        }
+                        app.exit(0);
+                    }
+                    _ => {}
+                })
+                .build(app)?;
+            }
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            #[cfg(desktop)]
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                let _ = window.hide();
+                api.prevent_close();
+            }
+            #[cfg(not(desktop))]
+            {
+                let _ = (window, event);
+            }
         })
         .run(tauri::generate_context!())
         .unwrap_or_else(|e| {

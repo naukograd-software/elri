@@ -59,11 +59,12 @@ pub struct Services {
     pub remote: Arc<Remote>,
 }
 
-/// Builds the loopback server: same-origin policy, bearer-token middleware,
-/// all services registered.
-pub fn build_server(services: Services) -> Server {
+/// Builds the loopback server: origin policy, bearer-token middleware, all
+/// services registered. The token is still required on every call, so the
+/// origin list only decides which browser contexts may open the socket.
+pub fn build_server(services: Services, allowed_origins: Vec<String>) -> Server {
     let server = Server::new(ServerConfig {
-        origin: OriginPolicy::same_origin_only(),
+        origin: OriginPolicy::Patterns(allowed_origins),
         ..ServerConfig::default()
     });
     let token = services.token.clone();

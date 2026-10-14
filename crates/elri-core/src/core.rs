@@ -32,15 +32,27 @@ pub struct Config {
     pub bind: SocketAddr,
     /// Version information of the embedding binary.
     pub build: BuildInfo,
+    /// Browser origins (host patterns) allowed to open the loopback socket,
+    /// besides same-origin and non-browser clients. The Tauri `WebView`
+    /// presents `tauri://localhost` or `http://tauri.localhost`; the Vite dev
+    /// server presents `http://127.0.0.1:<port>`.
+    pub allowed_origins: Vec<String>,
 }
 
 impl Config {
-    /// Default configuration for `data_dir`: loopback, random port.
+    /// Default configuration for `data_dir`: loopback, random port, the
+    /// shell's own origins allowed.
     pub fn new(data_dir: impl Into<PathBuf>, build: BuildInfo) -> Self {
         Self {
             data_dir: data_dir.into(),
             bind: SocketAddr::from(([127, 0, 0, 1], 0)),
             build,
+            allowed_origins: vec![
+                "localhost".to_owned(),
+                "localhost:*".to_owned(),
+                "tauri.localhost".to_owned(),
+                "127.0.0.1:*".to_owned(),
+            ],
         }
     }
 }
@@ -177,13 +189,16 @@ impl Core {
         };
         write_endpoint(&config.data_dir, &endpoint)?;
 
-        let server = api::build_server(api::Services {
-            build: config.build.clone(),
-            device_id,
-            token: token.clone(),
-            store: Arc::clone(&store),
-            remote: Arc::clone(&remote),
-        });
+        let server = api::build_server(
+            api::Services {
+                build: config.build.clone(),
+                device_id,
+                token: token.clone(),
+                store: Arc::clone(&store),
+                remote: Arc::clone(&remote),
+            },
+            config.allowed_origins.clone(),
+        );
         let listener_task = tokio::spawn(async move {
             if let Err(e) = server.serve_listener(listener).await {
                 tracing::error!(error = %e, "loopback listener stopped");
