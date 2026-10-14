@@ -1116,6 +1116,39 @@ async fn install_extension(
     Ok(extension_json(&e))
 }
 
+async fn call_extension(
+    client: &ExtensionServiceClient,
+    endpoint: &Endpoint,
+    space: String,
+    name: String,
+    function: String,
+    args: String,
+) -> Result<serde_json::Value> {
+    let res = client
+        .call_extension(authed(
+            endpoint,
+            CallExtensionRequest {
+                name,
+                function,
+                space_id: space,
+                args_json: args,
+            },
+        ))
+        .await?;
+    let Some(r) = res.msg.result else {
+        bail!("core returned no result");
+    };
+    let output: serde_json::Value = if r.output_json.is_empty() {
+        serde_json::Value::Null
+    } else {
+        serde_json::from_str(&r.output_json).unwrap_or(json!(r.output_json))
+    };
+    Ok(json!({
+        "output": output, "logs": r.logs, "duration_ms": r.duration_ms,
+        "error": r.error, "labels": r.labels, "grant_id": r.grant_id,
+    }))
+}
+
 async fn run_extension(
     endpoint: &Endpoint,
     conn: Client,
@@ -1196,31 +1229,7 @@ async fn run_extension(
             name,
             function,
             args,
-        } => {
-            let res = client
-                .call_extension(authed(
-                    endpoint,
-                    CallExtensionRequest {
-                        name,
-                        function,
-                        space_id: space,
-                        args_json: args,
-                    },
-                ))
-                .await?;
-            let Some(r) = res.msg.result else {
-                bail!("core returned no result");
-            };
-            let output: serde_json::Value = if r.output_json.is_empty() {
-                serde_json::Value::Null
-            } else {
-                serde_json::from_str(&r.output_json).unwrap_or(json!(r.output_json))
-            };
-            Ok(json!({
-                "output": output, "logs": r.logs, "duration_ms": r.duration_ms,
-                "error": r.error, "labels": r.labels, "grant_id": r.grant_id,
-            }))
-        }
+        } => call_extension(&client, endpoint, space, name, function, args).await,
     }
 }
 
