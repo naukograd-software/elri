@@ -92,8 +92,12 @@ impl ScriptServiceHandler for Services {
         script::write_script(&doc, Some(&m.source), Some(&manifest)).map_err(StoreError::from)?;
         doc.touch(now_ms()).map_err(StoreError::from)?;
         let rec = self.store.space(space_id).await?.insert(&doc).await?;
+        let script = script_of(&rec)?;
+        if crate::store::current_actor().starts_with("agent:") {
+            rules::mark_agent_written(&self.store, &script).await?;
+        }
         Ok(Response::new(CreateScriptResponse {
-            script: Some(script_of(&rec)?),
+            script: Some(script),
         }))
     }
 
@@ -128,8 +132,12 @@ impl ScriptServiceHandler for Services {
                 script::write_script(doc, source.as_deref(), manifest.as_ref())
             })
             .await?;
+        let script = script_of(&rec)?;
+        if crate::store::current_actor().starts_with("agent:") {
+            rules::mark_agent_written(&self.store, &script).await?;
+        }
         Ok(Response::new(UpdateScriptResponse {
-            script: Some(script_of(&rec)?),
+            script: Some(script),
         }))
     }
 

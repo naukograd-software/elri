@@ -411,6 +411,20 @@ async fn run_rule(
     Ok(run)
 }
 
+fn agent_written_key(script: &elri_proto::elri::v1::script::Script) -> String {
+    format!("agent_written:{}:{}", script.id, script.version)
+}
+
+/// Records that an agent wrote this version of a script: it is never
+/// granted without asking, benign or not, so a rule cannot pick up code
+/// an agent left behind.
+pub async fn mark_agent_written(
+    store: &Store,
+    script: &elri_proto::elri::v1::script::Script,
+) -> Result<(), crate::store::StoreError> {
+    store.set_setting(&agent_written_key(script), 1).await
+}
+
 /// The live grant for a script's version, created on the spot for a benign
 /// script when the device policy allows.
 pub async fn grant_or_auto(
@@ -422,7 +436,10 @@ pub async fn grant_or_auto(
     if let Some(g) = store.grant_for(script_id, &script.version).await? {
         return Ok(Some(g));
     }
-    if script.benign && store.setting(AUTO_GRANT_BENIGN, 1).await? != 0 {
+    if script.benign
+        && store.setting(AUTO_GRANT_BENIGN, 1).await? != 0
+        && store.setting(&agent_written_key(script), 0).await? == 0
+    {
         return Ok(Some(
             store
                 .grant(space_id, script_id, &script.version, true)

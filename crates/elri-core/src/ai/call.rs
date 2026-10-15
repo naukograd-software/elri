@@ -64,35 +64,88 @@ const SERVED: &[&str] = &[
     "elri.v1.ai.AgentService",
 ];
 
-/// Methods an agent may never call: they hand out authority, change the
-/// device, erase for good, run other code under its own grant, or name
-/// Spaces the agent was not given.
-const DENIED: &[&str] = &[
-    "elri.v1.space.SpaceService/ListSpaces",
-    "elri.v1.space.SpaceService/CreateSpace",
-    "elri.v1.space.SpaceService/SetRetention",
-    "elri.v1.space.SpaceService/SetTransferPolicy",
-    "elri.v1.object.ObjectService/PurgeObject",
-    "elri.v1.change.ChangeService/RetryChange",
-    "elri.v1.change.ChangeService/DiscardChange",
-    "elri.v1.search.SearchService/PrepareSemantic",
-    "elri.v1.script.ScriptService/RunScript",
-    "elri.v1.extension.ExtensionService/RemoveExtension",
-    "elri.v1.extension.ExtensionService/GrantExtension",
-    // An extension runs under its own manifest, and what it returns names
-    // no Space the gate could check.
-    "elri.v1.extension.ExtensionService/CallExtension",
-    // A rule would run an already granted script on events or a schedule
-    // the user never consented to.
-    "elri.v1.script.RuleService/CreateRule",
-    "elri.v1.script.RuleService/UpdateRule",
-    "elri.v1.workflow.WorkflowService/StartWorkflow",
-    "elri.v1.workflow.WorkflowService/ResumeWorkflowRun",
-    "elri.v1.workflow.WorkflowService/ResolveWorkflowStep",
-    "elri.v1.workflow.WorkflowService/CancelWorkflowRun",
-    "elri.v1.ai.AgentService/GrantAgent",
-    "elri.v1.ai.AgentService/Send",
-    "elri.v1.ai.AgentService/StartConversation",
+/// Methods an agent may call. Anything not listed is refused, so a
+/// method added to the API stays out of reach until it is added here.
+/// Left out on purpose: methods that hand out authority, change the
+/// device, erase for good, run code under its own grant (scripts, rules,
+/// extensions, workflows), stand for a person's review or approval, or
+/// name Spaces the agent was not given.
+const ALLOWED: &[&str] = &[
+    "elri.v1.ai.AgentService/CreateAgent",
+    "elri.v1.ai.AgentService/CreatePrompt",
+    "elri.v1.ai.AgentService/CreateSkill",
+    "elri.v1.ai.AgentService/GetConversation",
+    "elri.v1.ai.AgentService/ListAgents",
+    "elri.v1.ai.AgentService/ListConversations",
+    "elri.v1.ai.AgentService/ListPrompts",
+    "elri.v1.ai.AgentService/ListSkills",
+    "elri.v1.ai.AgentService/UpdateAgent",
+    "elri.v1.ai.AgentService/UpdatePrompt",
+    "elri.v1.ai.AgentService/UpdateSkill",
+    "elri.v1.attachment.AttachmentService/GetAttachment",
+    "elri.v1.attachment.AttachmentService/ListAttachments",
+    "elri.v1.attachment.AttachmentService/Pin",
+    "elri.v1.change.ChangeService/ListChanges",
+    "elri.v1.context.ContextService/CreateContext",
+    "elri.v1.context.ContextService/HideInContext",
+    "elri.v1.context.ContextService/ListContexts",
+    "elri.v1.context.ContextService/ListMappings",
+    "elri.v1.context.ContextService/ProposeMapping",
+    "elri.v1.context.ContextService/ResolveContext",
+    "elri.v1.context.ContextService/UpdateContext",
+    "elri.v1.core.CoreService/GetInfo",
+    "elri.v1.definition.DefinitionService/CreateConstraint",
+    "elri.v1.definition.DefinitionService/CreateFieldDefinition",
+    "elri.v1.definition.DefinitionService/CreateRoleDefinition",
+    "elri.v1.definition.DefinitionService/CreateTypeDefinition",
+    "elri.v1.definition.DefinitionService/GetSchema",
+    "elri.v1.definition.DefinitionService/ListConstraints",
+    "elri.v1.definition.DefinitionService/ListFieldDefinitions",
+    "elri.v1.definition.DefinitionService/ListPublications",
+    "elri.v1.definition.DefinitionService/ListRoleDefinitions",
+    "elri.v1.definition.DefinitionService/ListTypeDefinitions",
+    "elri.v1.definition.DefinitionService/ListViolations",
+    "elri.v1.definition.DefinitionService/PinDefinition",
+    "elri.v1.definition.DefinitionService/PublishDefinition",
+    "elri.v1.definition.DefinitionService/UpdateConstraint",
+    "elri.v1.definition.DefinitionService/UpdateFieldDefinition",
+    "elri.v1.definition.DefinitionService/UpdateTypeDefinition",
+    "elri.v1.document.DocumentService/CaptureFragment",
+    "elri.v1.document.DocumentService/MergeBlocks",
+    "elri.v1.document.DocumentService/ResolveFragment",
+    "elri.v1.document.DocumentService/SplitBlock",
+    "elri.v1.extension.ExtensionService/ListExtensions",
+    "elri.v1.object.ObjectService/Commit",
+    "elri.v1.object.ObjectService/CreateObject",
+    "elri.v1.object.ObjectService/DeleteObject",
+    "elri.v1.object.ObjectService/GetObject",
+    "elri.v1.object.ObjectService/ListHypotheses",
+    "elri.v1.object.ObjectService/ListObjects",
+    "elri.v1.object.ObjectService/UpdateObject",
+    "elri.v1.script.RuleService/ListRuleRuns",
+    "elri.v1.script.RuleService/ListRules",
+    "elri.v1.script.ScriptService/CheckScript",
+    "elri.v1.script.ScriptService/CreateScript",
+    "elri.v1.script.ScriptService/GetScript",
+    "elri.v1.script.ScriptService/GetSdk",
+    "elri.v1.script.ScriptService/ListScripts",
+    "elri.v1.script.ScriptService/UpdateScript",
+    "elri.v1.search.SearchService/GetSemanticStatus",
+    "elri.v1.search.SearchService/Search",
+    "elri.v1.space.SpaceService/GetTransferPolicy",
+    "elri.v1.transfer.TransferService/ExportObjects",
+    "elri.v1.transfer.TransferService/ImportObjects",
+    "elri.v1.transfer.TransferService/MoveObjects",
+    "elri.v1.ui.InterfaceService/CreateInterface",
+    "elri.v1.ui.InterfaceService/Dispatch",
+    "elri.v1.ui.InterfaceService/Evaluate",
+    "elri.v1.ui.InterfaceService/GetInterface",
+    "elri.v1.ui.InterfaceService/ListInterfaces",
+    "elri.v1.ui.InterfaceService/PublishInterface",
+    "elri.v1.ui.InterfaceService/SelectVersion",
+    "elri.v1.ui.InterfaceService/UpdateInterface",
+    "elri.v1.workflow.WorkflowService/GetWorkflowRun",
+    "elri.v1.workflow.WorkflowService/ListWorkflowRuns",
 ];
 
 /// Method name prefixes that only read.
@@ -114,7 +167,7 @@ pub fn allowed(method: &str) -> bool {
     let Some((svc, _)) = method.split_once('/') else {
         return false;
     };
-    SERVED.contains(&svc) && !DENIED.contains(&method) && ROUTES.contains_key(method)
+    SERVED.contains(&svc) && ALLOWED.contains(&method) && ROUTES.contains_key(method)
 }
 
 /// Whether `method` only reads.
@@ -519,6 +572,44 @@ mod tests {
     #![allow(clippy::expect_used)]
 
     use super::*;
+
+    /// Methods an agent must never reach.
+    const NEVER: &[&str] = &[
+        "elri.v1.space.SpaceService/ListSpaces",
+        "elri.v1.space.SpaceService/CreateSpace",
+        "elri.v1.space.SpaceService/SetRetention",
+        "elri.v1.space.SpaceService/SetTransferPolicy",
+        "elri.v1.object.ObjectService/PurgeObject",
+        "elri.v1.change.ChangeService/RetryChange",
+        "elri.v1.change.ChangeService/DiscardChange",
+        "elri.v1.search.SearchService/PrepareSemantic",
+        "elri.v1.script.ScriptService/RunScript",
+        "elri.v1.extension.ExtensionService/RemoveExtension",
+        "elri.v1.extension.ExtensionService/GrantExtension",
+        "elri.v1.extension.ExtensionService/CallExtension",
+        "elri.v1.script.RuleService/CreateRule",
+        "elri.v1.script.RuleService/UpdateRule",
+        "elri.v1.workflow.WorkflowService/StartWorkflow",
+        "elri.v1.workflow.WorkflowService/ResumeWorkflowRun",
+        "elri.v1.workflow.WorkflowService/ResolveWorkflowStep",
+        "elri.v1.workflow.WorkflowService/CancelWorkflowRun",
+        "elri.v1.ai.AgentService/GrantAgent",
+        "elri.v1.ai.AgentService/Send",
+        "elri.v1.ai.AgentService/StartConversation",
+        "elri.v1.context.ContextService/ApproveMapping",
+        "elri.v1.object.ObjectService/ReviewHypothesis",
+        "elri.v1.script.RuleService/RunRule",
+    ];
+
+    #[test]
+    fn the_gate_keeps_authority_out_of_reach() {
+        for m in NEVER {
+            assert!(!allowed(m), "{m} is open to agents");
+        }
+        for m in ALLOWED {
+            assert!(ROUTES.contains_key(*m), "{m} is not a method of the API");
+        }
+    }
 
     #[test]
     fn the_gate_knows_the_api() {

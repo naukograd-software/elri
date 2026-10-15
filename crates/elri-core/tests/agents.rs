@@ -22,15 +22,19 @@ use elri_proto::elri::v1::ai::{
 };
 use elri_proto::elri::v1::change::change_service_ws::ChangeServiceClient;
 use elri_proto::elri::v1::change::ListChangesRequest;
+use elri_proto::elri::v1::context::context_service_ws::ContextServiceClient;
+use elri_proto::elri::v1::context::ListMappingsRequest;
 use elri_proto::elri::v1::object::object_service_ws::ObjectServiceClient;
 use elri_proto::elri::v1::object::{ListObjectsRequest, ObjectKind};
+use elri_proto::elri::v1::script::script_service_ws::ScriptServiceClient;
+use elri_proto::elri::v1::script::{ListScriptsRequest, RunScriptRequest};
 use elri_proto::elri::v1::settings::settings_service_ws::SettingsServiceClient;
 use elri_proto::elri::v1::settings::{AiSettings, ProxyMode, ProxySettings, UpdateSettingsRequest};
 use elri_proto::elri::v1::space::space_service_ws::SpaceServiceClient;
 use elri_proto::elri::v1::space::CreateSpaceRequest;
 use sha2::{Digest as _, Sha256};
 use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
-use ws_proto::{Client, ClientConfig, Request};
+use ws_proto::{Client, ClientConfig, Code, Request};
 
 struct Authed(String);
 
@@ -171,10 +175,31 @@ fn respond(m: &Mock, body: &serde_json::Value) -> String {
         2 => sse(&function_call(
             "call",
             &serde_json::json!({
+                "method": "elri.v1.script.ScriptService/CreateScript",
+                "request": serde_json::json!({
+                    "space_id": space, "name": "left behind", "source": "return 1",
+                }).to_string(),
+            }),
+            2,
+        )),
+        3 => sse(&function_call(
+            "call",
+            &serde_json::json!({
+                "method": "elri.v1.context.ContextService/ProposeMapping",
+                "request": serde_json::json!({
+                    "space_id": space, "name": "priority",
+                    "members": [{"space_id": space, "field_id": space}],
+                }).to_string(),
+            }),
+            3,
+        )),
+        4 => sse(&function_call(
+            "call",
+            &serde_json::json!({
                 "method": "elri.v1.script.ScriptService/RunScript",
                 "request": serde_json::json!({"space_id": space, "id": "x"}).to_string(),
             }),
-            2,
+            4,
         )),
         _ => {
             let item = serde_json::json!({
@@ -411,6 +436,8 @@ async fn sign_in_with_chatgpt_and_run_an_agent() {
     let settings = SettingsServiceClient::new(conn.clone());
     let ai = AiServiceClient::new(conn.clone());
     let agents = AgentServiceClient::new(conn.clone());
+    let scripts = ScriptServiceClient::new(conn.clone());
+    let contexts = ContextServiceClient::new(conn.clone());
     let objects = ObjectServiceClient::new(conn.clone());
     let changes = ChangeServiceClient::new(conn);
     let space = spaces
@@ -591,7 +618,7 @@ async fn sign_in_with_chatgpt_and_run_an_agent() {
         .collect();
     assert_eq!(
         kinds.iter().filter(|k| **k == "call").count(),
-        3,
+        5,
         "{kinds:?}"
     );
     let results: Vec<_> = events
@@ -607,11 +634,17 @@ async fn sign_in_with_chatgpt_and_run_an_agent() {
         "create went through: {}",
         results[1].result
     );
-    assert!(results[2].failed, "RunScript is refused");
+    assert!(!results[2].failed, "script written: {}", results[2].result);
     assert!(
-        results[2].result.contains("not available"),
+        !results[3].failed,
+        "mapping proposed: {}",
+        results[3].result
+    );
+    assert!(results[4].failed, "RunScript is refused");
+    assert!(
+        results[4].result.contains("not available"),
         "{}",
-        results[2].result
+        results[4].result
     );
     assert!(kinds.contains(&"delta"));
     let last = events.last().expect("last");
@@ -670,11 +703,51 @@ async fn sign_in_with_chatgpt_and_run_an_agent() {
             MessageRole::Tool,
             MessageRole::Tool,
             MessageRole::Tool,
+            MessageRole::Tool,
+            MessageRole::Tool,
             MessageRole::Assistant
         ]
     );
-    assert!(saved.messages[3].failed);
-    assert_eq!(saved.messages[4].text, "Done.");
+    assert!(saved.messages[5].failed);
+    assert_eq!(saved.messages[6].text, "Done.");
+
+    // A script an agent wrote is never granted without asking, even one
+    // that only touches its own Space.
+    let left = scripts
+        .list_scripts(a.req(ListScriptsRequest {
+            space_id: space.clone(),
+            include_deleted: false,
+        }))
+        .await
+        .expect("scripts")
+        .msg
+        .scripts;
+    assert_eq!(left.len(), 1);
+    assert!(left[0].benign);
+    let err = scripts
+        .run_script(a.req(RunScriptRequest {
+            space_id: space.clone(),
+            id: left[0].id.clone(),
+            args_json: String::new(),
+        }))
+        .await
+        .expect_err("needs a grant");
+    assert_eq!(err.code, Code::PermissionDenied);
+
+    // A mapping an agent proposed waits for a person.
+    let mappings = contexts
+        .list_mappings(a.req(ListMappingsRequest {
+            space_id: space.clone(),
+            approved_only: false,
+            include_deleted: false,
+        }))
+        .await
+        .expect("mappings")
+        .msg
+        .mappings;
+    assert_eq!(mappings.len(), 1);
+    assert!(!mappings[0].approved);
+    assert_eq!(mappings[0].proposed_by, format!("agent:{}", agent.id));
 
     // Without consent for the Space nothing is sent.
     let before = mock.state.lock().expect("state").responses.len();

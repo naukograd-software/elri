@@ -301,8 +301,10 @@ impl ContextServiceHandler for Services {
         let m = &req.msg;
         let space_id = parse_id(&m.space_id, "space_id")?;
         crate::mapping::check(&m.name, &m.members).map_err(invalid)?;
-        // A person proposing is a person approving.
-        let doc = crate::mapping::create(space_id, &m.name, &m.members, "user", true)
+        // A person proposing is a person approving; anyone else waits.
+        let actor = crate::store::current_actor();
+        let by_user = actor == crate::store::ACTOR_USER;
+        let doc = crate::mapping::create(space_id, &m.name, &m.members, &actor, by_user)
             .map_err(StoreError::from)?;
         let rec = self.store.space(space_id).await?.insert(&doc).await?;
         Ok(Response::new(ProposeMappingResponse {
